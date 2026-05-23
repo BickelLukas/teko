@@ -154,6 +154,13 @@ export const DevUserSchema = z.object({
 });
 export type DevUser = z.infer<typeof DevUserSchema>;
 
+export const ClockActionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("advance"), ms: z.number().int() }),
+  z.object({ action: z.literal("set"), target: z.string().datetime() }),
+  z.object({ action: z.literal("reset") }),
+]);
+export type ClockAction = z.infer<typeof ClockActionSchema>;
+
 // ── API response schemas ──────────────────────────────────────────────────────
 
 export const TaskResponseSchema = TaskSchema.pick({

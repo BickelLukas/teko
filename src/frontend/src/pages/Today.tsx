@@ -8,11 +8,12 @@ import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
 import { AddTaskModal } from "@/components/AddTaskModal";
 import { Button } from "@/components/ui/button";
 import { useLocale, formatDateLong } from "@/lib/locale";
+import { getNow } from "@/lib/clock";
 import type { TaskResponse } from "@teko/shared";
 
 function useGreeting(name: string): string {
   const { t } = useTranslation("pages");
-  const h = new Date().getHours();
+  const h = getNow().getHours();
   const key = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
   return t(`today.greeting.${key}`, { name });
 }
@@ -84,7 +85,7 @@ function ProjectBreadcrumb({ task }: { task: TaskResponse }) {
 export function TodayPage() {
   const { t } = useTranslation("pages");
   const { locale } = useLocale();
-  const now = new Date();
+  const now = getNow();
 
   const {
     data: tasks = [],

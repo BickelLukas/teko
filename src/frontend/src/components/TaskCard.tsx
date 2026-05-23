@@ -3,6 +3,7 @@ import type React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { isPast, addHours, addDays, addWeeks } from "date-fns";
+import { getNow } from "@/lib/clock";
 import {
   IconCheck,
   IconDots,
@@ -112,7 +113,7 @@ function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => voi
           size="xs"
           variant="outline"
           disabled={scheduleMutation.isPending}
-          onClick={() => scheduleMutation.mutate({ date: addDays(new Date(), 1) })}
+          onClick={() => scheduleMutation.mutate({ date: addDays(getNow(), 1) })}
         >
           {t("schedule_panel.tomorrow")}
         </Button>
@@ -120,7 +121,7 @@ function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => voi
           size="xs"
           variant="outline"
           disabled={scheduleMutation.isPending}
-          onClick={() => scheduleMutation.mutate({ date: addDays(new Date(), 3) })}
+          onClick={() => scheduleMutation.mutate({ date: addDays(getNow(), 3) })}
         >
           {t("schedule_panel.in_3_days")}
         </Button>
@@ -128,7 +129,7 @@ function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => voi
           size="xs"
           variant="outline"
           disabled={scheduleMutation.isPending}
-          onClick={() => scheduleMutation.mutate({ date: addWeeks(new Date(), 1) })}
+          onClick={() => scheduleMutation.mutate({ date: addWeeks(getNow(), 1) })}
         >
           {t("schedule_panel.next_week")}
         </Button>
@@ -139,7 +140,7 @@ function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => voi
           className="rounded border border-input bg-background px-2 py-1 text-xs"
           value={customDate}
           onChange={(e) => setCustomDate(e.target.value)}
-          min={new Date().toISOString().split("T")[0]}
+          min={getNow().toISOString().split("T")[0]}
         />
         <Button
           size="xs"
@@ -331,21 +332,21 @@ export function TaskCard({
                     <DropdownMenuLabel>{t("actions.snooze")}</DropdownMenuLabel>
                     <DropdownMenuItem
                       disabled={snoozeMutation.isPending}
-                      onClick={() => snoozeMutation.mutate(addHours(new Date(), 1))}
+                      onClick={() => snoozeMutation.mutate(addHours(getNow(), 1))}
                     >
                       <IconZzz className="mr-2 size-4" />
                       {t("snooze_options.one_hour")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       disabled={snoozeMutation.isPending}
-                      onClick={() => snoozeMutation.mutate(addDays(new Date(), 1))}
+                      onClick={() => snoozeMutation.mutate(addDays(getNow(), 1))}
                     >
                       <IconZzz className="mr-2 size-4" />
                       {t("snooze_options.tomorrow")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       disabled={snoozeMutation.isPending}
-                      onClick={() => snoozeMutation.mutate(addWeeks(new Date(), 1))}
+                      onClick={() => snoozeMutation.mutate(addWeeks(getNow(), 1))}
                     >
                       <IconZzz className="mr-2 size-4" />
                       {t("snooze_options.next_week")}

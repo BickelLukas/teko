@@ -1,4 +1,5 @@
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistance as dfnsFormatDistance } from "date-fns";
+import { getNow } from "./clock.js";
 import { de } from "date-fns/locale/de";
 import { enUS } from "date-fns/locale/en-US";
 import { useTranslation } from "react-i18next";
@@ -42,5 +43,5 @@ export function formatDateMedium(date: Date, locale: string): string {
 }
 
 export function formatDistance(date: Date, locale: string, opts?: { addSuffix?: boolean }): string {
-  return formatDistanceToNow(date, { locale: getDateFnsLocale(locale), ...opts });
+  return dfnsFormatDistance(date, getNow(), { locale: getDateFnsLocale(locale), ...opts });
 }

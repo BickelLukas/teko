@@ -3,6 +3,7 @@ import { eq, and, isNull, isNotNull, ne, or, inArray, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { RRule } from "rrule";
 import * as schema from "../db/schema.js";
+import { getNow } from "../domain/clock.js";
 import {
   CreateTaskBodySchema,
   UpdateTaskBodySchema,
@@ -213,7 +214,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         .all();
     }
 
-    const now = new Date();
+    const now = getNow();
     const childCounts = buildChildCountMap(db);
     const parentIds = [...new Set(rows.filter((r) => r.parent_id).map((r) => r.parent_id!))];
     const parentTitles = buildParentTitleMap(db, parentIds);
@@ -252,7 +253,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     }
 
     const id = randomUUID();
-    const now = new Date();
+    const now = getNow();
 
     let nextDueAt: Date | null = null;
     let windowDays: number | null = completion_window_days ?? null;
@@ -301,7 +302,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, id)).get();
     if (!task) return reply.code(500).send({ error: "Failed to retrieve created task" });
 
-    return reply.code(201).send(taskToResponse(task, new Date()));
+    return reply.code(201).send(taskToResponse(task, getNow()));
   });
 
   // ── PATCH /api/tasks/:id ────────────────────────────────────────────────────
@@ -362,7 +363,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         updates.next_due_at = null;
         if (task.state !== "done") updates.state = "eligible";
       } else {
-        const now = new Date();
+        const now = getNow();
         const lastCompletion = db
           .select({ completed_at: schema.completions.completed_at })
           .from(schema.completions)
@@ -409,7 +410,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     }
 
     if (Object.keys(updates).length === 0) {
-      return reply.code(200).send(taskToResponse(task, new Date()));
+      return reply.code(200).send(taskToResponse(task, getNow()));
     }
 
     db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, task.id)).run();
@@ -426,7 +427,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
           .get()?.title ?? null)
       : null;
     return reply.code(200).send(
-      taskToResponse(updated, new Date(), {
+      taskToResponse(updated, getNow(), {
         childCount: childCounts.get(updated.id) ?? 0,
         parentTitle,
       }),
@@ -444,7 +445,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (task.state === "done") return reply.code(409).send({ error: "Task already completed" });
     if (task.archived_at !== null) return reply.code(409).send({ error: "Task is archived" });
 
-    const now = new Date();
+    const now = getNow();
     const wasOnTime = isWithinCompletionWindow(task, now);
     const isRecurring = task.recurrence_rule !== null && task.recurrence_mode !== null;
     const pointsAwarded = awardPoints(task);
@@ -537,7 +538,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const updatedTask = db.select().from(schema.tasks).where(eq(schema.tasks.id, task.id)).get();
 
     return reply.code(200).send({
-      task: updatedTask ? taskToResponse(updatedTask, new Date()) : null,
+      task: updatedTask ? taskToResponse(updatedTask, getNow()) : null,
       completion: { was_on_time: wasOnTime, points_awarded: pointsAwarded },
       streak: {
         current: newLength,
@@ -558,7 +559,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (!task) return reply.code(404).send({ error: "Task not found" });
     if (task.archived_at !== null) return reply.code(409).send({ error: "Task already archived" });
 
-    const now = new Date();
+    const now = getNow();
     const descendantIds = getDescendantIds(db, task.id);
 
     db.transaction((tx) => {
@@ -631,7 +632,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (!task) return reply.code(404).send({ error: "Task not found" });
     if (task.archived_at !== null) return reply.code(409).send({ error: "Task is archived" });
 
-    const now = new Date();
+    const now = getNow();
     const newState = computeTaskState({ ...task, planned_for: null }, now);
     const state = newState === "archived" || newState === "done" ? task.state : newState;
 
@@ -657,7 +658,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (task.archived_at !== null) return reply.code(409).send({ error: "Task is archived" });
 
     const until = new Date(body.data.until);
-    const now = new Date();
+    const now = getNow();
 
     const newState = computeTaskState({ ...task, next_due_at: until, planned_for: null }, now);
     const state = newState === "archived" || newState === "done" ? ("not_yet" as const) : newState;

@@ -1,5 +1,6 @@
 import { integer, text, sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+import { getNow } from "../domain/clock.js";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -16,7 +17,7 @@ export const users = sqliteTable("users", {
   week_start_day: integer("week_start_day").notNull().default(1),
   created_at: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .$defaultFn(() => getNow()),
 });
 
 export const tasks = sqliteTable("tasks", {
@@ -34,7 +35,7 @@ export const tasks = sqliteTable("tasks", {
     .default("eligible"),
   created_at: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
-    .$defaultFn(() => new Date()),
+    .$defaultFn(() => getNow()),
   created_by: text("created_by")
     .notNull()
     .references(() => users.id, { onDelete: "restrict" }),
@@ -87,4 +88,10 @@ export const completions = sqliteTable("completions", {
   points_awarded: integer("points_awarded"),
   cycle_due_at: integer("cycle_due_at", { mode: "timestamp_ms" }),
   notes: text("notes"),
+});
+
+export const devSettings = sqliteTable("dev_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updated_at: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });

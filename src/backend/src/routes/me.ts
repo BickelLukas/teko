@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, and, gte, lt } from "drizzle-orm";
 import { startOfDay, addDays } from "date-fns";
+import { getNow } from "../domain/clock.js";
 import * as schema from "../db/schema.js";
 import { UpdatePreferencesBodySchema } from "@teko/shared";
 import "../types.js";
@@ -71,7 +72,7 @@ const me: FastifyPluginAsync = async (fastify) => {
   // ── GET /api/me/today-stats ───────────────────────────────────────────────
 
   fastify.get("/api/me/today-stats", async (request, reply) => {
-    const now = new Date();
+    const now = getNow();
     const dayStart = startOfDay(now);
     const dayEnd = startOfDay(addDays(now, 1));
 

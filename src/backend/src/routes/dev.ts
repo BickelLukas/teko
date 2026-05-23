@@ -2,7 +2,8 @@ import type { FastifyPluginAsync } from "fastify";
 import { eq, inArray } from "drizzle-orm";
 import { runTick } from "../scheduler/tick.js";
 import * as schema from "../db/schema.js";
-import { SwitchUserBodySchema } from "@teko/shared";
+import { SwitchUserBodySchema, ClockActionSchema } from "@teko/shared";
+import { getNow, getOffsetMs, setOffsetMs } from "../domain/clock.js";
 import "../types.js";
 
 const SEED_HA_IDS = ["dev-alice", "dev-bob", "dev-charlie"];
@@ -63,6 +64,52 @@ const dev: FastifyPluginAsync = async (fastify) => {
       name: user.name,
       locale: user.locale,
       is_admin: user.is_admin,
+    });
+  });
+
+  fastify.get("/api/_dev/clock", async (_request, reply) => {
+    const offsetMs = getOffsetMs();
+    return reply.code(200).send({
+      offsetMs,
+      virtualNow: getNow().toISOString(),
+      realNow: new Date().toISOString(),
+    });
+  });
+
+  fastify.post("/api/_dev/clock", async (request, reply) => {
+    const parsed = ClockActionSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.flatten() });
+    }
+
+    const action = parsed.data;
+    let newOffsetMs: number;
+
+    if (action.action === "advance") {
+      newOffsetMs = getOffsetMs() + action.ms;
+    } else if (action.action === "set") {
+      newOffsetMs = new Date(action.target).getTime() - Date.now();
+    } else {
+      newOffsetMs = 0;
+    }
+
+    setOffsetMs(newOffsetMs);
+
+    db.insert(schema.devSettings)
+      .values({ key: "clock_offset_ms", value: String(newOffsetMs), updated_at: new Date() })
+      .onConflictDoUpdate({
+        target: schema.devSettings.key,
+        set: { value: String(newOffsetMs), updated_at: new Date() },
+      })
+      .run();
+
+    const ticked = await runTick(db, getNow());
+
+    return reply.code(200).send({
+      offsetMs: newOffsetMs,
+      virtualNow: getNow().toISOString(),
+      realNow: new Date().toISOString(),
+      ticked,
     });
   });
 };

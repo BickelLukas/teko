@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { eq, and, isNull, isNotNull, inArray, desc, sql } from "drizzle-orm";
 import * as schema from "../db/schema.js";
 import { TaskIdParamsSchema, GetTasksQuerySchema } from "@teko/shared";
+import { getNow } from "../domain/clock.js";
 import { computeProjectProgress } from "../domain/project.js";
 import { getAllDescendants } from "./tasks.js";
 import { taskToResponse } from "./taskResponseHelper.js";
@@ -83,7 +84,7 @@ const projects: FastifyPluginAsync = async (fastify) => {
         .all();
     }
 
-    const now = new Date();
+    const now = getNow();
 
     return rows.map((project) => {
       const descendants = getAllDescendants(db, project.id);
@@ -130,7 +131,7 @@ const projects: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    const now = new Date();
+    const now = getNow();
     return allNodes.map((t) => taskToResponse(t, now, { childCount: childCounts.get(t.id) ?? 0 }));
   });
 
@@ -170,7 +171,7 @@ const projects: FastifyPluginAsync = async (fastify) => {
       if (r.parent_id) grandchildCounts.set(r.parent_id, r.count);
     }
 
-    const now = new Date();
+    const now = getNow();
     return children.map((c) =>
       taskToResponse(c, now, {
         childCount: grandchildCounts.get(c.id) ?? 0,

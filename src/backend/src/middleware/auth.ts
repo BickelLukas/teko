@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import * as schema from "../db/schema.js";
 import type { Config } from "../config.js";
+import { getOffsetMs } from "../domain/clock.js";
 import "../types.js";
 
 export async function registerAuth(fastify: FastifyInstance, config: Config): Promise<void> {
@@ -51,6 +52,7 @@ export async function registerAuth(fastify: FastifyInstance, config: Config): Pr
 
     fastify.addHook("onSend", async (_request, reply, payload) => {
       reply.header("X-Teko-Dev-Mode", "true");
+      reply.header("X-Teko-Clock-Offset", String(getOffsetMs()));
       return payload;
     });
   } else {

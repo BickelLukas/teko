@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchMe, fetchMeStats, fetchHouseholdStats } from "@/lib/api";
+import { getNow } from "@/lib/clock";
 import type { MeStats, HouseholdStats } from "@teko/shared";
 
 // ── Mini charts ───────────────────────────────────────────────────────────────
@@ -16,7 +17,7 @@ function WeekBars({ data, weekStartsOnMonday }: { data: number[]; weekStartsOnMo
   const dayOrder = weekStartsOnMonday ? dayOrderMon : dayOrderSun;
   const labels = dayOrder.map((d) => t(`days.${d}`));
 
-  const today = new Date().getDay(); // 0=Sun
+  const today = getNow().getDay(); // 0=Sun
   const todayIdx = weekStartsOnMonday ? (today === 0 ? 6 : today - 1) : today;
   const chartData = data.map((v, i) => ({ day: labels[i]!, value: v, isToday: i === todayIdx }));
 

@@ -4,8 +4,9 @@ import type { Db } from "../db/client.js";
 import * as schema from "../db/schema.js";
 import { computeTaskState } from "../domain/recurrence.js";
 import { detectBrokenStreaks } from "../domain/streaks.js";
+import { getNow } from "../domain/clock.js";
 
-export async function runTick(db: Db, now: Date = new Date()): Promise<number> {
+export async function runTick(db: Db, now: Date = getNow()): Promise<number> {
   const tasks = db
     .select()
     .from(schema.tasks)

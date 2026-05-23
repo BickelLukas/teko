@@ -8,8 +8,11 @@ import projects from "./routes/projects.js";
 import me from "./routes/me.js";
 import stats from "./routes/stats.js";
 import dev from "./routes/dev.js";
+import { eq } from "drizzle-orm";
 import { registerAuth } from "./middleware/auth.js";
 import type { Config } from "./config.js";
+import { initClock } from "./domain/clock.js";
+import * as schema from "./db/schema.js";
 import "./types.js";
 
 export async function buildApp(db: Db, config: Config): Promise<FastifyInstance> {
@@ -30,6 +33,21 @@ export async function buildApp(db: Db, config: Config): Promise<FastifyInstance>
   await fastify.register(fastifyCookie);
 
   fastify.decorate("db", db);
+
+  {
+    let initialOffsetMs = 0;
+    if (config.devMode) {
+      const stored = db
+        .select({ value: schema.devSettings.value })
+        .from(schema.devSettings)
+        .where(eq(schema.devSettings.key, "clock_offset_ms"))
+        .get();
+      if (stored) {
+        initialOffsetMs = parseInt(stored.value, 10) || 0;
+      }
+    }
+    initClock({ devMode: config.devMode, initialOffsetMs });
+  }
 
   await registerAuth(fastify, config);
   await fastify.register(health);

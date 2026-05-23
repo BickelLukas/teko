@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, and, gte, lt, gt, inArray } from "drizzle-orm";
 import { startOfWeek, addWeeks, subWeeks, startOfDay, differenceInDays } from "date-fns";
+import { getNow } from "../domain/clock.js";
 import * as schema from "../db/schema.js";
 import { TaskIdParamsSchema } from "@teko/shared";
 import { computeTaskState, type ComputedTaskState } from "../domain/recurrence.js";
@@ -17,7 +18,7 @@ const stats: FastifyPluginAsync = async (fastify) => {
     if (!user) return reply.code(404).send({ error: "User not found" });
 
     const weekStartsOn = (user.week_start_day ?? 1) as 0 | 1;
-    const now = new Date();
+    const now = getNow();
     const weekStart = startOfWeek(now, { weekStartsOn });
     const weekEnd = addWeeks(weekStart, 1);
 
@@ -141,7 +142,7 @@ const stats: FastifyPluginAsync = async (fastify) => {
     const user = db.select().from(schema.users).where(eq(schema.users.id, request.user.id)).get();
     const weekStartsOn = (user?.week_start_day ?? 1) as 0 | 1;
 
-    const now = new Date();
+    const now = getNow();
     const weekStart = startOfWeek(now, { weekStartsOn });
     const weekEnd = addWeeks(weekStart, 1);
 

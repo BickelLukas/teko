@@ -5,6 +5,7 @@ import type {
   UserResponse,
   TodayStats,
   DevUser,
+  ClockAction,
   CreateTaskBody,
   UpdateTaskBody,
   CompleteTaskResult,
@@ -12,6 +13,7 @@ import type {
   HouseholdStats,
   TaskStreak,
 } from "@teko/shared";
+import { setOffsetMs } from "./clock.js";
 
 // Tracks whether the backend reported dev mode via response header.
 // Set on first response that carries X-Teko-Dev-Mode: true.
@@ -36,6 +38,10 @@ async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
   if (devModeHeader?.toLowerCase() === "true" && !_devModeActive) {
     _devModeActive = true;
     _devModeListeners.forEach((cb) => cb(true));
+  }
+  const offsetHeader = res.headers.get("X-Teko-Clock-Offset");
+  if (offsetHeader !== null) {
+    setOffsetMs(parseInt(offsetHeader, 10) || 0);
   }
   return res;
 }
@@ -187,6 +193,27 @@ export async function switchDevUser(ha_user_id: string): Promise<DevUser> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ha_user_id }),
+    }),
+  );
+}
+
+export type DevClockResponse = {
+  offsetMs: number;
+  virtualNow: string;
+  realNow: string;
+  ticked?: number;
+};
+
+export async function fetchDevClock(): Promise<DevClockResponse> {
+  return json(await apiFetch("/api/_dev/clock"));
+}
+
+export async function setDevClock(action: ClockAction): Promise<DevClockResponse> {
+  return json(
+    await apiFetch("/api/_dev/clock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(action),
     }),
   );
 }

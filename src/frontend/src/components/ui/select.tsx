@@ -103,11 +103,7 @@ function SelectLabel({ className, ...props }: React.ComponentProps<typeof Select
   );
 }
 
-function SelectItem({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<typeof Select.Item>) {
+function SelectItem({ className, children, ...props }: React.ComponentProps<typeof Select.Item>) {
   return (
     <Select.Item
       className={cn(
@@ -127,9 +123,7 @@ function SelectItem({
 }
 
 function SelectSeparator({ className, ...props }: React.ComponentProps<typeof Select.Separator>) {
-  return (
-    <Select.Separator className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />
-  );
+  return <Select.Separator className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />;
 }
 
 export {

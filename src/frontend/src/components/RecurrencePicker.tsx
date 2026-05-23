@@ -146,7 +146,6 @@ export function RecurrencePicker({ value, onChange }: Props) {
       if (err) return;
     }
     onChange({ rule, mode, windowDays: preset === "none" ? null : windowDays });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preset, mode, nDays, nMonths, weekdays, monthDay, rawRule, windowDays]);
 
   const rule = buildRule(preset, nDays, nMonths, weekdays, monthDay, rawRule);
@@ -154,7 +153,11 @@ export function RecurrencePicker({ value, onChange }: Props) {
 
   function toggleWeekday(day: string) {
     setWeekdays((prev) =>
-      prev.includes(day) ? (prev.length > 1 ? prev.filter((d) => d !== day) : prev) : [...prev, day],
+      prev.includes(day)
+        ? prev.length > 1
+          ? prev.filter((d) => d !== day)
+          : prev
+        : [...prev, day],
     );
   }
 
@@ -304,9 +307,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
       )}
 
       {/* Human-readable description */}
-      {desc && (
-        <p className="text-sm text-muted-foreground italic">{desc}</p>
-      )}
+      {desc && <p className="text-sm text-muted-foreground italic">{desc}</p>}
 
       {/* Completion window */}
       {preset !== "none" && (
@@ -320,7 +321,9 @@ export function RecurrencePicker({ value, onChange }: Props) {
               min={0}
               max={365}
               value={windowDays}
-              onChange={(e) => setWindowDays(Math.min(365, Math.max(0, parseInt(e.target.value) || 0)))}
+              onChange={(e) =>
+                setWindowDays(Math.min(365, Math.max(0, parseInt(e.target.value) || 0)))
+              }
               className="w-24"
             />
             <span className="text-sm">days</span>

@@ -1,7 +1,7 @@
 import { loadConfig } from "./config.js";
 import { createDb } from "./db/client.js";
 import * as schema from "./db/schema.js";
-import { eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
@@ -37,7 +37,12 @@ if (existingUsers.length > 0) {
     .all();
   if (seedTasks.length > 0) {
     db.delete(schema.completions)
-      .where(inArray(schema.completions.task_id, seedTasks.map((t) => t.id)))
+      .where(
+        inArray(
+          schema.completions.task_id,
+          seedTasks.map((t) => t.id),
+        ),
+      )
       .run();
   }
   db.delete(schema.tasks).where(inArray(schema.tasks.created_by, existingIds)).run();

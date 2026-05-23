@@ -11,11 +11,7 @@ const me: FastifyPluginAsync = async (fastify) => {
   // ── GET /api/me ───────────────────────────────────────────────────────────
 
   fastify.get("/api/me", async (request, reply) => {
-    const user = db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.id, request.user.id))
-      .get();
+    const user = db.select().from(schema.users).where(eq(schema.users.id, request.user.id)).get();
 
     if (!user) return reply.code(404).send({ error: "User not found" });
 
@@ -49,11 +45,7 @@ const me: FastifyPluginAsync = async (fastify) => {
       db.update(schema.users).set(updates).where(eq(schema.users.id, request.user.id)).run();
     }
 
-    const user = db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.id, request.user.id))
-      .get();
+    const user = db.select().from(schema.users).where(eq(schema.users.id, request.user.id)).get();
 
     if (!user) return reply.code(404).send({ error: "User not found" });
 

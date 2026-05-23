@@ -59,11 +59,7 @@ export function AddTaskModal() {
   const createMutation = useMutation({
     mutationFn: (data: FormValues) => {
       const resolvedAssignee =
-        assigneeId === "__me__"
-          ? undefined
-          : assigneeId === "__unassigned__"
-            ? null
-            : assigneeId;
+        assigneeId === "__me__" ? undefined : assigneeId === "__unassigned__" ? null : assigneeId;
       return createTask({
         title: data.title,
         description: data.description,
@@ -124,7 +120,9 @@ export function AddTaskModal() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__me__">Me ({me?.display_name ?? me?.name ?? "current user"})</SelectItem>
+                  <SelectItem value="__me__">
+                    Me ({me?.display_name ?? me?.name ?? "current user"})
+                  </SelectItem>
                   <SelectItem value="__unassigned__">Anyone (unassigned)</SelectItem>
                   {devUsers.map((u) => (
                     <SelectItem key={u.id} value={u.id}>
@@ -145,18 +143,11 @@ export function AddTaskModal() {
             >
               {showRecurrence ? "Hide recurrence" : "+ Add recurrence"}
             </button>
-            {showRecurrence && (
-              <RecurrencePicker value={recurrence} onChange={setRecurrence} />
-            )}
+            {showRecurrence && <RecurrencePicker value={recurrence} onChange={setRecurrence} />}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setOpen(false)}
-            >
+            <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" size="sm" disabled={createMutation.isPending}>

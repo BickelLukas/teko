@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { RRule } from "rrule";
 import {
   computeNextDueAt,
   computeTaskState,
@@ -25,25 +24,41 @@ const YEARLY = "RRULE:FREQ=YEARLY";
 describe("computeNextDueAt", () => {
   describe("fixed mode", () => {
     it("rent: completed mid-month → next 1st", () => {
-      const task = { recurrence_rule: MONTHLY_1ST, recurrence_mode: "fixed" as const, next_due_at: utc(2024, 2, 1) };
+      const task = {
+        recurrence_rule: MONTHLY_1ST,
+        recurrence_mode: "fixed" as const,
+        next_due_at: utc(2024, 2, 1),
+      };
       const result = computeNextDueAt(task, utc(2024, 2, 15), utc(2024, 2, 15));
       expect(result).toEqual(utc(2024, 3, 1));
     });
 
     it("rent: completed on due date → next month", () => {
-      const task = { recurrence_rule: MONTHLY_1ST, recurrence_mode: "fixed" as const, next_due_at: utc(2024, 2, 1) };
+      const task = {
+        recurrence_rule: MONTHLY_1ST,
+        recurrence_mode: "fixed" as const,
+        next_due_at: utc(2024, 2, 1),
+      };
       const result = computeNextDueAt(task, utc(2024, 2, 1), utc(2024, 2, 1));
       expect(result).toEqual(utc(2024, 3, 1));
     });
 
     it("creation (null lastCompletedAt): now before due → returns current month's 1st if upcoming", () => {
-      const task = { recurrence_rule: MONTHLY_1ST, recurrence_mode: "fixed" as const, next_due_at: null };
+      const task = {
+        recurrence_rule: MONTHLY_1ST,
+        recurrence_mode: "fixed" as const,
+        next_due_at: null,
+      };
       const result = computeNextDueAt(task, null, utc(2024, 2, 5));
       expect(result).toEqual(utc(2024, 3, 1));
     });
 
     it("creation: now IS the 1st → returns today (inclusive)", () => {
-      const task = { recurrence_rule: MONTHLY_1ST, recurrence_mode: "fixed" as const, next_due_at: null };
+      const task = {
+        recurrence_rule: MONTHLY_1ST,
+        recurrence_mode: "fixed" as const,
+        next_due_at: null,
+      };
       const result = computeNextDueAt(task, null, utc(2024, 3, 1));
       expect(result).toEqual(utc(2024, 3, 1));
     });
@@ -51,7 +66,11 @@ describe("computeNextDueAt", () => {
     it("weekly: finds next pattern occurrence (not +7 days)", () => {
       // WEEKLY_7 dtstart is Jan 3, 2000 (Monday). Occurrences are every Monday.
       // Jan 3, 2024 is a Wednesday; next Monday is Jan 8.
-      const task = { recurrence_rule: WEEKLY_7, recurrence_mode: "fixed" as const, next_due_at: utc(2024, 1, 8) };
+      const task = {
+        recurrence_rule: WEEKLY_7,
+        recurrence_mode: "fixed" as const,
+        next_due_at: utc(2024, 1, 8),
+      };
       const result = computeNextDueAt(task, utc(2024, 1, 8), utc(2024, 1, 8));
       expect(result).toEqual(utc(2024, 1, 15));
     });
@@ -59,37 +78,61 @@ describe("computeNextDueAt", () => {
 
   describe("after_completion mode", () => {
     it("vacuum: 7 days after completion", () => {
-      const task = { recurrence_rule: WEEKLY_7, recurrence_mode: "after_completion" as const, next_due_at: utc(2024, 1, 1) };
+      const task = {
+        recurrence_rule: WEEKLY_7,
+        recurrence_mode: "after_completion" as const,
+        next_due_at: utc(2024, 1, 1),
+      };
       const result = computeNextDueAt(task, utc(2024, 1, 1), utc(2024, 1, 1));
       expect(result).toEqual(utc(2024, 1, 8));
     });
 
     it("bushes: 6 months after completion", () => {
-      const task = { recurrence_rule: MONTHLY_6, recurrence_mode: "after_completion" as const, next_due_at: utc(2024, 4, 1) };
+      const task = {
+        recurrence_rule: MONTHLY_6,
+        recurrence_mode: "after_completion" as const,
+        next_due_at: utc(2024, 4, 1),
+      };
       const result = computeNextDueAt(task, utc(2024, 10, 15), utc(2024, 10, 15));
       expect(result).toEqual(utc(2025, 4, 15));
     });
 
     it("month-end: Jan 31 + 1 month = Feb 28 (non-leap 2025)", () => {
-      const task = { recurrence_rule: "RRULE:FREQ=MONTHLY;INTERVAL=1", recurrence_mode: "after_completion" as const, next_due_at: null };
+      const task = {
+        recurrence_rule: "RRULE:FREQ=MONTHLY;INTERVAL=1",
+        recurrence_mode: "after_completion" as const,
+        next_due_at: null,
+      };
       const result = computeNextDueAt(task, utc(2025, 1, 31), utc(2025, 1, 31));
       expect(result).toEqual(utc(2025, 2, 28));
     });
 
     it("month-end: Jan 31 + 1 month = Feb 29 (leap 2024)", () => {
-      const task = { recurrence_rule: "RRULE:FREQ=MONTHLY;INTERVAL=1", recurrence_mode: "after_completion" as const, next_due_at: null };
+      const task = {
+        recurrence_rule: "RRULE:FREQ=MONTHLY;INTERVAL=1",
+        recurrence_mode: "after_completion" as const,
+        next_due_at: null,
+      };
       const result = computeNextDueAt(task, utc(2024, 1, 31), utc(2024, 1, 31));
       expect(result).toEqual(utc(2024, 2, 29));
     });
 
     it("creation (null lastCompletedAt): first due = now + interval", () => {
-      const task = { recurrence_rule: WEEKLY_7, recurrence_mode: "after_completion" as const, next_due_at: null };
+      const task = {
+        recurrence_rule: WEEKLY_7,
+        recurrence_mode: "after_completion" as const,
+        next_due_at: null,
+      };
       const result = computeNextDueAt(task, null, utc(2024, 1, 1));
       expect(result).toEqual(utc(2024, 1, 8));
     });
 
     it("yearly after completion", () => {
-      const task = { recurrence_rule: YEARLY, recurrence_mode: "after_completion" as const, next_due_at: null };
+      const task = {
+        recurrence_rule: YEARLY,
+        recurrence_mode: "after_completion" as const,
+        next_due_at: null,
+      };
       const result = computeNextDueAt(task, utc(2024, 3, 15), utc(2024, 3, 15));
       expect(result).toEqual(utc(2025, 3, 15));
     });
@@ -244,10 +287,13 @@ describe("isWithinCompletionWindow", () => {
 describe("suggestCompletionWindow", () => {
   it("daily → 0", () => expect(suggestCompletionWindow(DAILY)).toBe(0));
   it("weekly → 1", () => expect(suggestCompletionWindow("RRULE:FREQ=WEEKLY")).toBe(1));
-  it("every 2 weeks → 2", () => expect(suggestCompletionWindow("RRULE:FREQ=WEEKLY;INTERVAL=2")).toBe(2));
+  it("every 2 weeks → 2", () =>
+    expect(suggestCompletionWindow("RRULE:FREQ=WEEKLY;INTERVAL=2")).toBe(2));
   it("monthly → 7", () => expect(suggestCompletionWindow("RRULE:FREQ=MONTHLY")).toBe(7));
-  it("every 3 months → 14", () => expect(suggestCompletionWindow("RRULE:FREQ=MONTHLY;INTERVAL=3")).toBe(14));
-  it("every 6 months → 30", () => expect(suggestCompletionWindow("RRULE:FREQ=MONTHLY;INTERVAL=6")).toBe(30));
+  it("every 3 months → 14", () =>
+    expect(suggestCompletionWindow("RRULE:FREQ=MONTHLY;INTERVAL=3")).toBe(14));
+  it("every 6 months → 30", () =>
+    expect(suggestCompletionWindow("RRULE:FREQ=MONTHLY;INTERVAL=6")).toBe(30));
   it("yearly → 30", () => expect(suggestCompletionWindow(YEARLY)).toBe(30));
 });
 

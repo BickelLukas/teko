@@ -37,10 +37,7 @@ function bucketTasks(tasks: TaskResponse[], now: Date): Sections {
     } else if (t.state === "planned") {
       if (plannedFor && isSameDay(plannedFor, now)) {
         todayTasks.push(t);
-      } else if (
-        plannedFor &&
-        isWithinInterval(plannedFor, { start: today, end: inTwoDays })
-      ) {
+      } else if (plannedFor && isWithinInterval(plannedFor, { start: today, end: inTwoDays })) {
         comingUp.push(t);
       } else {
         // Planned further out — treat as eligible
@@ -113,17 +110,11 @@ export function TodayPage() {
 
       {/* Overdue */}
       {sections.overdue.length > 0 && (
-        <Section
-          title="Overdue"
-          accent="text-destructive"
-          tasks={sections.overdue}
-        />
+        <Section title="Overdue" accent="text-destructive" tasks={sections.overdue} />
       )}
 
       {/* Today */}
-      {sections.today.length > 0 && (
-        <Section title="Today" tasks={sections.today} />
-      )}
+      {sections.today.length > 0 && <Section title="Today" tasks={sections.today} />}
 
       {/* Eligible this period */}
       {sections.eligible.length > 0 && (
@@ -176,9 +167,7 @@ function Section({
         >
           {title}
         </h2>
-        {subtitle && (
-          <p className="text-xs text-muted-foreground/50">{subtitle}</p>
-        )}
+        {subtitle && <p className="text-xs text-muted-foreground/50">{subtitle}</p>}
       </div>
       <ul className="space-y-2">
         {tasks.map((t) => (

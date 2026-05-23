@@ -153,8 +153,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     }
 
     // null means unassigned; undefined means default to current user
-    const resolvedAssignee =
-      assignee_id === null ? null : (assignee_id ?? request.user.id);
+    const resolvedAssignee = assignee_id === null ? null : (assignee_id ?? request.user.id);
 
     db.insert(schema.tasks)
       .values({
@@ -305,7 +304,10 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const newState = computeTaskState({ ...task, planned_for: null }, now);
     const state = newState === "archived" || newState === "done" ? task.state : newState;
 
-    db.update(schema.tasks).set({ planned_for: null, state }).where(eq(schema.tasks.id, task.id)).run();
+    db.update(schema.tasks)
+      .set({ planned_for: null, state })
+      .where(eq(schema.tasks.id, task.id))
+      .run();
 
     return reply.code(204).send();
   });

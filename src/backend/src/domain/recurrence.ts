@@ -47,7 +47,13 @@ export function computeWindowEnd(nextDueAt: Date, windowDays: number): Date {
 
 // ── Domain types ──────────────────────────────────────────────────────────────
 
-export type ComputedTaskState = "not_yet" | "eligible" | "planned" | "overdue" | "done" | "archived";
+export type ComputedTaskState =
+  | "not_yet"
+  | "eligible"
+  | "planned"
+  | "overdue"
+  | "done"
+  | "archived";
 
 type TaskForNextDue = {
   recurrence_rule: string | null;
@@ -150,6 +156,7 @@ export function isWithinCompletionWindow(task: TaskForWindow, completedAt: Date)
 export function describeRecurrence(
   ruleStr: string,
   mode: "fixed" | "after_completion",
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _locale: string,
 ): string {
   const rule = parseRuleWithEarlyDtstart(ruleStr);

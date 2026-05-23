@@ -71,10 +71,7 @@ export function SettingsPage() {
             <p className="text-xs text-muted-foreground">{me?.ha_user_id}</p>
           </div>
 
-          <form
-            onSubmit={handleSubmit((data) => saveMutation.mutate(data))}
-            className="space-y-4"
-          >
+          <form onSubmit={handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
             <div>
               <label className="mb-1 block text-xs font-medium">
                 Display name
@@ -106,9 +103,7 @@ export function SettingsPage() {
               </label>
               <Input placeholder="08:00" {...register("notification_time")} />
               {errors.notification_time && (
-                <p className="mt-1 text-xs text-destructive">
-                  {errors.notification_time.message}
-                </p>
+                <p className="mt-1 text-xs text-destructive">{errors.notification_time.message}</p>
               )}
             </div>
 
@@ -116,9 +111,7 @@ export function SettingsPage() {
               <Button type="submit" size="sm" disabled={saveMutation.isPending}>
                 {saveMutation.isPending ? "Saving…" : "Save"}
               </Button>
-              {saveMutation.isSuccess && (
-                <p className="text-xs text-muted-foreground">Saved.</p>
-              )}
+              {saveMutation.isSuccess && <p className="text-xs text-muted-foreground">Saved.</p>}
             </div>
           </form>
         </CardContent>

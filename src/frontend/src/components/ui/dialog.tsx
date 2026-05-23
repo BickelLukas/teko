@@ -60,10 +60,7 @@ function DialogDescription({
   ...props
 }: React.ComponentProps<typeof Dialog.Description>) {
   return (
-    <Dialog.Description
-      className={cn("text-sm text-muted-foreground", className)}
-      {...props}
-    />
+    <Dialog.Description className={cn("text-sm text-muted-foreground", className)} {...props} />
   );
 }
 

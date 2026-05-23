@@ -62,13 +62,7 @@ function StateBadge({ task }: { task: TaskResponse }) {
 
 // ── Snooze/schedule panel ─────────────────────────────────────────────────────
 
-function SchedulePanel({
-  task,
-  onDone,
-}: {
-  task: TaskResponse;
-  onDone: () => void;
-}) {
+function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => void }) {
   const queryClient = useQueryClient();
   const [customDate, setCustomDate] = useState("");
 
@@ -175,9 +169,7 @@ export function TaskCard({ task, showAssignee, assigneeName }: TaskCardProps) {
             className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border transition-colors hover:border-primary hover:bg-primary/10 disabled:opacity-50"
             aria-label="Mark done"
           >
-            {completeMutation.isPending && (
-              <IconCheck className="size-3 text-primary/50" />
-            )}
+            {completeMutation.isPending && <IconCheck className="size-3 text-primary/50" />}
           </button>
 
           <div className="min-w-0 flex-1">
@@ -254,9 +246,7 @@ export function TaskCard({ task, showAssignee, assigneeName }: TaskCardProps) {
               </DropdownMenuRoot>
             </div>
 
-            {showSchedule && (
-              <SchedulePanel task={task} onDone={() => setShowSchedule(false)} />
-            )}
+            {showSchedule && <SchedulePanel task={task} onDone={() => setShowSchedule(false)} />}
           </div>
         </div>
       </CardContent>

@@ -33,8 +33,7 @@ export function AllTasksPage() {
   });
 
   const sorted = [...tasks].sort(
-    (a: TaskResponse, b: TaskResponse) =>
-      (STATE_ORDER[a.state] ?? 9) - (STATE_ORDER[b.state] ?? 9),
+    (a: TaskResponse, b: TaskResponse) => (STATE_ORDER[a.state] ?? 9) - (STATE_ORDER[b.state] ?? 9),
   );
 
   const displayName = me?.display_name ?? me?.name ?? "Me";

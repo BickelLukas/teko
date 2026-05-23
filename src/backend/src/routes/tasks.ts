@@ -1,14 +1,16 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, and, isNull, ne } from "drizzle-orm";
+import { eq, and, isNull, ne, or } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { RRule } from "rrule";
 import * as schema from "../db/schema.js";
 import {
   CreateTaskBodySchema,
+  UpdateTaskBodySchema,
   CompleteTaskParamsSchema,
   TaskIdParamsSchema,
   ScheduleTaskBodySchema,
   SnoozeTaskBodySchema,
+  GetTasksQuerySchema,
 } from "@teko/shared";
 import {
   computeNextDueAt,
@@ -24,42 +26,84 @@ function normalizeRrule(ruleStr: string, dtstart: Date): string {
   return new RRule({ ...parsed.origOptions, dtstart }).toString();
 }
 
+function taskToResponse(t: typeof schema.tasks.$inferSelect, now: Date) {
+  return {
+    id: t.id,
+    title: t.title,
+    description: t.description,
+    assignee_id: t.assignee_id,
+    parent_id: t.parent_id,
+    state: computeTaskState(t, now),
+    created_at: t.created_at,
+    created_by: t.created_by,
+    points: t.points,
+    tags: t.tags,
+    recurrence_rule: t.recurrence_rule,
+    recurrence_mode: t.recurrence_mode,
+    completion_window_days: t.completion_window_days,
+    next_due_at: t.next_due_at,
+    planned_for: t.planned_for,
+  };
+}
+
 const tasks: FastifyPluginAsync = async (fastify) => {
   const db = fastify.db;
 
   // ── GET /api/tasks ────────────────────────────────────────────────────────
+  // ?assignee=mine (default) | me | unassigned | all | <uuid>
 
-  fastify.get("/api/tasks", async (request) => {
-    const rows = db
-      .select()
-      .from(schema.tasks)
-      .where(
-        and(
-          eq(schema.tasks.assignee_id, request.user.id),
-          isNull(schema.tasks.archived_at),
-          ne(schema.tasks.state, "done"),
-        ),
-      )
-      .all();
+  fastify.get("/api/tasks", async (request, reply) => {
+    const query = GetTasksQuerySchema.safeParse(request.query);
+    if (!query.success) {
+      const hasParams =
+        typeof request.query === "object" &&
+        request.query !== null &&
+        Object.keys(request.query as object).length > 0;
+      if (hasParams) {
+        return reply.code(400).send({ error: "Invalid query", details: query.error.flatten() });
+      }
+    }
+    const assignee = query.success ? (query.data.assignee ?? "mine") : "mine";
+
+    const baseWhere = and(isNull(schema.tasks.archived_at), ne(schema.tasks.state, "done"));
+
+    let rows;
+    if (assignee === "mine") {
+      rows = db
+        .select()
+        .from(schema.tasks)
+        .where(
+          and(
+            baseWhere,
+            or(eq(schema.tasks.assignee_id, request.user.id), isNull(schema.tasks.assignee_id)),
+          ),
+        )
+        .all();
+    } else if (assignee === "me") {
+      rows = db
+        .select()
+        .from(schema.tasks)
+        .where(and(baseWhere, eq(schema.tasks.assignee_id, request.user.id)))
+        .all();
+    } else if (assignee === "unassigned") {
+      rows = db
+        .select()
+        .from(schema.tasks)
+        .where(and(baseWhere, isNull(schema.tasks.assignee_id)))
+        .all();
+    } else if (assignee === "all") {
+      rows = db.select().from(schema.tasks).where(baseWhere).all();
+    } else {
+      // UUID — specific user
+      rows = db
+        .select()
+        .from(schema.tasks)
+        .where(and(baseWhere, eq(schema.tasks.assignee_id, assignee)))
+        .all();
+    }
 
     const now = new Date();
-    return rows.map((t) => ({
-      id: t.id,
-      title: t.title,
-      description: t.description,
-      assignee_id: t.assignee_id,
-      parent_id: t.parent_id,
-      state: computeTaskState(t, now),
-      created_at: t.created_at,
-      created_by: t.created_by,
-      points: t.points,
-      tags: t.tags,
-      recurrence_rule: t.recurrence_rule,
-      recurrence_mode: t.recurrence_mode,
-      completion_window_days: t.completion_window_days,
-      next_due_at: t.next_due_at,
-      planned_for: t.planned_for,
-    }));
+    return rows.map((t) => taskToResponse(t, now));
   });
 
   // ── POST /api/tasks ───────────────────────────────────────────────────────
@@ -108,12 +152,16 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       initialState = computed === "not_yet" ? "not_yet" : "eligible";
     }
 
+    // null means unassigned; undefined means default to current user
+    const resolvedAssignee =
+      assignee_id === null ? null : (assignee_id ?? request.user.id);
+
     db.insert(schema.tasks)
       .values({
         id,
         title,
         description: description ?? null,
-        assignee_id: assignee_id ?? request.user.id,
+        assignee_id: resolvedAssignee,
         created_by: request.user.id,
         state: initialState,
         recurrence_rule: normalizedRule,
@@ -126,23 +174,37 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, id)).get();
     if (!task) return reply.code(500).send({ error: "Failed to retrieve created task" });
 
-    return reply.code(201).send({
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      assignee_id: task.assignee_id,
-      parent_id: task.parent_id,
-      state: task.state,
-      created_at: task.created_at,
-      created_by: task.created_by,
-      points: task.points,
-      tags: task.tags,
-      recurrence_rule: task.recurrence_rule,
-      recurrence_mode: task.recurrence_mode,
-      completion_window_days: task.completion_window_days,
-      next_due_at: task.next_due_at,
-      planned_for: task.planned_for,
-    });
+    return reply.code(201).send(taskToResponse(task, new Date()));
+  });
+
+  // ── PATCH /api/tasks/:id ──────────────────────────────────────────────────
+
+  fastify.patch("/api/tasks/:id", async (request, reply) => {
+    const params = TaskIdParamsSchema.safeParse(request.params);
+    if (!params.success) return reply.code(400).send({ error: params.error.flatten() });
+
+    const body = UpdateTaskBodySchema.safeParse(request.body);
+    if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
+
+    const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, params.data.id)).get();
+    if (!task) return reply.code(404).send({ error: "Task not found" });
+    if (task.archived_at !== null) return reply.code(409).send({ error: "Task is archived" });
+
+    const updates: Partial<typeof schema.tasks.$inferInsert> = {};
+    if (body.data.title !== undefined) updates.title = body.data.title;
+    if (body.data.description !== undefined) updates.description = body.data.description;
+    if ("assignee_id" in body.data) updates.assignee_id = body.data.assignee_id ?? null;
+
+    if (Object.keys(updates).length === 0) {
+      return reply.code(200).send(taskToResponse(task, new Date()));
+    }
+
+    db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, task.id)).run();
+
+    const updated = db.select().from(schema.tasks).where(eq(schema.tasks.id, task.id)).get();
+    if (!updated) return reply.code(500).send({ error: "Failed to retrieve updated task" });
+
+    return reply.code(200).send(taskToResponse(updated, new Date()));
   });
 
   // ── POST /api/tasks/:id/complete ──────────────────────────────────────────

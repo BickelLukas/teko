@@ -1,10 +1,11 @@
-import { loadConfig } from "./config";
-import { createDb } from "./db/client";
-import * as schema from "./db/schema";
-import { eq } from "drizzle-orm";
+import { loadConfig } from "./config.js";
+import { createDb } from "./db/client.js";
+import * as schema from "./db/schema.js";
+import { eq, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
+import { addDays, subDays, startOfMonth, addMonths } from "date-fns";
 
 const config = loadConfig();
 
@@ -15,55 +16,265 @@ if (!fs.existsSync(dataDir)) {
 
 const { db } = createDb(config.dbPath);
 
-// Provision or find Alice
-let alice = db.select().from(schema.users).where(eq(schema.users.ha_user_id, "dev-alice")).get();
+// ── Reset all seed data ───────────────────────────────────────────────────────
+// Idempotent: delete everything tied to seed ha_user_ids and recreate.
 
-if (!alice) {
-  const id = randomUUID();
-  db.insert(schema.users)
-    .values({ id, ha_user_id: "dev-alice", name: "Alice", is_admin: true })
-    .run();
-  alice = db.select().from(schema.users).where(eq(schema.users.ha_user_id, "dev-alice")).get();
-  if (!alice) {
-    console.error("Failed to create/find user dev-alice after insert");
-    process.exit(1);
-  }
-  console.log("Created user: Alice (dev-alice)");
-} else {
-  console.log("User Alice already exists, skipping.");
-}
+const SEED_HA_IDS = ["dev-alice", "dev-bob", "dev-charlie"];
 
-// Seed tasks only if none exist for Alice
-const existing = db.select().from(schema.tasks).where(eq(schema.tasks.created_by, alice.id)).all();
+const existingUsers = db
+  .select()
+  .from(schema.users)
+  .where(inArray(schema.users.ha_user_id, SEED_HA_IDS))
+  .all();
 
-if (existing.length === 0) {
-  const taskData = [
-    {
-      title: "Take out the trash",
-      description: "Kitchen and bathroom bins",
-    },
-    { title: "Do the laundry", description: null },
-    {
-      title: "Vacuum the living room",
-      description: "Including under the couch",
-    },
-  ] as const;
-
-  for (const t of taskData) {
-    db.insert(schema.tasks)
-      .values({
-        id: randomUUID(),
-        title: t.title,
-        description: t.description,
-        assignee_id: alice.id,
-        created_by: alice.id,
-        state: "eligible",
-      })
+if (existingUsers.length > 0) {
+  const existingIds = existingUsers.map((u) => u.id);
+  // Delete completions for tasks created by seed users
+  const seedTasks = db
+    .select({ id: schema.tasks.id })
+    .from(schema.tasks)
+    .where(inArray(schema.tasks.created_by, existingIds))
+    .all();
+  if (seedTasks.length > 0) {
+    db.delete(schema.completions)
+      .where(inArray(schema.completions.task_id, seedTasks.map((t) => t.id)))
       .run();
   }
-  console.log(`Created ${taskData.length} sample tasks.`);
-} else {
-  console.log(`${existing.length} tasks already exist, skipping.`);
+  db.delete(schema.tasks).where(inArray(schema.tasks.created_by, existingIds)).run();
+  db.delete(schema.users).where(inArray(schema.users.ha_user_id, SEED_HA_IDS)).run();
+  console.log("Cleared existing seed data.");
 }
 
+// ── Create users ─────────────────────────────────────────────────────────────
+
+const aliceId = randomUUID();
+const bobId = randomUUID();
+const charlieId = randomUUID();
+
+db.insert(schema.users)
+  .values([
+    {
+      id: aliceId,
+      ha_user_id: "dev-alice",
+      name: "Alice",
+      display_name: null,
+      locale: "en",
+      is_admin: true,
+      is_active: true,
+    },
+    {
+      id: bobId,
+      ha_user_id: "dev-bob",
+      name: "Bob",
+      display_name: null,
+      locale: "en",
+      is_admin: false,
+      is_active: true,
+    },
+    {
+      id: charlieId,
+      ha_user_id: "dev-charlie",
+      name: "Charlie",
+      display_name: null,
+      locale: "de",
+      is_admin: false,
+      is_active: true,
+    },
+  ])
+  .run();
+
+console.log("Created users: Alice (dev-alice), Bob (dev-bob), Charlie (dev-charlie)");
+
+// ── Seed tasks ────────────────────────────────────────────────────────────────
+
+const now = new Date();
+const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+// Recurring chores
+
+// Trash every 7 days — unassigned, eligible now
+db.insert(schema.tasks)
+  .values({
+    id: randomUUID(),
+    title: "Take out the trash",
+    description: "Kitchen and bathroom bins",
+    assignee_id: null,
+    created_by: aliceId,
+    state: "eligible",
+    recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
+    recurrence_mode: "after_completion",
+    completion_window_days: 2,
+    next_due_at: today,
+    points: 1,
+  })
+  .run();
+
+// Rent on the 1st of each month — assigned to Alice, not_yet unless today is near the 1st
+const nextFirst = startOfMonth(addMonths(today, 1));
+const prevFirst = startOfMonth(today);
+const rentDue = today.getDate() <= 3 ? prevFirst : nextFirst;
+const rentState = rentDue <= today ? "eligible" : "not_yet";
+db.insert(schema.tasks)
+  .values({
+    id: randomUUID(),
+    title: "Pay rent",
+    description: null,
+    assignee_id: aliceId,
+    created_by: aliceId,
+    state: rentState,
+    recurrence_rule: "FREQ=MONTHLY;BYMONTHDAY=1",
+    recurrence_mode: "fixed",
+    completion_window_days: 3,
+    next_due_at: rentDue,
+    points: 2,
+  })
+  .run();
+
+// Trim the bushes every 6 months — assigned to Bob
+const bushesLastDone = subDays(today, 170);
+const bushesDue = addDays(bushesLastDone, 180);
+const bushesState = bushesDue <= today ? "eligible" : "not_yet";
+db.insert(schema.tasks)
+  .values({
+    id: randomUUID(),
+    title: "Trim the bushes",
+    description: "Front garden and backyard hedges",
+    assignee_id: bobId,
+    created_by: aliceId,
+    state: bushesState,
+    recurrence_rule: "FREQ=MONTHLY;INTERVAL=6",
+    recurrence_mode: "after_completion",
+    completion_window_days: 14,
+    next_due_at: bushesDue,
+    points: 3,
+  })
+  .run();
+
+// Weekly vacuuming — assigned to Charlie, overdue (due 3 days ago)
+db.insert(schema.tasks)
+  .values({
+    id: randomUUID(),
+    title: "Vacuum the living room",
+    description: "Including under the couch",
+    assignee_id: charlieId,
+    created_by: aliceId,
+    state: "overdue",
+    recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
+    recurrence_mode: "after_completion",
+    completion_window_days: 2,
+    next_due_at: subDays(today, 3),
+    points: 1,
+  })
+  .run();
+
+// Dishwasher filter cleaning every 4 weeks — unassigned, eligible
+db.insert(schema.tasks)
+  .values({
+    id: randomUUID(),
+    title: "Clean the dishwasher filter",
+    description: null,
+    assignee_id: null,
+    created_by: bobId,
+    state: "eligible",
+    recurrence_rule: "FREQ=WEEKLY;INTERVAL=4",
+    recurrence_mode: "after_completion",
+    completion_window_days: 5,
+    next_due_at: subDays(today, 1),
+    points: 1,
+  })
+  .run();
+
+// Laundry — assigned to Bob, due today
+db.insert(schema.tasks)
+  .values({
+    id: randomUUID(),
+    title: "Do the laundry",
+    description: null,
+    assignee_id: bobId,
+    created_by: bobId,
+    state: "eligible",
+    recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
+    recurrence_mode: "after_completion",
+    completion_window_days: 1,
+    next_due_at: today,
+    points: 1,
+  })
+  .run();
+
+// Grocery run — unassigned, coming up in 2 days
+db.insert(schema.tasks)
+  .values({
+    id: randomUUID(),
+    title: "Do the grocery run",
+    description: "Check the shared list in the fridge",
+    assignee_id: null,
+    created_by: charlieId,
+    state: "not_yet",
+    recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
+    recurrence_mode: "after_completion",
+    completion_window_days: 2,
+    next_due_at: addDays(today, 2),
+    points: 1,
+  })
+  .run();
+
+// One-off tasks
+
+// Alice: call the plumber — overdue
+db.insert(schema.tasks)
+  .values({
+    id: randomUUID(),
+    title: "Call the plumber about the kitchen tap",
+    description: null,
+    assignee_id: aliceId,
+    created_by: aliceId,
+    state: "overdue",
+    next_due_at: subDays(today, 2),
+    points: null,
+  })
+  .run();
+
+// Bob: pick up dry cleaning — due today
+db.insert(schema.tasks)
+  .values({
+    id: randomUUID(),
+    title: "Pick up dry cleaning",
+    description: null,
+    assignee_id: bobId,
+    created_by: bobId,
+    state: "eligible",
+    next_due_at: today,
+    points: null,
+  })
+  .run();
+
+// Charlie: schedule car service — coming up
+db.insert(schema.tasks)
+  .values({
+    id: randomUUID(),
+    title: "Book car service appointment",
+    description: null,
+    assignee_id: charlieId,
+    created_by: charlieId,
+    state: "not_yet",
+    next_due_at: addDays(today, 5),
+    points: null,
+  })
+  .run();
+
+// Unassigned: replace smoke detector batteries
+db.insert(schema.tasks)
+  .values({
+    id: randomUUID(),
+    title: "Replace smoke detector batteries",
+    description: "All rooms",
+    assignee_id: null,
+    created_by: aliceId,
+    state: "eligible",
+    next_due_at: subDays(today, 1),
+    points: 1,
+  })
+  .run();
+
+console.log("Created 11 seed tasks across all users.");
 console.log("Seed complete.");

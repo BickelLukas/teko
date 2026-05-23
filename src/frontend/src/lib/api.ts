@@ -1,0 +1,140 @@
+import type {
+  TaskListResponse,
+  TaskResponse,
+  UserResponse,
+  TodayStats,
+  DevUser,
+  CreateTaskBody,
+  UpdateTaskBody,
+} from "@teko/shared";
+
+// Tracks whether the backend reported dev mode via response header.
+// Set on first response that carries X-Teko-Dev-Mode: true.
+let _devModeActive = false;
+const _devModeListeners: Array<(active: boolean) => void> = [];
+
+export function isDevModeActive(): boolean {
+  return _devModeActive;
+}
+
+export function onDevModeChange(cb: (active: boolean) => void): () => void {
+  _devModeListeners.push(cb);
+  return () => {
+    const idx = _devModeListeners.indexOf(cb);
+    if (idx !== -1) _devModeListeners.splice(idx, 1);
+  };
+}
+
+async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(input, init);
+  const devModeHeader = res.headers.get("X-Teko-Dev-Mode");
+  if (devModeHeader?.toLowerCase() === "true" && !_devModeActive) {
+    _devModeActive = true;
+    _devModeListeners.forEach((cb) => cb(true));
+  }
+  return res;
+}
+
+async function json<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+
+export async function fetchTasks(assignee?: string): Promise<TaskListResponse> {
+  const params = assignee ? `?assignee=${encodeURIComponent(assignee)}` : "";
+  return json(await apiFetch(`/api/tasks${params}`));
+}
+
+export async function createTask(body: CreateTaskBody): Promise<TaskResponse> {
+  return json(
+    await apiFetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+export async function updateTask(id: string, body: UpdateTaskBody): Promise<TaskResponse> {
+  return json(
+    await apiFetch(`/api/tasks/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+async function throwIfNotOk(res: Response): Promise<void> {
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status}: ${body}`);
+  }
+}
+
+export async function completeTask(id: string): Promise<void> {
+  await throwIfNotOk(await apiFetch(`/api/tasks/${id}/complete`, { method: "POST" }));
+}
+
+export async function scheduleTask(id: string, plannedFor: Date): Promise<void> {
+  await throwIfNotOk(
+    await apiFetch(`/api/tasks/${id}/schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planned_for: plannedFor.toISOString() }),
+    }),
+  );
+}
+
+export async function snoozeTask(id: string, until: Date): Promise<void> {
+  await throwIfNotOk(
+    await apiFetch(`/api/tasks/${id}/snooze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ until: until.toISOString() }),
+    }),
+  );
+}
+
+// ── Me ────────────────────────────────────────────────────────────────────────
+
+export async function fetchMe(): Promise<UserResponse> {
+  return json(await apiFetch("/api/me"));
+}
+
+export async function updatePreferences(
+  prefs: Partial<{ locale: string; notification_time: string | null; display_name: string | null }>,
+): Promise<UserResponse> {
+  return json(
+    await apiFetch("/api/me/preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(prefs),
+    }),
+  );
+}
+
+export async function fetchTodayStats(): Promise<TodayStats> {
+  return json(await apiFetch("/api/me/today-stats"));
+}
+
+// ── Dev ───────────────────────────────────────────────────────────────────────
+
+export async function fetchDevUsers(): Promise<DevUser[]> {
+  return json(await apiFetch("/api/_dev/users"));
+}
+
+export async function switchDevUser(ha_user_id: string): Promise<DevUser> {
+  return json(
+    await apiFetch("/api/_dev/switch-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ha_user_id }),
+    }),
+  );
+}

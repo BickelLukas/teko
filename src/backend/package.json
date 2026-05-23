@@ -11,6 +11,7 @@
     "seed": "tsx --env-file=../../.env src/seed.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.0.2",
     "@teko/shared": "workspace:^",
     "better-sqlite3": "^12.10.0",
     "date-fns": "^4.2.1",

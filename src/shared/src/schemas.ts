@@ -23,6 +23,25 @@ export const UserSchema = z.object({
 });
 export type User = z.infer<typeof UserSchema>;
 
+export const UserResponseSchema = UserSchema.pick({
+  id: true,
+  ha_user_id: true,
+  name: true,
+  display_name: true,
+  locale: true,
+  notification_time: true,
+  is_admin: true,
+  is_active: true,
+});
+export type UserResponse = z.infer<typeof UserResponseSchema>;
+
+export const UpdatePreferencesBodySchema = z.object({
+  locale: z.string().min(2).optional(),
+  notification_time: z.string().nullable().optional(),
+  display_name: z.string().nullable().optional(),
+});
+export type UpdatePreferencesBody = z.infer<typeof UpdatePreferencesBodySchema>;
+
 // ── Task ─────────────────────────────────────────────────────────────────────
 
 export const TaskSchema = z.object({
@@ -71,12 +90,19 @@ export type TaskIdParams = z.infer<typeof TaskIdParamsSchema>;
 export const CreateTaskBodySchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  assignee_id: z.string().uuid().optional(),
+  assignee_id: z.string().uuid().nullable().optional(),
   recurrence_rule: z.string().optional(),
   recurrence_mode: RecurrenceModeSchema.optional(),
   completion_window_days: z.number().int().nonnegative().optional(),
 });
 export type CreateTaskBody = z.infer<typeof CreateTaskBodySchema>;
+
+export const UpdateTaskBodySchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+  assignee_id: z.string().uuid().nullable().optional(),
+});
+export type UpdateTaskBody = z.infer<typeof UpdateTaskBodySchema>;
 
 export const CompleteTaskParamsSchema = z.object({
   id: z.string().uuid("Invalid task ID"),
@@ -92,6 +118,27 @@ export const SnoozeTaskBodySchema = z.object({
   until: z.string().datetime({ message: "until must be an ISO datetime" }),
 });
 export type SnoozeTaskBody = z.infer<typeof SnoozeTaskBodySchema>;
+
+export const GetTasksQuerySchema = z.object({
+  assignee: z.enum(["mine", "me", "unassigned", "all"]).or(z.string().uuid()).optional(),
+});
+export type GetTasksQuery = z.infer<typeof GetTasksQuerySchema>;
+
+// ── Dev endpoints ─────────────────────────────────────────────────────────────
+
+export const SwitchUserBodySchema = z.object({
+  ha_user_id: z.string().min(1),
+});
+export type SwitchUserBody = z.infer<typeof SwitchUserBodySchema>;
+
+export const DevUserSchema = z.object({
+  id: z.string().uuid(),
+  ha_user_id: z.string(),
+  name: z.string(),
+  locale: z.string(),
+  is_admin: z.boolean(),
+});
+export type DevUser = z.infer<typeof DevUserSchema>;
 
 // ── API response schemas ──────────────────────────────────────────────────────
 
@@ -116,3 +163,8 @@ export type TaskResponse = z.infer<typeof TaskResponseSchema>;
 
 export const TaskListResponseSchema = z.array(TaskResponseSchema);
 export type TaskListResponse = z.infer<typeof TaskListResponseSchema>;
+
+export const TodayStatsSchema = z.object({
+  completions_today: z.number().int(),
+});
+export type TodayStats = z.infer<typeof TodayStatsSchema>;

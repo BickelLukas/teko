@@ -1,21 +1,31 @@
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import * as schema from "../db/schema";
-import type { Config } from "../config";
-import "../types";
+import * as schema from "../db/schema.js";
+import type { Config } from "../config.js";
+import "../types.js";
 
 export async function registerAuth(fastify: FastifyInstance, config: Config): Promise<void> {
   if (config.devMode) {
-    fastify.addHook("onRequest", async (request) => {
+    fastify.addHook("onRequest", async (request, reply) => {
       const db = fastify.db;
 
+      // Cookie takes precedence; falls back to DEV_USER_ID env var
+      const cookieUserId =
+        "cookies" in request &&
+        typeof (request as { cookies?: Record<string, string> }).cookies === "object"
+          ? (request as { cookies?: Record<string, string> }).cookies?.["dev_user_id"]
+          : undefined;
+
+      const targetHaId = cookieUserId ?? config.devUserId;
+
+      // Auto-provision if missing
       db.insert(schema.users)
         .values({
           id: randomUUID(),
-          ha_user_id: config.devUserId,
-          name: config.devUserName,
-          is_admin: true,
+          ha_user_id: targetHaId,
+          name: targetHaId,
+          is_admin: targetHaId === config.devUserId,
         })
         .onConflictDoNothing({ target: schema.users.ha_user_id })
         .run();
@@ -23,11 +33,12 @@ export async function registerAuth(fastify: FastifyInstance, config: Config): Pr
       const user = db
         .select()
         .from(schema.users)
-        .where(eq(schema.users.ha_user_id, config.devUserId))
+        .where(eq(schema.users.ha_user_id, targetHaId))
         .get();
 
       if (!user) {
-        throw new Error("Dev-mode user provisioning failed");
+        await reply.code(401).send({ error: "Dev user not found: " + targetHaId });
+        return;
       }
 
       request.user = {

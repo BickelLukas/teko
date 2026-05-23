@@ -1,0 +1,1 @@
+ALTER TABLE `tasks` ADD `auto_complete_when_children_done` integer DEFAULT true NOT NULL;

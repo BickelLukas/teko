@@ -46,6 +46,11 @@ export const tasks = sqliteTable("tasks", {
   tags: text("tags"),
   exposed_to_ha: integer("exposed_to_ha", { mode: "boolean" }).notNull().default(false),
   is_household: integer("is_household", { mode: "boolean" }).notNull().default(false),
+  auto_complete_when_children_done: integer("auto_complete_when_children_done", {
+    mode: "boolean",
+  })
+    .notNull()
+    .default(true),
 });
 
 export const completions = sqliteTable("completions", {

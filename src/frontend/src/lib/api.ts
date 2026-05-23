@@ -1,6 +1,7 @@
 import type {
   TaskListResponse,
   TaskResponse,
+  ProjectListResponse,
   UserResponse,
   TodayStats,
   DevUser,
@@ -43,11 +44,24 @@ async function json<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function throwIfNotOk(res: Response): Promise<void> {
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status}: ${body}`);
+  }
+}
+
 // ── Tasks ─────────────────────────────────────────────────────────────────────
 
-export async function fetchTasks(assignee?: string): Promise<TaskListResponse> {
-  const params = assignee ? `?assignee=${encodeURIComponent(assignee)}` : "";
-  return json(await apiFetch(`/api/tasks${params}`));
+export async function fetchTasks(
+  assignee?: string,
+  scope?: "leaves" | "all" | "top_level",
+): Promise<TaskListResponse> {
+  const params = new URLSearchParams();
+  if (assignee) params.set("assignee", assignee);
+  if (scope) params.set("scope", scope);
+  const qs = params.toString();
+  return json(await apiFetch(`/api/tasks${qs ? `?${qs}` : ""}`));
 }
 
 export async function createTask(body: CreateTaskBody): Promise<TaskResponse> {
@@ -68,13 +82,6 @@ export async function updateTask(id: string, body: UpdateTaskBody): Promise<Task
       body: JSON.stringify(body),
     }),
   );
-}
-
-async function throwIfNotOk(res: Response): Promise<void> {
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`HTTP ${res.status}: ${body}`);
-  }
 }
 
 export async function completeTask(id: string): Promise<void> {
@@ -99,6 +106,29 @@ export async function snoozeTask(id: string, until: Date): Promise<void> {
       body: JSON.stringify({ until: until.toISOString() }),
     }),
   );
+}
+
+export async function archiveTask(id: string): Promise<void> {
+  await throwIfNotOk(await apiFetch(`/api/tasks/${id}/archive`, { method: "POST" }));
+}
+
+export async function unarchiveTask(id: string): Promise<void> {
+  await throwIfNotOk(await apiFetch(`/api/tasks/${id}/unarchive`, { method: "POST" }));
+}
+
+// ── Projects ──────────────────────────────────────────────────────────────────
+
+export async function fetchProjects(assignee?: string): Promise<ProjectListResponse> {
+  const params = assignee ? `?assignee=${encodeURIComponent(assignee)}` : "";
+  return json(await apiFetch(`/api/projects${params}`));
+}
+
+export async function fetchTaskTree(id: string): Promise<TaskListResponse> {
+  return json(await apiFetch(`/api/tasks/${id}/tree`));
+}
+
+export async function fetchTaskChildren(id: string): Promise<TaskListResponse> {
+  return json(await apiFetch(`/api/tasks/${id}/children`));
 }
 
 // ── Me ────────────────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, isPast, addHours, addDays, addWeeks } from "date-fns";
 import { IconCheck, IconDots, IconCalendar, IconZzz } from "@tabler/icons-react";
@@ -136,9 +137,10 @@ type TaskCardProps = {
   task: TaskResponse;
   showAssignee?: boolean;
   assigneeName?: string;
+  breadcrumb?: React.ReactNode;
 };
 
-export function TaskCard({ task, showAssignee, assigneeName }: TaskCardProps) {
+export function TaskCard({ task, showAssignee, assigneeName, breadcrumb }: TaskCardProps) {
   const queryClient = useQueryClient();
   const [showSchedule, setShowSchedule] = useState(false);
 
@@ -183,6 +185,7 @@ export function TaskCard({ task, showAssignee, assigneeName }: TaskCardProps) {
                   <p className="text-xs text-muted-foreground/70">{recurrenceSummary}</p>
                 )}
                 <StateBadge task={task} />
+                {breadcrumb}
                 {showAssignee && (
                   <span className="mt-0.5 inline-block text-xs text-muted-foreground/60">
                     {assigneeName ?? "Unassigned"}

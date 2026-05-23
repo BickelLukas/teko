@@ -4,6 +4,7 @@ import fastifyCookie from "@fastify/cookie";
 import type { Db } from "./db/client.js";
 import health from "./routes/health.js";
 import tasks from "./routes/tasks.js";
+import projects from "./routes/projects.js";
 import me from "./routes/me.js";
 import dev from "./routes/dev.js";
 import { registerAuth } from "./middleware/auth.js";
@@ -32,6 +33,7 @@ export async function buildApp(db: Db, config: Config): Promise<FastifyInstance>
   await registerAuth(fastify, config);
   await fastify.register(health);
   await fastify.register(tasks);
+  await fastify.register(projects);
   await fastify.register(me);
 
   if (config.devMode) {

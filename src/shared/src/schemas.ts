@@ -63,6 +63,7 @@ export const TaskSchema = z.object({
   tags: z.string().nullable(),
   exposed_to_ha: z.boolean(),
   is_household: z.boolean(),
+  auto_complete_when_children_done: z.boolean(),
 });
 export type Task = z.infer<typeof TaskSchema>;
 
@@ -91,6 +92,7 @@ export const CreateTaskBodySchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
+  parent_id: z.string().uuid().nullable().optional(),
   recurrence_rule: z.string().optional(),
   recurrence_mode: RecurrenceModeSchema.optional(),
   completion_window_days: z.number().int().nonnegative().optional(),
@@ -101,6 +103,8 @@ export const UpdateTaskBodySchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
+  parent_id: z.string().uuid().nullable().optional(),
+  auto_complete_when_children_done: z.boolean().optional(),
 });
 export type UpdateTaskBody = z.infer<typeof UpdateTaskBodySchema>;
 
@@ -121,6 +125,7 @@ export type SnoozeTaskBody = z.infer<typeof SnoozeTaskBodySchema>;
 
 export const GetTasksQuerySchema = z.object({
   assignee: z.enum(["mine", "me", "unassigned", "all"]).or(z.string().uuid()).optional(),
+  scope: z.enum(["leaves", "all", "top_level"]).optional(),
 });
 export type GetTasksQuery = z.infer<typeof GetTasksQuerySchema>;
 
@@ -158,11 +163,34 @@ export const TaskResponseSchema = TaskSchema.pick({
   completion_window_days: true,
   next_due_at: true,
   planned_for: true,
+  auto_complete_when_children_done: true,
+  archived_at: true,
+}).extend({
+  child_count: z.number().int().nonnegative(),
+  parent_title: z.string().nullable(),
 });
 export type TaskResponse = z.infer<typeof TaskResponseSchema>;
 
 export const TaskListResponseSchema = z.array(TaskResponseSchema);
 export type TaskListResponse = z.infer<typeof TaskListResponseSchema>;
+
+// ── Project response schemas ──────────────────────────────────────────────────
+
+export const ProjectProgressSchema = z.object({
+  totalLeaves: z.number().int().nonnegative(),
+  completedLeaves: z.number().int().nonnegative(),
+  percent: z.number().int().min(0).max(100),
+});
+export type ProjectProgress = z.infer<typeof ProjectProgressSchema>;
+
+export const ProjectResponseSchema = TaskResponseSchema.extend({
+  progress: ProjectProgressSchema,
+  last_activity_at: z.coerce.date().nullable(),
+});
+export type ProjectResponse = z.infer<typeof ProjectResponseSchema>;
+
+export const ProjectListResponseSchema = z.array(ProjectResponseSchema);
+export type ProjectListResponse = z.infer<typeof ProjectListResponseSchema>;
 
 export const TodayStatsSchema = z.object({
   completions_today: z.number().int(),

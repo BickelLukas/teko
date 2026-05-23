@@ -1,11 +1,12 @@
 import { NavLink } from "react-router-dom";
-import { IconHome, IconRepeat, IconList, IconSettings } from "@tabler/icons-react";
+import { IconHome, IconRepeat, IconList, IconSettings, IconStack2 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { to: "/", label: "Today", icon: IconHome, end: true },
   { to: "/chores", label: "Chores", icon: IconRepeat, end: false },
   { to: "/tasks", label: "All tasks", icon: IconList, end: false },
+  { to: "/projects", label: "Projects", icon: IconStack2, end: false },
   { to: "/settings", label: "Settings", icon: IconSettings, end: false },
 ];
 

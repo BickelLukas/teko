@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceValue } from "@/components/RecurrencePicker";
-import { createTask, fetchDevUsers, fetchMe, isDevModeActive } from "@/lib/api";
+import { createTask, fetchDevUsers, fetchMe, fetchProjects, isDevModeActive } from "@/lib/api";
 
 const FormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -30,10 +30,29 @@ const FormSchema = z.object({
 });
 type FormValues = z.infer<typeof FormSchema>;
 
-export function AddTaskModal() {
+type AddTaskModalProps = {
+  defaultParentId?: string | null;
+  // Controlled mode — when provided, no trigger button is rendered
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+};
+
+export function AddTaskModal({
+  defaultParentId,
+  open: controlledOpen,
+  onOpenChange,
+}: AddTaskModalProps = {}) {
+  const isControlled = controlledOpen !== undefined;
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (v: boolean) => onOpenChange?.(v) : setInternalOpen;
   const [assigneeId, setAssigneeId] = useState<string>("__me__");
+  const [parentId, setParentId] = useState<string>(defaultParentId ?? "__none__");
+
+  useEffect(() => {
+    setParentId(defaultParentId ?? "__none__");
+  }, [defaultParentId]);
   const [recurrence, setRecurrence] = useState<RecurrenceValue>({
     rule: null,
     mode: "fixed",
@@ -49,6 +68,11 @@ export function AddTaskModal() {
     enabled: import.meta.env.DEV && isDevModeActive(),
   });
 
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects", "all"],
+    queryFn: () => fetchProjects("all"),
+  });
+
   const {
     register,
     handleSubmit,
@@ -56,14 +80,24 @@ export function AddTaskModal() {
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(FormSchema) });
 
+  function resetForm() {
+    reset();
+    setAssigneeId("__me__");
+    setParentId(defaultParentId ?? "__none__");
+    setRecurrence({ rule: null, mode: "fixed", windowDays: null });
+    setShowRecurrence(false);
+  }
+
   const createMutation = useMutation({
     mutationFn: (data: FormValues) => {
       const resolvedAssignee =
         assigneeId === "__me__" ? undefined : assigneeId === "__unassigned__" ? null : assigneeId;
+      const resolvedParent = parentId === "__none__" ? undefined : parentId;
       return createTask({
         title: data.title,
         description: data.description,
         assignee_id: resolvedAssignee,
+        parent_id: resolvedParent,
         recurrence_rule: recurrence.rule ?? undefined,
         recurrence_mode: recurrence.rule ? recurrence.mode : undefined,
         completion_window_days: recurrence.windowDays ?? undefined,
@@ -71,22 +105,29 @@ export function AddTaskModal() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      reset();
-      setAssigneeId("__me__");
-      setRecurrence({ rule: null, mode: "fixed", windowDays: null });
-      setShowRecurrence(false);
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: ["task-tree"] });
+      resetForm();
       setOpen(false);
     },
   });
 
   return (
-    <DialogRoot open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <IconPlus className="mr-1 size-4" />
-          Add task
-        </Button>
-      </DialogTrigger>
+    <DialogRoot
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) resetForm();
+      }}
+    >
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button size="sm">
+            <IconPlus className="mr-1 size-4" />
+            Add task
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>New task</DialogTitle>
@@ -127,6 +168,28 @@ export function AddTaskModal() {
                   {devUsers.map((u) => (
                     <SelectItem key={u.id} value={u.id}>
                       {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </SelectRoot>
+            </div>
+          )}
+
+          {/* Part of project — hidden when parent is set by context (controlled mode) */}
+          {!isControlled && projects.length > 0 && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                Part of project (optional)
+              </label>
+              <SelectRoot value={parentId} onValueChange={setParentId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.title}
                     </SelectItem>
                   ))}
                 </SelectContent>

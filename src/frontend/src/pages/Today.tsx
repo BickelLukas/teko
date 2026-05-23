@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { isSameDay, isWithinInterval, addDays, startOfDay } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import { fetchTasks, fetchMe, fetchTodayStats } from "@/lib/api";
 import { TaskCard } from "@/components/TaskCard";
 import { AddTaskModal } from "@/components/AddTaskModal";
@@ -11,7 +12,6 @@ function greeting(name: string): string {
   return `Good ${part}, ${name}`;
 }
 
-// Bucket tasks into the four Today sections
 type Sections = {
   overdue: TaskResponse[];
   today: TaskResponse[];
@@ -40,11 +40,9 @@ function bucketTasks(tasks: TaskResponse[], now: Date): Sections {
       } else if (plannedFor && isWithinInterval(plannedFor, { start: today, end: inTwoDays })) {
         comingUp.push(t);
       } else {
-        // Planned further out — treat as eligible
         eligible.push(t);
       }
     } else if (t.state === "eligible") {
-      // Due today or has no due date → Today section
       if (!nextDue || isSameDay(nextDue, now) || nextDue <= now) {
         todayTasks.push(t);
       } else {
@@ -60,12 +58,31 @@ function bucketTasks(tasks: TaskResponse[], now: Date): Sections {
   return { overdue, today: todayTasks, eligible, comingUp };
 }
 
+// Breadcrumb shown beneath a task title when the task belongs to a project
+function ProjectBreadcrumb({ task }: { task: TaskResponse }) {
+  const navigate = useNavigate();
+  if (!task.parent_id || !task.parent_title) return null;
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        navigate(`/projects/${task.parent_id}`);
+      }}
+      className="mt-0.5 block text-left text-xs text-muted-foreground/70 hover:text-primary"
+    >
+      ↳ {task.parent_title}
+    </button>
+  );
+}
+
 export function TodayPage() {
   const now = new Date();
 
+  // scope=leaves: projects don't appear as line items, only their leaf tasks do
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["tasks", "mine"],
-    queryFn: () => fetchTasks("mine"),
+    queryKey: ["tasks", "mine", "leaves"],
+    queryFn: () => fetchTasks("mine", "leaves"),
   });
 
   const { data: me } = useQuery({
@@ -108,15 +125,12 @@ export function TodayPage() {
         </div>
       )}
 
-      {/* Overdue */}
       {sections.overdue.length > 0 && (
         <Section title="Overdue" accent="text-destructive" tasks={sections.overdue} />
       )}
 
-      {/* Today */}
       {sections.today.length > 0 && <Section title="Today" tasks={sections.today} />}
 
-      {/* Eligible this period */}
       {sections.eligible.length > 0 && (
         <Section
           title="Eligible this period"
@@ -126,12 +140,10 @@ export function TodayPage() {
         />
       )}
 
-      {/* Coming up */}
       {sections.comingUp.length > 0 && (
         <Section title="Coming up" muted tasks={sections.comingUp} />
       )}
 
-      {/* Footer */}
       {stats !== undefined && stats.completions_today > 0 && (
         <p className="pt-2 text-center text-xs text-muted-foreground/60">
           {stats.completions_today === 1
@@ -172,7 +184,7 @@ function Section({
       <ul className="space-y-2">
         {tasks.map((t) => (
           <li key={t.id}>
-            <TaskCard task={t} />
+            <TaskCard task={t} breadcrumb={<ProjectBreadcrumb task={t} />} />
           </li>
         ))}
       </ul>

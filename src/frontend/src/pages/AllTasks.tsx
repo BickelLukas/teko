@@ -24,12 +24,15 @@ const STATE_ORDER: Record<string, number> = {
 
 export function AllTasksPage() {
   const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilter>("all");
+  const [includeProjects, setIncludeProjects] = useState(false);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
 
+  const scope = includeProjects ? "all" : "leaves";
+
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["tasks", assigneeFilter],
-    queryFn: () => fetchTasks(assigneeFilter),
+    queryKey: ["tasks", assigneeFilter, scope],
+    queryFn: () => fetchTasks(assigneeFilter, scope),
   });
 
   const sorted = [...tasks].sort(
@@ -60,6 +63,17 @@ export function AllTasksPage() {
           <AddTaskModal />
         </div>
       </div>
+
+      {/* Include projects toggle */}
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={includeProjects}
+          onChange={(e) => setIncludeProjects(e.target.checked)}
+          className="size-3"
+        />
+        Include projects
+      </label>
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
 

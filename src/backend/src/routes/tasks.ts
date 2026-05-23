@@ -345,6 +345,69 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       updates.parent_id = newParentId;
     }
 
+    const recurrenceRuleChanged = body.data.recurrence_rule !== undefined;
+    const recurrenceModeChanged = body.data.recurrence_mode !== undefined;
+    const windowChanged = body.data.completion_window_days !== undefined;
+
+    if (recurrenceRuleChanged || recurrenceModeChanged) {
+      const newRule: string | null =
+        body.data.recurrence_rule !== undefined ? body.data.recurrence_rule : task.recurrence_rule;
+      const newMode: "fixed" | "after_completion" | null =
+        body.data.recurrence_mode !== undefined ? body.data.recurrence_mode : task.recurrence_mode;
+
+      if (newRule === null || newMode === null) {
+        updates.recurrence_rule = null;
+        updates.recurrence_mode = null;
+        updates.completion_window_days = null;
+        updates.next_due_at = null;
+        if (task.state !== "done") updates.state = "eligible";
+      } else {
+        const now = new Date();
+        const lastCompletion = db
+          .select({ completed_at: schema.completions.completed_at })
+          .from(schema.completions)
+          .where(eq(schema.completions.task_id, task.id))
+          .orderBy(sql`${schema.completions.completed_at} DESC`)
+          .limit(1)
+          .get();
+
+        const anchor =
+          newMode === "after_completion" && lastCompletion ? lastCompletion.completed_at : null;
+        const nextDueAt = computeNextDueAt(
+          { recurrence_rule: newRule, recurrence_mode: newMode, next_due_at: null },
+          anchor,
+          now,
+        );
+        const normalizedRule = normalizeRrule(newRule, nextDueAt ?? now);
+
+        const windowDays: number | null = windowChanged
+          ? (body.data.completion_window_days ?? null)
+          : (task.completion_window_days ?? suggestCompletionWindow(newRule));
+
+        const computedState = computeTaskState(
+          {
+            archived_at: null,
+            state: "eligible",
+            recurrence_rule: normalizedRule,
+            next_due_at: nextDueAt,
+            completion_window_days: windowDays,
+            planned_for: task.planned_for,
+          },
+          now,
+        );
+
+        updates.recurrence_rule = normalizedRule;
+        updates.recurrence_mode = newMode;
+        updates.completion_window_days = windowDays;
+        updates.next_due_at = nextDueAt;
+        if (task.state !== "done") {
+          updates.state = computedState === "not_yet" ? "not_yet" : "eligible";
+        }
+      }
+    } else if (windowChanged) {
+      updates.completion_window_days = body.data.completion_window_days ?? null;
+    }
+
     if (Object.keys(updates).length === 0) {
       return reply.code(200).send(taskToResponse(task, new Date()));
     }

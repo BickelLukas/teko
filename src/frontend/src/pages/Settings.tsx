@@ -45,7 +45,6 @@ export function SettingsPage() {
       }
     };
     // i18n is a stable singleton; initialLocaleRef/savedRef are refs — intentionally excluded
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const { data: me, isLoading } = useQuery({ queryKey: ["me"], queryFn: fetchMe });

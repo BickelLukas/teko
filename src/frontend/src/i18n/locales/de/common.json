@@ -20,7 +20,10 @@
     "new_project": "Neues Projekt",
     "creating": "Wird erstellt…",
     "create_project": "Projekt erstellen",
-    "confirm": "Bestätigen"
+    "confirm": "Bestätigen",
+    "edit": "Bearbeiten",
+    "archive": "Archivieren",
+    "confirm_archive": "Archivieren"
   },
   "states": {
     "overdue": "Überfällig",
@@ -70,6 +73,11 @@
     "mark_done_aria": "Erledigt",
     "actions_aria": "Aufgaben-Aktionen",
     "add_subtask_aria": "Teilaufgabe hinzufügen",
+    "edit_aria": "Aufgabe bearbeiten",
+    "archive_aria": "Aufgabe archivieren",
+    "archive_confirm_title": "{{title}} archivieren?",
+    "archive_confirm_body": "Diese Aufgabe wird archiviert.",
+    "archive_confirm_body_with_children": "Diese Aufgabe und alle Teilaufgaben werden archiviert.",
     "state_badge": {
       "due": "Fällig {{time}}",
       "do_until": "Jederzeit bis {{date}}",
@@ -93,6 +101,11 @@
     "overdue_badge": "Überfällig",
     "expand": "{{title}} ausklappen",
     "collapse": "{{title}} einklappen"
+  },
+  "edit_task": {
+    "title": "Aufgabe bearbeiten",
+    "save": "Änderungen speichern",
+    "saving": "Wird gespeichert…"
   },
   "add_task": {
     "title": "Neue Aufgabe",

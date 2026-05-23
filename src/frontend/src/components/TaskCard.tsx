@@ -3,7 +3,15 @@ import type React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { isPast, addHours, addDays, addWeeks } from "date-fns";
-import { IconCheck, IconDots, IconCalendar, IconZzz, IconFlame } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconDots,
+  IconCalendar,
+  IconZzz,
+  IconFlame,
+  IconPencil,
+  IconArchive,
+} from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -14,8 +22,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { completeTask, snoozeTask, scheduleTask } from "@/lib/api";
+import { completeTask, snoozeTask, scheduleTask, archiveTask } from "@/lib/api";
 import type { TaskResponse } from "@teko/shared";
+import { EditTaskModal } from "@/components/EditTaskModal";
+import { ArchiveConfirmDialog } from "@/components/ArchiveConfirmDialog";
 import { describeRecurrenceLocalized } from "@/lib/recurrence";
 import { useLocale, formatDateMedium, formatDistance } from "@/lib/locale";
 import confetti from "canvas-confetti";
@@ -173,6 +183,8 @@ export function TaskCard({
   const [showSchedule, setShowSchedule] = useState(false);
   const [justDone, setJustDone] = useState(false);
   const [milestoneCaption, setMilestoneCaption] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   useEffect(() => {
     if (!justDone) return;
@@ -204,6 +216,18 @@ export function TaskCard({
   const snoozeMutation = useMutation({
     mutationFn: (until: Date) => snoozeTask(task.id, until),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: () => archiveTask(task.id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: ["task-tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["stats"] });
+      void queryClient.invalidateQueries({ queryKey: ["today-stats"] });
+      setArchiveOpen(false);
+    },
   });
 
   const isOverdue = task.state === "overdue";
@@ -238,106 +262,130 @@ export function TaskCard({
   }
 
   return (
-    <Card className={isOverdue ? "border-destructive/40" : ""}>
-      <CardContent className="py-3">
-        <div className="flex items-start gap-3">
-          <button
-            onClick={() => completeMutation.mutate()}
-            disabled={completeMutation.isPending}
-            className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border transition-all duration-200 hover:scale-110 hover:border-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-50"
-            aria-label={t("task.mark_done_aria")}
-          >
-            {completeMutation.isPending && <IconCheck className="size-3 text-primary/50" />}
-          </button>
+    <>
+      <Card className={isOverdue ? "border-destructive/40" : ""}>
+        <CardContent className="py-3">
+          <div className="flex items-start gap-3">
+            <button
+              onClick={() => completeMutation.mutate()}
+              disabled={completeMutation.isPending}
+              className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border transition-all duration-200 hover:scale-110 hover:border-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-50"
+              aria-label={t("task.mark_done_aria")}
+            >
+              {completeMutation.isPending && <IconCheck className="size-3 text-primary/50" />}
+            </button>
 
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="truncate text-sm font-medium">{task.title}</p>
-                  {showStreakBadge && (
-                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-xs font-medium text-amber-600">
-                      <IconFlame className="size-3" />
-                      {streakLength}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm font-medium">{task.title}</p>
+                    {showStreakBadge && (
+                      <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-xs font-medium text-amber-600">
+                        <IconFlame className="size-3" />
+                        {streakLength}
+                      </span>
+                    )}
+                  </div>
+                  {task.description && (
+                    <p className="truncate text-xs text-muted-foreground">{task.description}</p>
+                  )}
+                  {recurrenceSummary && (
+                    <p className="text-xs text-muted-foreground/70">{recurrenceSummary}</p>
+                  )}
+                  <StateBadge task={task} />
+                  {breadcrumb}
+                  {showAssignee && (
+                    <span className="mt-0.5 inline-block text-xs text-muted-foreground/60">
+                      {assigneeName ?? t("filters.unassigned")}
                     </span>
                   )}
                 </div>
-                {task.description && (
-                  <p className="truncate text-xs text-muted-foreground">{task.description}</p>
-                )}
-                {recurrenceSummary && (
-                  <p className="text-xs text-muted-foreground/70">{recurrenceSummary}</p>
-                )}
-                <StateBadge task={task} />
-                {breadcrumb}
-                {showAssignee && (
-                  <span className="mt-0.5 inline-block text-xs text-muted-foreground/60">
-                    {assigneeName ?? t("filters.unassigned")}
-                  </span>
-                )}
+
+                <DropdownMenuRoot>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="shrink-0 text-muted-foreground"
+                      aria-label={t("task.actions_aria")}
+                    >
+                      <IconDots />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>{t("task.dropdown_label")}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => completeMutation.mutate()}
+                      disabled={completeMutation.isPending}
+                    >
+                      <IconCheck className="mr-2 size-4" />
+                      {t("actions.mark_done")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                      <IconPencil className="mr-2 size-4" />
+                      {t("actions.edit")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>{t("actions.snooze")}</DropdownMenuLabel>
+                    <DropdownMenuItem
+                      disabled={snoozeMutation.isPending}
+                      onClick={() => snoozeMutation.mutate(addHours(new Date(), 1))}
+                    >
+                      <IconZzz className="mr-2 size-4" />
+                      {t("snooze_options.one_hour")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={snoozeMutation.isPending}
+                      onClick={() => snoozeMutation.mutate(addDays(new Date(), 1))}
+                    >
+                      <IconZzz className="mr-2 size-4" />
+                      {t("snooze_options.tomorrow")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={snoozeMutation.isPending}
+                      onClick={() => snoozeMutation.mutate(addWeeks(new Date(), 1))}
+                    >
+                      <IconZzz className="mr-2 size-4" />
+                      {t("snooze_options.next_week")}
+                    </DropdownMenuItem>
+                    {(task.state === "eligible" || task.state === "overdue") && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setShowSchedule((v) => !v)}>
+                          <IconCalendar className="mr-2 size-4" />
+                          {t("actions.schedule")}
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => setArchiveOpen(true)}
+                    >
+                      <IconArchive className="mr-2 size-4" />
+                      {t("actions.archive")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenuRoot>
               </div>
 
-              <DropdownMenuRoot>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="shrink-0 text-muted-foreground"
-                    aria-label={t("task.actions_aria")}
-                  >
-                    <IconDots />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>{t("task.dropdown_label")}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => completeMutation.mutate()}
-                    disabled={completeMutation.isPending}
-                  >
-                    <IconCheck className="mr-2 size-4" />
-                    {t("actions.mark_done")}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>{t("actions.snooze")}</DropdownMenuLabel>
-                  <DropdownMenuItem
-                    disabled={snoozeMutation.isPending}
-                    onClick={() => snoozeMutation.mutate(addHours(new Date(), 1))}
-                  >
-                    <IconZzz className="mr-2 size-4" />
-                    {t("snooze_options.one_hour")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={snoozeMutation.isPending}
-                    onClick={() => snoozeMutation.mutate(addDays(new Date(), 1))}
-                  >
-                    <IconZzz className="mr-2 size-4" />
-                    {t("snooze_options.tomorrow")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={snoozeMutation.isPending}
-                    onClick={() => snoozeMutation.mutate(addWeeks(new Date(), 1))}
-                  >
-                    <IconZzz className="mr-2 size-4" />
-                    {t("snooze_options.next_week")}
-                  </DropdownMenuItem>
-                  {(task.state === "eligible" || task.state === "overdue") && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setShowSchedule((v) => !v)}>
-                        <IconCalendar className="mr-2 size-4" />
-                        {t("actions.schedule")}
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenuRoot>
+              {showSchedule && <SchedulePanel task={task} onDone={() => setShowSchedule(false)} />}
             </div>
-
-            {showSchedule && <SchedulePanel task={task} onDone={() => setShowSchedule(false)} />}
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      <EditTaskModal task={task} open={editOpen} onOpenChange={setEditOpen} />
+      <ArchiveConfirmDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        title={task.title}
+        hasChildren={task.child_count > 0}
+        isPending={archiveMutation.isPending}
+        onConfirm={() => archiveMutation.mutate()}
+      />
+    </>
   );
 }

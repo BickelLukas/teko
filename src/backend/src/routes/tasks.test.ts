@@ -380,6 +380,128 @@ describe("POST /api/tasks/:id/snooze", () => {
   });
 });
 
+describe("PATCH /api/tasks/:id", () => {
+  let app: FastifyInstance;
+  let db: Db;
+  let userId: string;
+
+  beforeEach(async () => {
+    ({ db, userId } = buildTestDb());
+    app = await buildApp(db, TEST_CONFIG);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  function insertTask(overrides: Partial<typeof schema.tasks.$inferInsert> = {}) {
+    const id = randomUUID();
+    db.insert(schema.tasks)
+      .values({ id, title: "Test task", created_by: userId, state: "eligible", ...overrides })
+      .run();
+    return id;
+  }
+
+  it("updates title and description", async () => {
+    const id = insertTask();
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/tasks/${id}`,
+      payload: { title: "Updated", description: "New desc" },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as TaskResponse;
+    expect(body.title).toBe("Updated");
+    expect(body.description).toBe("New desc");
+  });
+
+  it("adds recurrence rule — populates next_due_at and completion_window_days", async () => {
+    const id = insertTask();
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/tasks/${id}`,
+      payload: { recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=MO", recurrence_mode: "fixed" },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as TaskResponse;
+    expect(body.recurrence_rule).toBeTruthy();
+    expect(body.next_due_at).toBeTruthy();
+    expect(body.completion_window_days).toBeGreaterThan(0);
+    expect(["eligible", "not_yet"]).toContain(body.state);
+  });
+
+  it("clears recurrence when recurrence_rule sent as null", async () => {
+    const id = insertTask({
+      recurrence_rule: "RRULE:FREQ=DAILY",
+      recurrence_mode: "fixed",
+      completion_window_days: 1,
+      next_due_at: new Date(),
+    });
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/tasks/${id}`,
+      payload: { recurrence_rule: null, recurrence_mode: null },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as TaskResponse;
+    expect(body.recurrence_rule).toBeNull();
+    expect(body.recurrence_mode).toBeNull();
+    expect(body.next_due_at).toBeNull();
+    expect(body.completion_window_days).toBeNull();
+    expect(body.state).toBe("eligible");
+  });
+
+  it("updates only completion_window_days without changing next_due_at", async () => {
+    const due = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const id = insertTask({
+      recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=MO",
+      recurrence_mode: "fixed",
+      completion_window_days: 1,
+      next_due_at: due,
+    });
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/tasks/${id}`,
+      payload: { completion_window_days: 3 },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as TaskResponse;
+    expect(body.completion_window_days).toBe(3);
+    // next_due_at should be unchanged
+    expect(new Date(body.next_due_at!).getTime()).toBeCloseTo(due.getTime(), -3);
+  });
+
+  it("returns 404 for unknown task", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/tasks/${randomUUID()}`,
+      payload: { title: "x" },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("returns 409 when task is archived", async () => {
+    const id = insertTask({ archived_at: new Date() });
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/tasks/${id}`,
+      payload: { title: "x" },
+    });
+    expect(res.statusCode).toBe(409);
+  });
+
+  it("returns 422 when parent_id would create a cycle", async () => {
+    const parentId = insertTask();
+    const childId = insertTask({ parent_id: parentId });
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/tasks/${parentId}`,
+      payload: { parent_id: childId },
+    });
+    expect(res.statusCode).toBe(422);
+  });
+});
+
 describe("POST /api/_dev/tick", () => {
   let app: FastifyInstance;
   let db: Db;

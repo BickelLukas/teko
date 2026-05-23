@@ -111,6 +111,9 @@ export const UpdateTaskBodySchema = z.object({
   assignee_id: z.string().uuid().nullable().optional(),
   parent_id: z.string().uuid().nullable().optional(),
   auto_complete_when_children_done: z.boolean().optional(),
+  recurrence_rule: z.string().nullable().optional(),
+  recurrence_mode: RecurrenceModeSchema.nullable().optional(),
+  completion_window_days: z.number().int().nonnegative().nullable().optional(),
 });
 export type UpdateTaskBody = z.infer<typeof UpdateTaskBodySchema>;
 

@@ -1,10 +1,27 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { IconCheck, IconChevronDown, IconChevronRight, IconPlus } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconChevronDown,
+  IconChevronRight,
+  IconPlus,
+  IconDots,
+  IconPencil,
+  IconArchive,
+} from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
-import { completeTask } from "@/lib/api";
+import {
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { completeTask, archiveTask } from "@/lib/api";
 import type { TaskResponse } from "@teko/shared";
+import { EditTaskModal } from "@/components/EditTaskModal";
+import { ArchiveConfirmDialog } from "@/components/ArchiveConfirmDialog";
 
 type TreeNode = TaskResponse & { children: TreeNode[] };
 
@@ -37,6 +54,8 @@ function TaskTreeNodeRow({ node, depth, onAddChild }: TaskTreeNodeProps) {
   const { t } = useTranslation("common");
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const hasChildren = node.children.length > 0;
   const isProject = node.child_count > 0;
 
@@ -45,92 +64,141 @@ function TaskTreeNodeRow({ node, depth, onAddChild }: TaskTreeNodeProps) {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["task-tree"] }),
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: () => archiveTask(node.id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["task-tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setArchiveOpen(false);
+    },
+  });
+
   const isDone = node.state === "done";
 
   return (
-    <li>
-      <div
-        className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/40"
-        style={{ paddingLeft: `${depth * 20 + 8}px` }}
-      >
-        {hasChildren ? (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="flex size-4 items-center justify-center rounded text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-            aria-label={
-              expanded
-                ? t("task_tree.collapse", { title: node.title })
-                : t("task_tree.expand", { title: node.title })
-            }
-            aria-expanded={expanded}
-          >
-            {expanded ? (
-              <IconChevronDown className="size-3" />
-            ) : (
-              <IconChevronRight className="size-3" />
-            )}
-          </button>
-        ) : (
-          <span className="size-4" />
-        )}
-
-        {!isProject && (
-          <button
-            onClick={() => completeMutation.mutate()}
-            disabled={isDone || completeMutation.isPending}
-            className="flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-border transition-colors hover:border-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-40"
-            aria-label={t("task.mark_done_aria")}
-          >
-            {(isDone || completeMutation.isPending) && (
-              <IconCheck className="size-2.5 text-primary" />
-            )}
-          </button>
-        )}
-        {isProject && <span className="size-4" />}
-
-        <span
-          className={[
-            "flex-1 text-sm",
-            isDone ? "text-muted-foreground line-through" : "",
-            isProject ? "font-medium" : "",
-          ].join(" ")}
+    <>
+      <li>
+        <div
+          className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/40"
+          style={{ paddingLeft: `${depth * 20 + 8}px` }}
         >
-          {node.title}
-        </span>
+          {hasChildren ? (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="flex size-4 items-center justify-center rounded text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              aria-label={
+                expanded
+                  ? t("task_tree.collapse", { title: node.title })
+                  : t("task_tree.expand", { title: node.title })
+              }
+              aria-expanded={expanded}
+            >
+              {expanded ? (
+                <IconChevronDown className="size-3" />
+              ) : (
+                <IconChevronRight className="size-3" />
+              )}
+            </button>
+          ) : (
+            <span className="size-4" />
+          )}
 
-        {!isDone && !isProject && (
+          {!isProject && (
+            <button
+              onClick={() => completeMutation.mutate()}
+              disabled={isDone || completeMutation.isPending}
+              className="flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-border transition-colors hover:border-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-40"
+              aria-label={t("task.mark_done_aria")}
+            >
+              {(isDone || completeMutation.isPending) && (
+                <IconCheck className="size-2.5 text-primary" />
+              )}
+            </button>
+          )}
+          {isProject && <span className="size-4" />}
+
           <span
             className={[
-              "shrink-0 text-xs",
-              node.state === "overdue" ? "text-destructive" : "text-muted-foreground",
+              "flex-1 text-sm",
+              isDone ? "text-muted-foreground line-through" : "",
+              isProject ? "font-medium" : "",
             ].join(" ")}
           >
-            {node.state === "overdue" ? t("task_tree.overdue_badge") : ""}
+            {node.title}
           </span>
+
+          {!isDone && !isProject && (
+            <span
+              className={[
+                "shrink-0 text-xs",
+                node.state === "overdue" ? "text-destructive" : "text-muted-foreground",
+              ].join(" ")}
+            >
+              {node.state === "overdue" ? t("task_tree.overdue_badge") : ""}
+            </span>
+          )}
+
+          <div className="hidden items-center gap-1 group-hover:flex">
+            <button
+              onClick={() => onAddChild(node.id)}
+              className="flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              aria-label={t("task.add_subtask_aria")}
+            >
+              <IconPlus className="size-3" />
+            </button>
+
+            <DropdownMenuRoot>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                  aria-label={t("task.actions_aria")}
+                >
+                  <IconDots className="size-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                  <IconPencil className="mr-2 size-4" />
+                  {t("actions.edit")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setArchiveOpen(true)}
+                >
+                  <IconArchive className="mr-2 size-4" />
+                  {t("actions.archive")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenuRoot>
+          </div>
+        </div>
+
+        {hasChildren && expanded && (
+          <ul>
+            {node.children.map((child) => (
+              <TaskTreeNodeRow
+                key={child.id}
+                node={child}
+                depth={depth + 1}
+                onAddChild={onAddChild}
+              />
+            ))}
+          </ul>
         )}
+      </li>
 
-        <button
-          onClick={() => onAddChild(node.id)}
-          className="hidden size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 group-hover:flex"
-          aria-label={t("task.add_subtask_aria")}
-        >
-          <IconPlus className="size-3" />
-        </button>
-      </div>
-
-      {hasChildren && expanded && (
-        <ul>
-          {node.children.map((child) => (
-            <TaskTreeNodeRow
-              key={child.id}
-              node={child}
-              depth={depth + 1}
-              onAddChild={onAddChild}
-            />
-          ))}
-        </ul>
-      )}
-    </li>
+      <EditTaskModal task={node} open={editOpen} onOpenChange={setEditOpen} />
+      <ArchiveConfirmDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        title={node.title}
+        hasChildren={hasChildren}
+        isPending={archiveMutation.isPending}
+        onConfirm={() => archiveMutation.mutate()}
+      />
+    </>
   );
 }
 

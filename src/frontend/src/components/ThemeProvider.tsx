@@ -16,16 +16,24 @@ function applyTheme(theme: Theme) {
 
 // Apply cached theme immediately at module load to avoid flash on subsequent visits
 try {
-  applyTheme(((localStorage.getItem(THEME_KEY) as Theme) ?? "system"));
-} catch { /* localStorage unavailable */ }
+  applyTheme((localStorage.getItem(THEME_KEY) as Theme) ?? "system");
+} catch {
+  /* localStorage unavailable */
+}
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
-  const theme = (me?.theme ?? (localStorage.getItem(THEME_KEY) as Theme | null) ?? "system") as Theme;
+  const theme = (me?.theme ??
+    (localStorage.getItem(THEME_KEY) as Theme | null) ??
+    "system") as Theme;
 
   useEffect(() => {
     applyTheme(theme);
-    try { localStorage.setItem(THEME_KEY, theme); } catch { /* quota exceeded */ }
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      /* quota exceeded */
+    }
   }, [theme]);
 
   // Also react to system preference changes when theme is "system"

@@ -1,15 +1,23 @@
-import Fastify from "fastify";
-import health from "./routes/health";
+import { loadConfig } from "./config";
+import { createDb } from "./db/client";
+import { buildApp } from "./app";
+import fs from "fs";
+import path from "path";
 
-async function main(): Promise<void> {
-  const port = parseInt(process.env["PORT"] ?? "3000", 10);
-  const fastify = Fastify({ logger: true });
+async function init() {
+  const config = loadConfig();
 
-  await fastify.register(health);
-  await fastify.listen({ port, host: "0.0.0.0" });
+  const dataDir = path.dirname(config.dbPath);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+
+  const { db } = createDb(config.dbPath);
+  const app = await buildApp(db, config);
+  await app.listen({ port: config.port, host: "0.0.0.0" });
 }
 
-main().catch((err) => {
+init().catch((err) => {
   console.error(err);
   process.exit(1);
 });

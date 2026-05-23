@@ -3,3 +3,5 @@ export type HealthResponse = {
   version: string;
   uptime: number;
 };
+
+export * from "./schemas";

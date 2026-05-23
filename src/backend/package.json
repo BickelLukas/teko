@@ -3,17 +3,24 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch --env-file=../../.env src/index.ts",
     "build": "tsup src/index.ts --format cjs --out-dir dist",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "seed": "tsx --env-file=../../.env src/seed.ts"
   },
   "dependencies": {
     "@teko/shared": "workspace:^",
-    "fastify": "^5.8.5"
+    "better-sqlite3": "^12.10.0",
+    "drizzle-orm": "0.45.2",
+    "fastify": "^5.8.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.9.1",
+    "drizzle-kit": "0.31.10",
     "tsup": "^8.5.1",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",

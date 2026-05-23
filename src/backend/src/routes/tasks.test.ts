@@ -1,0 +1,220 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { eq } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import path from "path";
+import type { FastifyInstance } from "fastify";
+import { buildApp } from "../app";
+import * as schema from "../db/schema";
+import type { Db } from "../db/client";
+import type { TaskListResponse, TaskResponse } from "@teko/shared";
+
+const MIGRATIONS = path.join(process.cwd(), "drizzle/migrations");
+
+const TEST_CONFIG = {
+  port: 3001,
+  nodeEnv: "test",
+  devMode: true,
+  devUserId: "test-user",
+  devUserName: "Test User",
+  dbPath: ":memory:",
+};
+
+function buildTestDb(): { db: Db; userId: string } {
+  const sqlite = new Database(":memory:");
+  sqlite.pragma("foreign_keys = ON");
+  const db = drizzle({ client: sqlite, schema });
+  migrate(db, { migrationsFolder: MIGRATIONS });
+
+  const userId = randomUUID();
+  db.insert(schema.users)
+    .values({
+      id: userId,
+      ha_user_id: "test-user",
+      name: "Test User",
+      is_admin: false,
+    })
+    .run();
+
+  return { db, userId };
+}
+
+describe("GET /api/tasks", () => {
+  let app: FastifyInstance;
+  let db: Db;
+  let userId: string;
+
+  beforeEach(async () => {
+    ({ db, userId } = buildTestDb());
+    app = await buildApp(db, TEST_CONFIG);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it("returns empty list when no tasks", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/tasks" });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+  });
+
+  it("returns only the user's open tasks", async () => {
+    db.insert(schema.tasks)
+      .values({
+        id: randomUUID(),
+        title: "My task",
+        assignee_id: userId,
+        created_by: userId,
+        state: "eligible",
+      })
+      .run();
+
+    // done task should not appear
+    db.insert(schema.tasks)
+      .values({
+        id: randomUUID(),
+        title: "Done task",
+        assignee_id: userId,
+        created_by: userId,
+        state: "done",
+      })
+      .run();
+
+    const res = await app.inject({ method: "GET", url: "/api/tasks" });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as TaskListResponse;
+    expect(body).toHaveLength(1);
+    expect(body[0]?.title).toBe("My task");
+  });
+});
+
+describe("POST /api/tasks", () => {
+  let app: FastifyInstance;
+  let db: Db;
+  let userId: string;
+
+  beforeEach(async () => {
+    ({ db, userId } = buildTestDb());
+    // suppress "unused variable" — userId used implicitly via auth middleware
+    void userId;
+    app = await buildApp(db, TEST_CONFIG);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it("creates a task and returns 201", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: { title: "New task", description: "Some details" },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as TaskResponse;
+    expect(body.title).toBe("New task");
+    expect(body.description).toBe("Some details");
+    expect(body.state).toBe("eligible");
+    expect(body.id).toBeTruthy();
+  });
+
+  it("returns 400 when title is missing", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: { description: "No title" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("returns 400 when title is empty string", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: { title: "" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+describe("POST /api/tasks/:id/complete", () => {
+  let app: FastifyInstance;
+  let db: Db;
+  let userId: string;
+
+  beforeEach(async () => {
+    ({ db, userId } = buildTestDb());
+    app = await buildApp(db, TEST_CONFIG);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it("marks task done and returns 204", async () => {
+    const taskId = randomUUID();
+    db.insert(schema.tasks)
+      .values({
+        id: taskId,
+        title: "Complete me",
+        assignee_id: userId,
+        created_by: userId,
+        state: "eligible",
+      })
+      .run();
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/tasks/${taskId}/complete`,
+    });
+    expect(res.statusCode).toBe(204);
+
+    const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();
+    expect(task?.state).toBe("done");
+
+    const completion = db
+      .select()
+      .from(schema.completions)
+      .where(eq(schema.completions.task_id, taskId))
+      .get();
+    expect(completion).toBeTruthy();
+  });
+
+  it("returns 404 for non-existent task", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/tasks/${randomUUID()}/complete`,
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("returns 400 for invalid task ID format", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks/not-a-uuid/complete",
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("returns 409 when task already done", async () => {
+    const taskId = randomUUID();
+    db.insert(schema.tasks)
+      .values({
+        id: taskId,
+        title: "Already done",
+        assignee_id: userId,
+        created_by: userId,
+        state: "done",
+      })
+      .run();
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/tasks/${taskId}/complete`,
+    });
+    expect(res.statusCode).toBe(409);
+  });
+});

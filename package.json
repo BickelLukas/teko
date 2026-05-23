@@ -16,6 +16,9 @@
     "test": "yarn workspaces foreach -A run test"
   },
   "dependenciesMeta": {
+    "better-sqlite3": {
+      "built": true
+    },
     "esbuild": {
       "built": true
     }

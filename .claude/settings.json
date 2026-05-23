@@ -1,5 +1,13 @@
 {
   "permissions": {
-    "allow": ["Bash(yarn lint *)", "Bash(yarn format *)"]
+    "allow": [
+      "Bash(yarn lint *)",
+      "Bash(yarn format *)",
+      "Bash(yarn install *)",
+      "Bash(yarn db:generate)",
+      "Bash(yarn workspace *)",
+      "Bash(yarn test *)",
+      "Bash(yarn typecheck *)"
+    ]
   }
 }

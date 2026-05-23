@@ -8,6 +8,9 @@
 dist/
 build/
 
+# SQLite database (created at runtime)
+src/backend/data/
+
 # Node
 node_modules/
 

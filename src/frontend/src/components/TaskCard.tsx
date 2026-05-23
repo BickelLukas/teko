@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, isPast, addHours, addDays, addWeeks } from "date-fns";
-import { IconCheck, IconDots, IconCalendar, IconZzz } from "@tabler/icons-react";
+import { IconCheck, IconDots, IconCalendar, IconZzz, IconFlame } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -16,6 +16,20 @@ import {
 import { completeTask, snoozeTask, scheduleTask } from "@/lib/api";
 import type { TaskResponse } from "@teko/shared";
 import { describeRecurrence } from "@/lib/recurrence";
+import confetti from "canvas-confetti";
+
+// ── Milestone confetti ────────────────────────────────────────────────────────
+
+function fireMilestoneConfetti() {
+  void confetti({
+    particleCount: 80,
+    spread: 60,
+    origin: { y: 0.6 },
+    colors: ["#f59e0b", "#10b981", "#6366f1", "#f43f5e"],
+    scalar: 0.9,
+    ticks: 150,
+  });
+}
 
 // ── State badge ───────────────────────────────────────────────────────────────
 
@@ -138,15 +152,44 @@ type TaskCardProps = {
   showAssignee?: boolean;
   assigneeName?: string;
   breadcrumb?: React.ReactNode;
+  streakLength?: number;
 };
 
-export function TaskCard({ task, showAssignee, assigneeName, breadcrumb }: TaskCardProps) {
+export function TaskCard({
+  task,
+  showAssignee,
+  assigneeName,
+  breadcrumb,
+  streakLength = 0,
+}: TaskCardProps) {
   const queryClient = useQueryClient();
   const [showSchedule, setShowSchedule] = useState(false);
+  const [justDone, setJustDone] = useState(false);
+  const [milestoneCaption, setMilestoneCaption] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!justDone) return;
+    const t = setTimeout(() => setJustDone(false), 2000);
+    return () => clearTimeout(t);
+  }, [justDone]);
 
   const completeMutation = useMutation({
     mutationFn: () => completeTask(task.id),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+    onSuccess: (result) => {
+      setJustDone(true);
+
+      if (result.streak.milestone_reached !== null && result.completion.was_on_time) {
+        fireMilestoneConfetti();
+        setMilestoneCaption(`${result.streak.milestone_reached}-day streak on ${task.title} 🔥`);
+        setTimeout(() => setMilestoneCaption(null), 4000);
+      }
+
+      setTimeout(() => {
+        void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        void queryClient.invalidateQueries({ queryKey: ["stats"] });
+        void queryClient.invalidateQueries({ queryKey: ["today-stats"] });
+      }, 400);
+    },
   });
 
   const snoozeMutation = useMutation({
@@ -155,11 +198,35 @@ export function TaskCard({ task, showAssignee, assigneeName, breadcrumb }: TaskC
   });
 
   const isOverdue = task.state === "overdue";
+  const showStreakBadge = streakLength >= 3;
 
   const recurrenceSummary =
     task.recurrence_rule && task.recurrence_mode
       ? describeRecurrence(task.recurrence_rule, task.recurrence_mode)
       : null;
+
+  if (justDone) {
+    return (
+      <Card className="overflow-hidden">
+        <CardContent className="flex items-center gap-3 py-3">
+          <div
+            className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary"
+            style={{ animation: "scale-in 200ms ease-out" }}
+          >
+            <IconCheck className="size-3 text-primary-foreground" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-muted-foreground line-through">
+              {task.title}
+            </p>
+            {milestoneCaption && (
+              <p className="mt-0.5 text-xs font-medium text-amber-500">{milestoneCaption}</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={isOverdue ? "border-destructive/40" : ""}>
@@ -168,7 +235,7 @@ export function TaskCard({ task, showAssignee, assigneeName, breadcrumb }: TaskC
           <button
             onClick={() => completeMutation.mutate()}
             disabled={completeMutation.isPending}
-            className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border transition-colors hover:border-primary hover:bg-primary/10 disabled:opacity-50"
+            className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border transition-all duration-200 hover:border-primary hover:bg-primary/10 hover:scale-110 disabled:opacity-50"
             aria-label="Mark done"
           >
             {completeMutation.isPending && <IconCheck className="size-3 text-primary/50" />}
@@ -177,7 +244,15 @@ export function TaskCard({ task, showAssignee, assigneeName, breadcrumb }: TaskC
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{task.title}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-sm font-medium">{task.title}</p>
+                  {showStreakBadge && (
+                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-xs font-medium text-amber-600">
+                      <IconFlame className="size-3" />
+                      {streakLength}
+                    </span>
+                  )}
+                </div>
                 {task.description && (
                   <p className="truncate text-xs text-muted-foreground">{task.description}</p>
                 )}

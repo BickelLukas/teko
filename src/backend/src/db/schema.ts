@@ -1,4 +1,4 @@
-import { integer, text, sqliteTable } from "drizzle-orm/sqlite-core";
+import { integer, text, sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
@@ -10,6 +10,7 @@ export const users = sqliteTable("users", {
   notification_time: text("notification_time"),
   is_admin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   is_active: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  week_start_day: integer("week_start_day").notNull().default(1),
   created_at: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -52,6 +53,23 @@ export const tasks = sqliteTable("tasks", {
     .notNull()
     .default(true),
 });
+
+export const streaks = sqliteTable(
+  "streaks",
+  {
+    id: text("id").primaryKey(),
+    task_id: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    current_length: integer("current_length").notNull().default(0),
+    longest_length: integer("longest_length").notNull().default(0),
+    last_completed_at: integer("last_completed_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [uniqueIndex("streaks_task_user_idx").on(table.task_id, table.user_id)],
+);
 
 export const completions = sqliteTable("completions", {
   id: text("id").primaryKey(),

@@ -19,6 +19,7 @@ export const UserSchema = z.object({
   notification_time: z.string().nullable(),
   is_admin: z.boolean(),
   is_active: z.boolean(),
+  week_start_day: z.union([z.literal(0), z.literal(1)]),
   created_at: z.coerce.date(),
 });
 export type User = z.infer<typeof UserSchema>;
@@ -32,6 +33,7 @@ export const UserResponseSchema = UserSchema.pick({
   notification_time: true,
   is_admin: true,
   is_active: true,
+  week_start_day: true,
 });
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 
@@ -39,6 +41,7 @@ export const UpdatePreferencesBodySchema = z.object({
   locale: z.string().min(2).optional(),
   notification_time: z.string().nullable().optional(),
   display_name: z.string().nullable().optional(),
+  week_start_day: z.union([z.literal(0), z.literal(1)]).optional(),
 });
 export type UpdatePreferencesBody = z.infer<typeof UpdatePreferencesBodySchema>;
 
@@ -196,3 +199,76 @@ export const TodayStatsSchema = z.object({
   completions_today: z.number().int(),
 });
 export type TodayStats = z.infer<typeof TodayStatsSchema>;
+
+// ── Streak schemas ────────────────────────────────────────────────────────────
+
+export const StreakRecordSchema = z.object({
+  task_id: z.string().uuid(),
+  task_title: z.string(),
+  current_length: z.number().int().nonnegative(),
+  longest_length: z.number().int().nonnegative(),
+  at_risk: z.boolean(),
+});
+export type StreakRecord = z.infer<typeof StreakRecordSchema>;
+
+export const TaskStreakSchema = z.object({
+  user_id: z.string().uuid(),
+  current_length: z.number().int().nonnegative(),
+  longest_length: z.number().int().nonnegative(),
+  last_completed_at: z.coerce.date().nullable(),
+});
+export type TaskStreak = z.infer<typeof TaskStreakSchema>;
+
+export const CompleteTaskResultSchema = z.object({
+  task: TaskResponseSchema.nullable(),
+  completion: z.object({
+    was_on_time: z.boolean(),
+    points_awarded: z.number().int(),
+  }),
+  streak: z.object({
+    current: z.number().int().nonnegative(),
+    longest: z.number().int().nonnegative(),
+    milestone_reached: z.number().int().nullable(),
+  }),
+  points_awarded: z.number().int(),
+});
+export type CompleteTaskResult = z.infer<typeof CompleteTaskResultSchema>;
+
+// ── Stats schemas ─────────────────────────────────────────────────────────────
+
+export const MeStatsSchema = z.object({
+  week: z.object({
+    points: z.number().int(),
+    completions: z.number().int(),
+    completions_by_day: z.array(z.number().int()),
+  }),
+  streaks: z.object({
+    active: z.array(StreakRecordSchema),
+    longest_ever: z
+      .object({
+        task_id: z.string().uuid(),
+        task_title: z.string().nullable(),
+        length: z.number().int(),
+      })
+      .nullable(),
+  }),
+  history: z.object({
+    last_12_weeks: z.array(z.number().int()),
+  }),
+});
+export type MeStats = z.infer<typeof MeStatsSchema>;
+
+export const HouseholdStatsSchema = z.object({
+  week: z.object({
+    points: z.number().int(),
+    completions_by_day: z.array(z.number().int()),
+    contributions: z.array(
+      z.object({ user_id: z.string().uuid(), name: z.string(), points: z.number().int() }),
+    ),
+  }),
+  longest_household_streak: z.number().int(),
+  history: z.object({
+    last_12_weeks: z.array(z.number().int()),
+  }),
+});
+export type HouseholdStats = z.infer<typeof HouseholdStatsSchema>;

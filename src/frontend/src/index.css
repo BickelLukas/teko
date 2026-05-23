@@ -120,6 +120,11 @@
   --sidebar-ring: oklch(0.56 0.021 213.5);
 }
 
+@keyframes scale-in {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

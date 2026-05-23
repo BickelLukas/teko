@@ -7,6 +7,10 @@ import type {
   DevUser,
   CreateTaskBody,
   UpdateTaskBody,
+  CompleteTaskResult,
+  MeStats,
+  HouseholdStats,
+  TaskStreak,
 } from "@teko/shared";
 
 // Tracks whether the backend reported dev mode via response header.
@@ -84,8 +88,8 @@ export async function updateTask(id: string, body: UpdateTaskBody): Promise<Task
   );
 }
 
-export async function completeTask(id: string): Promise<void> {
-  await throwIfNotOk(await apiFetch(`/api/tasks/${id}/complete`, { method: "POST" }));
+export async function completeTask(id: string): Promise<CompleteTaskResult> {
+  return json(await apiFetch(`/api/tasks/${id}/complete`, { method: "POST" }));
 }
 
 export async function scheduleTask(id: string, plannedFor: Date): Promise<void> {
@@ -138,7 +142,12 @@ export async function fetchMe(): Promise<UserResponse> {
 }
 
 export async function updatePreferences(
-  prefs: Partial<{ locale: string; notification_time: string | null; display_name: string | null }>,
+  prefs: Partial<{
+    locale: string;
+    notification_time: string | null;
+    display_name: string | null;
+    week_start_day: 0 | 1;
+  }>,
 ): Promise<UserResponse> {
   return json(
     await apiFetch("/api/me/preferences", {
@@ -151,6 +160,18 @@ export async function updatePreferences(
 
 export async function fetchTodayStats(): Promise<TodayStats> {
   return json(await apiFetch("/api/me/today-stats"));
+}
+
+export async function fetchMeStats(): Promise<MeStats> {
+  return json(await apiFetch("/api/me/stats"));
+}
+
+export async function fetchHouseholdStats(): Promise<HouseholdStats> {
+  return json(await apiFetch("/api/household/stats"));
+}
+
+export async function fetchTaskStreak(taskId: string): Promise<TaskStreak[]> {
+  return json(await apiFetch(`/api/tasks/${taskId}/streak`));
 }
 
 // ── Dev ───────────────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import health from "./routes/health.js";
 import tasks from "./routes/tasks.js";
 import projects from "./routes/projects.js";
 import me from "./routes/me.js";
+import stats from "./routes/stats.js";
 import dev from "./routes/dev.js";
 import { registerAuth } from "./middleware/auth.js";
 import type { Config } from "./config.js";
@@ -35,6 +36,7 @@ export async function buildApp(db: Db, config: Config): Promise<FastifyInstance>
   await fastify.register(tasks);
   await fastify.register(projects);
   await fastify.register(me);
+  await fastify.register(stats);
 
   if (config.devMode) {
     await fastify.register(dev);

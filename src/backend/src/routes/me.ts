@@ -24,6 +24,7 @@ const me: FastifyPluginAsync = async (fastify) => {
       notification_time: user.notification_time,
       is_admin: user.is_admin,
       is_active: user.is_active,
+      week_start_day: user.week_start_day,
     });
   });
 
@@ -40,6 +41,8 @@ const me: FastifyPluginAsync = async (fastify) => {
     if (parsed.data.notification_time !== undefined)
       updates.notification_time = parsed.data.notification_time;
     if (parsed.data.display_name !== undefined) updates.display_name = parsed.data.display_name;
+    if (parsed.data.week_start_day !== undefined)
+      updates.week_start_day = parsed.data.week_start_day;
 
     if (Object.keys(updates).length > 0) {
       db.update(schema.users).set(updates).where(eq(schema.users.id, request.user.id)).run();
@@ -58,6 +61,7 @@ const me: FastifyPluginAsync = async (fastify) => {
       notification_time: user.notification_time,
       is_admin: user.is_admin,
       is_active: user.is_active,
+      week_start_day: user.week_start_day,
     });
   });
 

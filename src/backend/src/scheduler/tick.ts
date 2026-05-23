@@ -1,8 +1,9 @@
-import { and, isNull, isNotNull, ne } from "drizzle-orm";
+import { and, isNull, isNotNull, ne, inArray, gt } from "drizzle-orm";
 import { eq } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import * as schema from "../db/schema.js";
 import { computeTaskState } from "../domain/recurrence.js";
+import { detectBrokenStreaks } from "../domain/streaks.js";
 
 export async function runTick(db: Db, now: Date = new Date()): Promise<number> {
   const tasks = db
@@ -18,6 +19,7 @@ export async function runTick(db: Db, now: Date = new Date()): Promise<number> {
     .all();
 
   let updated = 0;
+  const newlyOverdueTasks: (typeof schema.tasks.$inferSelect)[] = [];
 
   for (const task of tasks) {
     const computed = computeTaskState(task, now);
@@ -26,6 +28,10 @@ export async function runTick(db: Db, now: Date = new Date()): Promise<number> {
     if (computed === "archived" || computed === "done") continue;
 
     if (task.state === computed) continue;
+
+    if (computed === "overdue" && task.state !== "overdue") {
+      newlyOverdueTasks.push(task);
+    }
 
     const updates: {
       state: "not_yet" | "eligible" | "planned" | "overdue" | "done";
@@ -41,6 +47,31 @@ export async function runTick(db: Db, now: Date = new Date()): Promise<number> {
 
     console.log(`tick: ${task.id} (${task.title}) ${task.state} → ${computed}`);
     updated++;
+  }
+
+  // Reset streaks for tasks that just went overdue (window closed without completion)
+  if (newlyOverdueTasks.length > 0) {
+    const overdueIds = newlyOverdueTasks.map((t) => t.id);
+    const affectedStreaks = db
+      .select()
+      .from(schema.streaks)
+      .where(and(inArray(schema.streaks.task_id, overdueIds), gt(schema.streaks.current_length, 0)))
+      .all();
+
+    const toReset = detectBrokenStreaks(newlyOverdueTasks, affectedStreaks);
+
+    for (const streak of toReset) {
+      db.update(schema.streaks)
+        .set({ current_length: 0 })
+        .where(
+          and(
+            eq(schema.streaks.task_id, streak.task_id),
+            eq(schema.streaks.user_id, streak.user_id),
+          ),
+        )
+        .run();
+      console.log(`streak-reset: task=${streak.task_id} user=${streak.user_id} (overdue)`);
+    }
   }
 
   return updated;

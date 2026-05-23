@@ -1,5 +1,12 @@
 import { NavLink } from "react-router-dom";
-import { IconHome, IconRepeat, IconList, IconSettings, IconStack2 } from "@tabler/icons-react";
+import {
+  IconHome,
+  IconRepeat,
+  IconList,
+  IconSettings,
+  IconStack2,
+  IconChartBar,
+} from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -7,6 +14,7 @@ const links = [
   { to: "/chores", label: "Chores", icon: IconRepeat, end: false },
   { to: "/tasks", label: "All tasks", icon: IconList, end: false },
   { to: "/projects", label: "Projects", icon: IconStack2, end: false },
+  { to: "/stats", label: "Stats", icon: IconChartBar, end: false },
   { to: "/settings", label: "Settings", icon: IconSettings, end: false },
 ];
 

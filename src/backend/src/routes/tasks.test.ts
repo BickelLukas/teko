@@ -154,7 +154,7 @@ describe("POST /api/tasks/:id/complete", () => {
     await app.close();
   });
 
-  it("marks task done and returns 204", async () => {
+  it("marks task done and returns 200 with streak/points", async () => {
     const taskId = randomUUID();
     db.insert(schema.tasks)
       .values({
@@ -170,7 +170,10 @@ describe("POST /api/tasks/:id/complete", () => {
       method: "POST",
       url: `/api/tasks/${taskId}/complete`,
     });
-    expect(res.statusCode).toBe(204);
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{ streak: { current: number }; points_awarded: number }>();
+    expect(body.points_awarded).toBe(1);
+    expect(body.streak.current).toBe(0); // one-off task has no streak
 
     const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();
     expect(task?.state).toBe("done");
@@ -238,7 +241,10 @@ describe("POST /api/tasks/:id/complete", () => {
       method: "POST",
       url: `/api/tasks/${taskId}/complete`,
     });
-    expect(res.statusCode).toBe(204);
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{ streak: { current: number }; points_awarded: number }>();
+    expect(body.streak.current).toBe(1); // first on-time completion → streak 1
+    expect(body.points_awarded).toBe(1);
 
     // Should NOT be marked "done" — it should cycle
     const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();

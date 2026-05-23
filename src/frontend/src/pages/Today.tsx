@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { isSameDay, isWithinInterval, addDays, startOfDay } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { fetchTasks, fetchMe, fetchTodayStats } from "@/lib/api";
+import { fetchTasks, fetchMe, fetchTodayStats, fetchMeStats } from "@/lib/api";
 import { TaskCard } from "@/components/TaskCard";
 import { AddTaskModal } from "@/components/AddTaskModal";
 import type { TaskResponse } from "@teko/shared";
@@ -95,6 +95,12 @@ export function TodayPage() {
     queryFn: fetchTodayStats,
   });
 
+  const { data: meStats } = useQuery({
+    queryKey: ["stats", "me"],
+    queryFn: fetchMeStats,
+    staleTime: 60_000,
+  });
+
   const sections = bucketTasks(tasks, now);
   const hasAny =
     sections.overdue.length > 0 ||
@@ -103,6 +109,17 @@ export function TodayPage() {
     sections.comingUp.length > 0;
 
   const displayName = me?.display_name ?? me?.name ?? "there";
+
+  // Build task_id → streak_length lookup for badge rendering
+  const streakByTask = new Map<string, number>();
+  if (meStats) {
+    for (const s of meStats.streaks.active) {
+      streakByTask.set(s.task_id, s.current_length);
+    }
+  }
+
+  // Footer: longest active streak
+  const longestActive = meStats?.streaks.active[0] ?? null;
 
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-6">
@@ -126,10 +143,17 @@ export function TodayPage() {
       )}
 
       {sections.overdue.length > 0 && (
-        <Section title="Overdue" accent="text-destructive" tasks={sections.overdue} />
+        <Section
+          title="Overdue"
+          accent="text-destructive"
+          tasks={sections.overdue}
+          streakByTask={streakByTask}
+        />
       )}
 
-      {sections.today.length > 0 && <Section title="Today" tasks={sections.today} />}
+      {sections.today.length > 0 && (
+        <Section title="Today" tasks={sections.today} streakByTask={streakByTask} />
+      )}
 
       {sections.eligible.length > 0 && (
         <Section
@@ -137,20 +161,31 @@ export function TodayPage() {
           subtitle="Ready when you are"
           muted
           tasks={sections.eligible}
+          streakByTask={streakByTask}
         />
       )}
 
       {sections.comingUp.length > 0 && (
-        <Section title="Coming up" muted tasks={sections.comingUp} />
+        <Section title="Coming up" muted tasks={sections.comingUp} streakByTask={streakByTask} />
       )}
 
-      {stats !== undefined && stats.completions_today > 0 && (
-        <p className="pt-2 text-center text-xs text-muted-foreground/60">
-          {stats.completions_today === 1
-            ? "1 task completed today"
-            : `${stats.completions_today} tasks completed today`}
-        </p>
-      )}
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground/60">
+        {stats !== undefined && stats.completions_today > 0 ? (
+          <p className="text-center">
+            {stats.completions_today === 1
+              ? "1 task completed today"
+              : `${stats.completions_today} tasks completed today`}
+          </p>
+        ) : (
+          <span />
+        )}
+        {longestActive && (
+          <p className="text-right">
+            🔥 {longestActive.current_length} days on {longestActive.task_title}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -161,12 +196,14 @@ function Section({
   tasks,
   accent,
   muted,
+  streakByTask,
 }: {
   title: string;
   subtitle?: string;
   tasks: TaskResponse[];
   accent?: string;
   muted?: boolean;
+  streakByTask: Map<string, number>;
 }) {
   return (
     <section>
@@ -184,7 +221,11 @@ function Section({
       <ul className="space-y-2">
         {tasks.map((t) => (
           <li key={t.id}>
-            <TaskCard task={t} breadcrumb={<ProjectBreadcrumb task={t} />} />
+            <TaskCard
+              task={t}
+              streakLength={streakByTask.get(t.id) ?? 0}
+              breadcrumb={<ProjectBreadcrumb task={t} />}
+            />
           </li>
         ))}
       </ul>

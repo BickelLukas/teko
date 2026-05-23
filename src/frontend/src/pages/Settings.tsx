@@ -27,6 +27,7 @@ type FormValues = z.infer<typeof FormSchema>;
 export function SettingsPage() {
   const queryClient = useQueryClient();
   const [locale, setLocale] = useState("en");
+  const [weekStartDay, setWeekStartDay] = useState<0 | 1>(1);
 
   const { data: me, isLoading } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
 
@@ -44,6 +45,7 @@ export function SettingsPage() {
         notification_time: me.notification_time ?? "",
       });
       setLocale(me.locale ?? "en");
+      setWeekStartDay((me.week_start_day ?? 1) as 0 | 1);
     }
   }, [me, reset]);
 
@@ -51,10 +53,14 @@ export function SettingsPage() {
     mutationFn: (data: FormValues) =>
       updatePreferences({
         locale,
+        week_start_day: weekStartDay,
         display_name: data.display_name ? data.display_name : null,
         notification_time: data.notification_time ? data.notification_time : null,
       }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["me"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["me"] });
+      void queryClient.invalidateQueries({ queryKey: ["stats"] });
+    },
   });
 
   if (isLoading) return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
@@ -92,6 +98,22 @@ export function SettingsPage() {
                 <SelectContent>
                   <SelectItem value="en">English</SelectItem>
                   <SelectItem value="de">Deutsch</SelectItem>
+                </SelectContent>
+              </SelectRoot>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium">Week starts on</label>
+              <SelectRoot
+                value={String(weekStartDay)}
+                onValueChange={(v) => setWeekStartDay(Number(v) as 0 | 1)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Monday</SelectItem>
+                  <SelectItem value="0">Sunday</SelectItem>
                 </SelectContent>
               </SelectRoot>
             </div>

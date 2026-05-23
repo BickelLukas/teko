@@ -19,6 +19,7 @@ import {
   isWithinCompletionWindow,
   suggestCompletionWindow,
 } from "../domain/recurrence.js";
+import { computeStreakUpdate, awardPoints, detectStreakMilestone } from "../domain/streaks.js";
 import { taskToResponse } from "./taskResponseHelper.js";
 import type { Db } from "../db/client.js";
 import "../types.js";
@@ -383,6 +384,26 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const now = new Date();
     const wasOnTime = isWithinCompletionWindow(task, now);
     const isRecurring = task.recurrence_rule !== null && task.recurrence_mode !== null;
+    const pointsAwarded = awardPoints(task);
+
+    // Read current streak before transaction (SQLite single-writer, safe)
+    const currentStreak = isRecurring
+      ? db
+          .select()
+          .from(schema.streaks)
+          .where(
+            and(eq(schema.streaks.task_id, task.id), eq(schema.streaks.user_id, request.user.id)),
+          )
+          .get()
+      : null;
+
+    const oldLength = currentStreak?.current_length ?? 0;
+    const oldLongest = currentStreak?.longest_length ?? 0;
+    const streakUpdate = isRecurring
+      ? computeStreakUpdate({ current_length: oldLength, longest_length: oldLongest }, wasOnTime)
+      : { current_length: 0, longest_length: 0 };
+    const { current_length: newLength, longest_length: newLongest } = streakUpdate;
+    const milestoneReached = isRecurring ? detectStreakMilestone(oldLength, newLength) : null;
 
     db.transaction((tx) => {
       tx.insert(schema.completions)
@@ -393,10 +414,30 @@ const tasks: FastifyPluginAsync = async (fastify) => {
           completed_at: now,
           was_on_time: wasOnTime,
           cycle_due_at: task.next_due_at,
+          points_awarded: pointsAwarded,
         })
         .run();
 
       if (isRecurring) {
+        tx.insert(schema.streaks)
+          .values({
+            id: randomUUID(),
+            task_id: task.id,
+            user_id: request.user.id,
+            current_length: newLength,
+            longest_length: newLongest,
+            last_completed_at: now,
+          })
+          .onConflictDoUpdate({
+            target: [schema.streaks.task_id, schema.streaks.user_id],
+            set: {
+              current_length: newLength,
+              longest_length: newLongest,
+              last_completed_at: now,
+            },
+          })
+          .run();
+
         const nextDueAt = computeNextDueAt(task, now, now);
         const nextStateInput = {
           archived_at: null,
@@ -419,12 +460,29 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       }
     });
 
+    if (milestoneReached !== null) {
+      console.log(
+        `streak-milestone: user=${request.user.id} task=${task.id} (${task.title}) hit ${milestoneReached}-day streak`,
+      );
+    }
+
     // Walk upward: auto-complete ancestors whose all children are now done
     if (task.parent_id && !isRecurring) {
       checkAndAutoCompleteAncestors(db, task.parent_id, request.user.id, now);
     }
 
-    return reply.code(204).send();
+    const updatedTask = db.select().from(schema.tasks).where(eq(schema.tasks.id, task.id)).get();
+
+    return reply.code(200).send({
+      task: updatedTask ? taskToResponse(updatedTask, new Date()) : null,
+      completion: { was_on_time: wasOnTime, points_awarded: pointsAwarded },
+      streak: {
+        current: newLength,
+        longest: newLongest,
+        milestone_reached: milestoneReached ?? null,
+      },
+      points_awarded: pointsAwarded,
+    });
   });
 
   // ── POST /api/tasks/:id/archive ─────────────────────────────────────────────

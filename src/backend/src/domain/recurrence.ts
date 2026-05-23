@@ -135,15 +135,14 @@ export function computeTaskState(task: TaskForState, now: Date): ComputedTaskSta
 
 /**
  * Returns true if completedAt is within the task's completion window.
+ * Early completion (before next_due_at) is treated as on-time: paying rent
+ * a day early or finishing a snoozed chore ahead of plan should not reset
+ * the streak.
  */
 export function isWithinCompletionWindow(task: TaskForWindow, completedAt: Date): boolean {
   if (task.next_due_at === null) return true;
 
-  const nextDueMs = task.next_due_at.getTime();
   const completedMs = completedAt.getTime();
-
-  if (completedMs < nextDueMs) return false;
-
   const windowDays = task.completion_window_days ?? 0;
 
   return completedMs < computeWindowEnd(task.next_due_at, windowDays).getTime();
@@ -151,14 +150,10 @@ export function isWithinCompletionWindow(task: TaskForWindow, completedAt: Date)
 
 /**
  * Returns a human-readable English description of the recurrence.
- * Phase 6 will add localized variants on the frontend.
+ * The frontend has its own localized version; this is used in tests and as a
+ * fallback for non-localized contexts.
  */
-export function describeRecurrence(
-  ruleStr: string,
-  mode: "fixed" | "after_completion",
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _locale: string,
-): string {
+export function describeRecurrence(ruleStr: string, mode: "fixed" | "after_completion"): string {
   const rule = parseRuleWithEarlyDtstart(ruleStr);
 
   if (mode === "after_completion") {

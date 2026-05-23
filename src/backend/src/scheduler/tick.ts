@@ -6,7 +6,21 @@ import { computeTaskState } from "../domain/recurrence.js";
 import { detectBrokenStreaks } from "../domain/streaks.js";
 import { getNow } from "../domain/clock.js";
 
-export async function runTick(db: Db, now: Date = getNow()): Promise<number> {
+type Logger = {
+  info: (obj: object, msg?: string) => void;
+  error: (obj: object, msg?: string) => void;
+};
+
+const fallbackLogger: Logger = {
+  info: (obj, msg) => console.log(msg, obj),
+  error: (obj, msg) => console.error(msg, obj),
+};
+
+export async function runTick(
+  db: Db,
+  now: Date = getNow(),
+  logger: Logger = fallbackLogger,
+): Promise<number> {
   const tasks = db
     .select()
     .from(schema.tasks)
@@ -23,55 +37,86 @@ export async function runTick(db: Db, now: Date = getNow()): Promise<number> {
   const newlyOverdueTasks: (typeof schema.tasks.$inferSelect)[] = [];
 
   for (const task of tasks) {
-    const computed = computeTaskState(task, now);
+    try {
+      const computed = computeTaskState(task, now);
 
-    // archived derived from archived_at; done = one-off completion — neither stored as state
-    if (computed === "archived" || computed === "done") continue;
+      // archived derived from archived_at; done = one-off completion — neither stored as state
+      if (computed === "archived" || computed === "done") continue;
 
-    if (task.state === computed) continue;
+      if (task.state === computed) continue;
 
-    if (computed === "overdue" && task.state !== "overdue") {
-      newlyOverdueTasks.push(task);
+      if (computed === "overdue" && task.state !== "overdue") {
+        newlyOverdueTasks.push(task);
+      }
+
+      const updates: {
+        state: "not_yet" | "eligible" | "planned" | "overdue" | "done";
+        planned_for?: Date | null;
+      } = { state: computed };
+
+      // clear planned_for if the planned date has passed and state is no longer planned
+      if (task.planned_for !== null && computed !== "planned") {
+        updates.planned_for = null;
+      }
+
+      db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, task.id)).run();
+
+      logger.info(
+        { task: task.id, title: task.title, from: task.state, to: computed },
+        "tick.state-change",
+      );
+      updated++;
+    } catch (err) {
+      // Don't let one bad row kill the whole tick.
+      logger.error(
+        { task: task.id, err: err instanceof Error ? err.message : String(err) },
+        "tick.row-failed",
+      );
     }
-
-    const updates: {
-      state: "not_yet" | "eligible" | "planned" | "overdue" | "done";
-      planned_for?: Date | null;
-    } = { state: computed };
-
-    // clear planned_for if the planned date has passed and state is no longer planned
-    if (task.planned_for !== null && computed !== "planned") {
-      updates.planned_for = null;
-    }
-
-    db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, task.id)).run();
-
-    console.log(`tick: ${task.id} (${task.title}) ${task.state} → ${computed}`);
-    updated++;
   }
 
   // Reset streaks for tasks that just went overdue (window closed without completion)
   if (newlyOverdueTasks.length > 0) {
-    const overdueIds = newlyOverdueTasks.map((t) => t.id);
-    const affectedStreaks = db
-      .select()
-      .from(schema.streaks)
-      .where(and(inArray(schema.streaks.task_id, overdueIds), gt(schema.streaks.current_length, 0)))
-      .all();
-
-    const toReset = detectBrokenStreaks(newlyOverdueTasks, affectedStreaks);
-
-    for (const streak of toReset) {
-      db.update(schema.streaks)
-        .set({ current_length: 0 })
+    try {
+      const overdueIds = newlyOverdueTasks.map((t) => t.id);
+      const affectedStreaks = db
+        .select()
+        .from(schema.streaks)
         .where(
-          and(
-            eq(schema.streaks.task_id, streak.task_id),
-            eq(schema.streaks.user_id, streak.user_id),
-          ),
+          and(inArray(schema.streaks.task_id, overdueIds), gt(schema.streaks.current_length, 0)),
         )
-        .run();
-      console.log(`streak-reset: task=${streak.task_id} user=${streak.user_id} (overdue)`);
+        .all();
+
+      const toReset = detectBrokenStreaks(newlyOverdueTasks, affectedStreaks);
+
+      for (const streak of toReset) {
+        try {
+          db.update(schema.streaks)
+            .set({ current_length: 0 })
+            .where(
+              and(
+                eq(schema.streaks.task_id, streak.task_id),
+                eq(schema.streaks.user_id, streak.user_id),
+              ),
+            )
+            .run();
+          logger.info({ task: streak.task_id, user: streak.user_id }, "tick.streak-reset");
+        } catch (err) {
+          logger.error(
+            {
+              task: streak.task_id,
+              user: streak.user_id,
+              err: err instanceof Error ? err.message : String(err),
+            },
+            "tick.streak-reset-failed",
+          );
+        }
+      }
+    } catch (err) {
+      logger.error(
+        { err: err instanceof Error ? err.message : String(err) },
+        "tick.streak-phase-failed",
+      );
     }
   }
 

@@ -276,9 +276,14 @@ describe("isWithinCompletionWindow", () => {
     expect(isWithinCompletionWindow(task, new Date())).toBe(true);
   });
 
-  it("completed before due date → false", () => {
+  it("completed before due date → true (early completion is on time)", () => {
     const task = { next_due_at: dueOct1, completion_window_days: 30 };
-    expect(isWithinCompletionWindow(task, utc(2024, 9, 30))).toBe(false);
+    expect(isWithinCompletionWindow(task, utc(2024, 9, 30))).toBe(true);
+  });
+
+  it("snoozed task completed early → true", () => {
+    const task = { next_due_at: utc(2024, 12, 1), completion_window_days: 0 };
+    expect(isWithinCompletionWindow(task, utc(2024, 10, 15))).toBe(true);
   });
 });
 
@@ -301,24 +306,24 @@ describe("suggestCompletionWindow", () => {
 
 describe("describeRecurrence", () => {
   it("fixed weekly → rrule text", () => {
-    const desc = describeRecurrence("RRULE:FREQ=WEEKLY", "fixed", "en");
+    const desc = describeRecurrence("RRULE:FREQ=WEEKLY", "fixed");
     expect(desc.toLowerCase()).toContain("week");
   });
 
   it("after_completion 7 days", () => {
-    const desc = describeRecurrence(WEEKLY_7, "after_completion", "en");
+    const desc = describeRecurrence(WEEKLY_7, "after_completion");
     expect(desc).toContain("after last completion");
     expect(desc.toLowerCase()).toMatch(/week|7 day/);
   });
 
   it("after_completion 6 months", () => {
-    const desc = describeRecurrence(MONTHLY_6, "after_completion", "en");
+    const desc = describeRecurrence(MONTHLY_6, "after_completion");
     expect(desc).toContain("after last completion");
     expect(desc).toContain("6");
   });
 
   it("fixed daily", () => {
-    const desc = describeRecurrence(DAILY, "fixed", "en");
+    const desc = describeRecurrence(DAILY, "fixed");
     expect(desc.toLowerCase()).toContain("day");
   });
 });

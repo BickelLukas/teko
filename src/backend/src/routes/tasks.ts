@@ -22,6 +22,7 @@ import {
 } from "../domain/recurrence.js";
 import { computeStreakUpdate, awardPoints, detectStreakMilestone } from "../domain/streaks.js";
 import { taskToResponse } from "./taskResponseHelper.js";
+import { fetchDescendants } from "../db/queries.js";
 import type { Db } from "../db/client.js";
 import "../types.js";
 
@@ -32,33 +33,8 @@ function normalizeRrule(ruleStr: string, dtstart: Date): string {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-export function getAllDescendants(db: Db, rootId: string): (typeof schema.tasks.$inferSelect)[] {
-  const result: (typeof schema.tasks.$inferSelect)[] = [];
-  const queue = [rootId];
-  const visited = new Set<string>();
-
-  while (queue.length > 0) {
-    const currentId = queue.shift()!;
-    if (visited.has(currentId)) continue;
-    visited.add(currentId);
-
-    const children = db
-      .select()
-      .from(schema.tasks)
-      .where(eq(schema.tasks.parent_id, currentId))
-      .all();
-
-    for (const child of children) {
-      result.push(child);
-      queue.push(child.id);
-    }
-  }
-
-  return result;
-}
-
 function getDescendantIds(db: Db, taskId: string): string[] {
-  return getAllDescendants(db, taskId).map((d) => d.id);
+  return fetchDescendants(db, taskId).map((d) => d.id);
 }
 
 function buildChildCountMap(db: Db): Map<string, number> {
@@ -449,8 +425,64 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const wasOnTime = isWithinCompletionWindow(task, now);
     const isRecurring = task.recurrence_rule !== null && task.recurrence_mode !== null;
     const pointsAwarded = awardPoints(task);
+    const cycleDueAt = task.next_due_at;
 
-    // Read current streak before transaction (SQLite single-writer, safe)
+    // Reserve the cycle with a conditional update. Guards against two concurrent
+    // completes both passing the state read above and double-cycling the task.
+    // For one-off: claim by flipping state to "done" only if not already done.
+    // For recurring: claim by replacing next_due_at only if it still matches
+    // the value we read (a parallel completer would have already advanced it).
+    const reserved = isRecurring
+      ? (() => {
+          const nextDueAt = computeNextDueAt(task, now, now);
+          const nextStateInput = {
+            archived_at: null,
+            state: "not_yet" as const,
+            recurrence_rule: task.recurrence_rule,
+            next_due_at: nextDueAt,
+            completion_window_days: task.completion_window_days,
+            planned_for: null,
+          };
+          const computed = computeTaskState(nextStateInput, now);
+          const nextState =
+            computed === "archived" || computed === "done" ? ("not_yet" as const) : computed;
+
+          const result = db
+            .update(schema.tasks)
+            .set({ next_due_at: nextDueAt, planned_for: null, state: nextState })
+            .where(
+              and(
+                eq(schema.tasks.id, task.id),
+                cycleDueAt === null
+                  ? isNull(schema.tasks.next_due_at)
+                  : eq(schema.tasks.next_due_at, cycleDueAt),
+                ne(schema.tasks.state, "done"),
+                isNull(schema.tasks.archived_at),
+              ),
+            )
+            .run();
+          return { claimed: result.changes > 0, nextDueAt };
+        })()
+      : (() => {
+          const result = db
+            .update(schema.tasks)
+            .set({ state: "done" })
+            .where(
+              and(
+                eq(schema.tasks.id, task.id),
+                ne(schema.tasks.state, "done"),
+                isNull(schema.tasks.archived_at),
+              ),
+            )
+            .run();
+          return { claimed: result.changes > 0, nextDueAt: null };
+        })();
+
+    if (!reserved.claimed) {
+      return reply.code(409).send({ error: "Task already completed" });
+    }
+
+    // Read current streak after claiming the cycle
     const currentStreak = isRecurring
       ? db
           .select()
@@ -477,7 +509,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
           completed_by: request.user.id,
           completed_at: now,
           was_on_time: wasOnTime,
-          cycle_due_at: task.next_due_at,
+          cycle_due_at: cycleDueAt,
           points_awarded: pointsAwarded,
         })
         .run();
@@ -501,32 +533,13 @@ const tasks: FastifyPluginAsync = async (fastify) => {
             },
           })
           .run();
-
-        const nextDueAt = computeNextDueAt(task, now, now);
-        const nextStateInput = {
-          archived_at: null,
-          state: "not_yet" as const,
-          recurrence_rule: task.recurrence_rule,
-          next_due_at: nextDueAt,
-          completion_window_days: task.completion_window_days,
-          planned_for: null,
-        };
-        const computed = computeTaskState(nextStateInput, now);
-        const nextState =
-          computed === "archived" || computed === "done" ? ("not_yet" as const) : computed;
-
-        tx.update(schema.tasks)
-          .set({ next_due_at: nextDueAt, planned_for: null, state: nextState })
-          .where(eq(schema.tasks.id, task.id))
-          .run();
-      } else {
-        tx.update(schema.tasks).set({ state: "done" }).where(eq(schema.tasks.id, task.id)).run();
       }
     });
 
     if (milestoneReached !== null) {
-      console.log(
-        `streak-milestone: user=${request.user.id} task=${task.id} (${task.title}) hit ${milestoneReached}-day streak`,
+      fastify.log.info(
+        { user: request.user.id, task: task.id, title: task.title, streak: milestoneReached },
+        "streak-milestone",
       );
     }
 

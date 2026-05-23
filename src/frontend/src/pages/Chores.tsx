@@ -13,9 +13,11 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { parseEnum } from "@/lib/utils";
 import type { TaskResponse } from "@teko/shared";
 
-type AssigneeFilter = "mine" | "me" | "unassigned" | "all";
+const ASSIGNEE_FILTERS = ["mine", "me", "unassigned", "all"] as const;
+type AssigneeFilter = (typeof ASSIGNEE_FILTERS)[number];
 
 export function ChoresPage() {
   const { t } = useTranslation(["pages", "common"]);
@@ -40,7 +42,7 @@ export function ChoresPage() {
   const planned = chores.filter((t) => t.state === "planned");
   const notYet = chores.filter((t) => t.state === "not_yet");
 
-  const displayName = me?.display_name ?? me?.name ?? "Me";
+  const displayName = me?.display_name ?? me?.name ?? t("common:person.me_short");
 
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-6">
@@ -49,7 +51,7 @@ export function ChoresPage() {
         <div className="flex items-center gap-2">
           <SelectRoot
             value={assigneeFilter}
-            onValueChange={(v) => setAssigneeFilter(v as AssigneeFilter)}
+            onValueChange={(v) => setAssigneeFilter(parseEnum(v, ASSIGNEE_FILTERS, "all"))}
           >
             <SelectTrigger size="sm" className="w-40">
               <SelectValue />

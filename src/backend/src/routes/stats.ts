@@ -1,12 +1,49 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, and, gte, lt, gt, inArray } from "drizzle-orm";
-import { startOfWeek, addWeeks, subWeeks, startOfDay, differenceInDays } from "date-fns";
+import {
+  startOfWeek,
+  addWeeks,
+  subWeeks,
+  startOfDay,
+  differenceInDays,
+  differenceInCalendarWeeks,
+} from "date-fns";
 import { getNow } from "../domain/clock.js";
 import * as schema from "../db/schema.js";
 import { TaskIdParamsSchema } from "@teko/shared";
-import { computeTaskState, type ComputedTaskState } from "../domain/recurrence.js";
+import { computeTaskState } from "../domain/recurrence.js";
 import { isStreakActive } from "../domain/streaks.js";
 import "../types.js";
+
+type CompletionRow = typeof schema.completions.$inferSelect;
+
+// Aggregate completions into N consecutive week buckets (oldest first, current last).
+function bucketByWeek(
+  completions: CompletionRow[],
+  weeksAgoStart: Date,
+  weekCount: number,
+  weekStartsOn: 0 | 1,
+): number[] {
+  const buckets = new Array<number>(weekCount).fill(0);
+  for (const c of completions) {
+    const idx = differenceInCalendarWeeks(c.completed_at, weeksAgoStart, { weekStartsOn });
+    if (idx >= 0 && idx < weekCount) {
+      buckets[idx]! += c.points_awarded ?? 0;
+    }
+  }
+  return buckets;
+}
+
+// Longest run of consecutive weeks (ending at currentWeekIdx) with > 0 completions.
+// counts is indexed oldest→newest; consecutive run extends backward from the end.
+function trailingStreak(counts: number[]): number {
+  let streak = 0;
+  for (let i = counts.length - 1; i >= 0; i--) {
+    if ((counts[i] ?? 0) > 0) streak++;
+    else break;
+  }
+  return streak;
+}
 
 const stats: FastifyPluginAsync = async (fastify) => {
   const db = fastify.db;
@@ -21,19 +58,24 @@ const stats: FastifyPluginAsync = async (fastify) => {
     const now = getNow();
     const weekStart = startOfWeek(now, { weekStartsOn });
     const weekEnd = addWeeks(weekStart, 1);
+    const history12Start = subWeeks(weekStart, 11);
 
-    const weekCompletions = db
+    // Single query covers both current-week stats and 12-week history.
+    const rangeCompletions = db
       .select()
       .from(schema.completions)
       .where(
         and(
           eq(schema.completions.completed_by, request.user.id),
-          gte(schema.completions.completed_at, weekStart),
+          gte(schema.completions.completed_at, history12Start),
           lt(schema.completions.completed_at, weekEnd),
         ),
       )
       .all();
 
+    const weekCompletions = rangeCompletions.filter(
+      (c) => c.completed_at >= weekStart && c.completed_at < weekEnd,
+    );
     const weekPoints = weekCompletions.reduce((sum, c) => sum + (c.points_awarded ?? 0), 0);
 
     const completionsByDay = new Array<number>(7).fill(0);
@@ -42,29 +84,31 @@ const stats: FastifyPluginAsync = async (fastify) => {
       if (dayIndex >= 0 && dayIndex < 7) completionsByDay[dayIndex]!++;
     }
 
-    // Active streaks for this user
-    const userStreaks = db
+    const history = bucketByWeek(rangeCompletions, history12Start, 12, weekStartsOn);
+
+    // Active streaks for this user — fetch all streaks once, derive both active
+    // and longest_ever from the same dataset.
+    const allUserStreaks = db
       .select()
       .from(schema.streaks)
-      .where(and(eq(schema.streaks.user_id, request.user.id), gt(schema.streaks.current_length, 0)))
+      .where(eq(schema.streaks.user_id, request.user.id))
       .all();
 
-    const taskIds = userStreaks.map((s) => s.task_id);
+    const allTaskIds = [...new Set(allUserStreaks.map((s) => s.task_id))];
     const tasks =
-      taskIds.length > 0
-        ? db.select().from(schema.tasks).where(inArray(schema.tasks.id, taskIds)).all()
+      allTaskIds.length > 0
+        ? db.select().from(schema.tasks).where(inArray(schema.tasks.id, allTaskIds)).all()
         : [];
     const taskMap = new Map(tasks.map((t) => [t.id, t]));
 
-    const activeStreaks = userStreaks
+    const activeStreaks = allUserStreaks
+      .filter((s) => s.current_length > 0)
       .map((s) => {
         const task = taskMap.get(s.task_id);
         if (!task) return null;
-        const state = computeTaskState(task, now) as ComputedTaskState;
+        const state = computeTaskState(task, now);
         const normalizedState =
-          state === "archived" || state === "done"
-            ? ("eligible" as const)
-            : (state as "not_yet" | "eligible" | "planned" | "overdue");
+          state === "archived" || state === "done" ? ("eligible" as const) : state;
         const { at_risk } = isStreakActive(s.current_length, normalizedState);
         return {
           task_id: s.task_id,
@@ -77,44 +121,11 @@ const stats: FastifyPluginAsync = async (fastify) => {
       .filter((s): s is NonNullable<typeof s> => s !== null)
       .sort((a, b) => b.current_length - a.current_length);
 
-    // Longest ever streak for this user
-    const allUserStreaks = db
-      .select()
-      .from(schema.streaks)
-      .where(eq(schema.streaks.user_id, request.user.id))
-      .all();
-
     const longestEverStreak = allUserStreaks.reduce<(typeof allUserStreaks)[0] | null>(
-      (best, s) => {
-        if (!best || s.longest_length > best.longest_length) return s;
-        return best;
-      },
+      (best, s) => (!best || s.longest_length > best.longest_length ? s : best),
       null,
     );
-
-    const longestEverTask = longestEverStreak
-      ? (taskMap.get(longestEverStreak.task_id) ??
-        db.select().from(schema.tasks).where(eq(schema.tasks.id, longestEverStreak.task_id)).get())
-      : null;
-
-    // Last 12 weeks history
-    const history: number[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const wStart = subWeeks(weekStart, i);
-      const wEnd = addWeeks(wStart, 1);
-      const wCompletions = db
-        .select()
-        .from(schema.completions)
-        .where(
-          and(
-            eq(schema.completions.completed_by, request.user.id),
-            gte(schema.completions.completed_at, wStart),
-            lt(schema.completions.completed_at, wEnd),
-          ),
-        )
-        .all();
-      history.push(wCompletions.reduce((sum, c) => sum + (c.points_awarded ?? 0), 0));
-    }
+    const longestEverTask = longestEverStreak ? taskMap.get(longestEverStreak.task_id) : null;
 
     return reply.code(200).send({
       week: {
@@ -145,18 +156,24 @@ const stats: FastifyPluginAsync = async (fastify) => {
     const now = getNow();
     const weekStart = startOfWeek(now, { weekStartsOn });
     const weekEnd = addWeeks(weekStart, 1);
+    const streakWindowStart = subWeeks(weekStart, 51);
 
-    const weekCompletions = db
+    // Single query covers the full 52-week window — used for the current-week
+    // breakdown, household streak, and 12-week history.
+    const rangeCompletions = db
       .select()
       .from(schema.completions)
       .where(
         and(
-          gte(schema.completions.completed_at, weekStart),
+          gte(schema.completions.completed_at, streakWindowStart),
           lt(schema.completions.completed_at, weekEnd),
         ),
       )
       .all();
 
+    const weekCompletions = rangeCompletions.filter(
+      (c) => c.completed_at >= weekStart && c.completed_at < weekEnd,
+    );
     const weekPoints = weekCompletions.reduce((sum, c) => sum + (c.points_awarded ?? 0), 0);
 
     const completionsByDay = new Array<number>(7).fill(0);
@@ -178,45 +195,10 @@ const stats: FastifyPluginAsync = async (fastify) => {
       }))
       .sort((a, b) => a.name.localeCompare(b.name)); // alphabetical ONLY
 
-    // Consecutive weeks with > 0 completions (household streak)
-    let householdStreak = 0;
-    for (let i = 0; i < 52; i++) {
-      const wStart = subWeeks(weekStart, i);
-      const wEnd = addWeeks(wStart, 1);
-      const count = db
-        .select()
-        .from(schema.completions)
-        .where(
-          and(
-            gte(schema.completions.completed_at, wStart),
-            lt(schema.completions.completed_at, wEnd),
-          ),
-        )
-        .all().length;
-      if (count > 0) {
-        householdStreak++;
-      } else {
-        break;
-      }
-    }
-
-    // Last 12 weeks history
-    const history: number[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const wStart = subWeeks(weekStart, i);
-      const wEnd = addWeeks(wStart, 1);
-      const wCompletions = db
-        .select()
-        .from(schema.completions)
-        .where(
-          and(
-            gte(schema.completions.completed_at, wStart),
-            lt(schema.completions.completed_at, wEnd),
-          ),
-        )
-        .all();
-      history.push(wCompletions.reduce((sum, c) => sum + (c.points_awarded ?? 0), 0));
-    }
+    // Bucket the 52-week range; trailing run with > 0 is the household streak.
+    const streakBuckets = bucketByWeek(rangeCompletions, streakWindowStart, 52, weekStartsOn);
+    const householdStreak = trailingStreak(streakBuckets);
+    const history = streakBuckets.slice(-12);
 
     return reply.code(200).send({
       week: { points: weekPoints, completions_by_day: completionsByDay, contributions },

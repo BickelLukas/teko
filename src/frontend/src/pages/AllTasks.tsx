@@ -13,9 +13,11 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { parseEnum } from "@/lib/utils";
 import type { TaskResponse } from "@teko/shared";
 
-type AssigneeFilter = "mine" | "me" | "unassigned" | "all";
+const ASSIGNEE_FILTERS = ["mine", "me", "unassigned", "all"] as const;
+type AssigneeFilter = (typeof ASSIGNEE_FILTERS)[number];
 
 const STATE_ORDER: Record<string, number> = {
   overdue: 0,
@@ -48,7 +50,7 @@ export function AllTasksPage() {
     (a: TaskResponse, b: TaskResponse) => (STATE_ORDER[a.state] ?? 9) - (STATE_ORDER[b.state] ?? 9),
   );
 
-  const displayName = me?.display_name ?? me?.name ?? "Me";
+  const displayName = me?.display_name ?? me?.name ?? t("common:person.me_short");
 
   return (
     <div className="mx-auto max-w-xl space-y-4 px-4 py-6">
@@ -57,7 +59,7 @@ export function AllTasksPage() {
         <div className="flex items-center gap-2">
           <SelectRoot
             value={assigneeFilter}
-            onValueChange={(v) => setAssigneeFilter(v as AssigneeFilter)}
+            onValueChange={(v) => setAssigneeFilter(parseEnum(v, ASSIGNEE_FILTERS, "all"))}
           >
             <SelectTrigger size="sm" className="w-40">
               <SelectValue />

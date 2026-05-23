@@ -43,6 +43,15 @@
     "load_failed": "Something went wrong.",
     "retry": "Retry"
   },
+  "form": {
+    "title_required": "Title is required",
+    "time_format": "Use HH:MM format (e.g. 08:00)"
+  },
+  "person": {
+    "current_user": "current user",
+    "you": "you",
+    "me_short": "Me"
+  },
   "snooze_options": {
     "one_hour": "1 hour",
     "tomorrow": "Until tomorrow",

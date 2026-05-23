@@ -9,14 +9,19 @@ export type Config = {
 
 export function loadConfig(): Config {
   const nodeEnv = process.env["NODE_ENV"] ?? "development";
-  const devMode = process.env["DEV_MODE"] === "true";
+  const rawDevMode = process.env["DEV_MODE"] === "true";
 
-  if (devMode && nodeEnv === "production") {
+  if (rawDevMode && nodeEnv === "production") {
     throw new Error(
       "FATAL: DEV_MODE=true is not allowed when NODE_ENV=production. " +
         "This is a safety check. Never run with DEV_MODE=true in production.",
     );
   }
+
+  // Dev auth requires BOTH flags. NODE_ENV=test is honored so vitest can drive
+  // the dev branch; production is rejected above; anything else with DEV_MODE=true
+  // but NODE_ENV unset/staging/etc. silently runs in non-dev mode.
+  const devMode = rawDevMode && (nodeEnv === "development" || nodeEnv === "test");
 
   const rawPort = parseInt(process.env["PORT"] ?? "3000", 10);
   if (isNaN(rawPort) || rawPort < 1 || rawPort > 65535) {

@@ -15,9 +15,11 @@ import {
 } from "@/components/ui/dialog";
 import { fetchProjects, createTask } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { parseEnum } from "@/lib/utils";
 import type { ProjectResponse } from "@teko/shared";
 
-type SortKey = "activity" | "alpha" | "progress_asc" | "progress_desc";
+const SORT_KEYS = ["activity", "alpha", "progress_asc", "progress_desc"] as const;
+type SortKey = (typeof SORT_KEYS)[number];
 
 function sortProjects(projects: ProjectResponse[], key: SortKey): ProjectResponse[] {
   return [...projects].sort((a, b) => {
@@ -139,7 +141,7 @@ export function ProjectsPage() {
           <select
             className="rounded border border-input bg-background px-2 py-1 text-xs text-foreground"
             value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
+            onChange={(e) => setSort(parseEnum(e.target.value, SORT_KEYS, "activity"))}
           >
             <option value="activity">{t("pages:projects.sort.activity")}</option>
             <option value="alpha">{t("pages:projects.sort.alpha")}</option>

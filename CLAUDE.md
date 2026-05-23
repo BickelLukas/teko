@@ -136,7 +136,7 @@ These are doctrine from `README.md` and `PRODUCT.md`. They are enforced through 
 Auth is the most important subsystem to keep clean. The following invariants are absolute:
 
 - **Four contexts, one middleware, deterministic order:** dev mode → ingress → bearer token → (future) OAuth2 → 401.
-- **The dev branch comes first and short-circuits.** It is gated by `NODE_ENV=development` AND `DEV_MODE=true`. Both required.
+- **The dev branch comes first and short-circuits.** Active only when `NODE_ENV` is `development` or `test` AND `DEV_MODE=true`. Any other combination (including production) disables the dev branch entirely.
 - **The config loader must refuse to start with `DEV_MODE=true` and `NODE_ENV=production`.** This check exists; do not weaken it.
 - **Dev-only routes do not exist in production builds.** They are conditionally registered, not 404'd. Don't change this pattern.
 - **Ingress headers are trusted only when accompanied by the ingress path header.** Don't add code paths that trust them otherwise.

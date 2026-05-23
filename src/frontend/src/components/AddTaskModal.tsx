@@ -25,11 +25,13 @@ import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceValue } from "@/components/RecurrencePicker";
 import { createTask, fetchDevUsers, fetchMe, fetchProjects, isDevModeActive } from "@/lib/api";
 
-const FormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-});
-type FormValues = z.infer<typeof FormSchema>;
+function buildFormSchema(titleRequired: string) {
+  return z.object({
+    title: z.string().min(1, titleRequired),
+    description: z.string().optional(),
+  });
+}
+type FormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
 type AddTaskModalProps = {
   defaultParentId?: string | null;
@@ -75,6 +77,7 @@ export function AddTaskModal({
     queryFn: () => fetchProjects("all"),
   });
 
+  const FormSchema = buildFormSchema(t("form.title_required"));
   const {
     register,
     handleSubmit,
@@ -163,7 +166,9 @@ export function AddTaskModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__me__">
-                    {t("assignee.me", { name: me?.display_name ?? me?.name ?? "current user" })}
+                    {t("assignee.me", {
+                      name: me?.display_name ?? me?.name ?? t("person.current_user"),
+                    })}
                   </SelectItem>
                   <SelectItem value="__unassigned__">{t("assignee.anyone")}</SelectItem>
                   {devUsers.map((u) => (

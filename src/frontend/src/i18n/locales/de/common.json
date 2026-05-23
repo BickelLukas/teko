@@ -43,6 +43,15 @@
     "load_failed": "Etwas ist schiefgelaufen.",
     "retry": "Erneut versuchen"
   },
+  "form": {
+    "title_required": "Titel ist erforderlich",
+    "time_format": "Format HH:MM verwenden (z. B. 08:00)"
+  },
+  "person": {
+    "current_user": "aktueller Benutzer",
+    "you": "du",
+    "me_short": "Ich"
+  },
   "snooze_options": {
     "one_hour": "1 Stunde",
     "tomorrow": "Bis morgen",

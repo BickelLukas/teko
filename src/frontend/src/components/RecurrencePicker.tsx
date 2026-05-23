@@ -5,6 +5,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { describeRecurrenceLocalized } from "@/lib/recurrence";
 import { useLocale } from "@/lib/locale";
+import { parseEnum } from "@/lib/utils";
 
 export type RecurrenceValue = {
   rule: string | null;
@@ -17,15 +18,17 @@ type Props = {
   onChange: (v: RecurrenceValue) => void;
 };
 
-type Preset =
-  | "none"
-  | "daily"
-  | "every-n-days"
-  | "weekly"
-  | "monthly-date"
-  | "every-n-months"
-  | "yearly"
-  | "custom";
+const PRESETS = [
+  "none",
+  "daily",
+  "every-n-days",
+  "weekly",
+  "monthly-date",
+  "every-n-months",
+  "yearly",
+  "custom",
+] as const;
+type Preset = (typeof PRESETS)[number];
 
 const WEEKDAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const;
 
@@ -130,7 +133,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
         <select
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
           value={preset}
-          onChange={(e) => setPreset(e.target.value as Preset)}
+          onChange={(e) => setPreset(parseEnum(e.target.value, PRESETS, "none"))}
         >
           <option value="none">{t("recurrence.none")}</option>
           <option value="daily">{t("recurrence.daily")}</option>

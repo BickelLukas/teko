@@ -5,7 +5,7 @@ import { inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
-import { addDays, subDays, startOfMonth, addMonths } from "date-fns";
+import { addDays, subDays, startOfMonth, addMonths, startOfDay } from "date-fns";
 
 const config = loadConfig();
 
@@ -93,7 +93,7 @@ console.log("Created users: Alice (dev-alice), Bob (dev-bob), Charlie (dev-charl
 // ── Seed tasks ────────────────────────────────────────────────────────────────
 
 const now = new Date();
-const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+const today = startOfDay(now);
 
 // Recurring chores
 

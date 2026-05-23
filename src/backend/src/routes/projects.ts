@@ -1,24 +1,54 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, and, isNull, isNotNull, inArray, desc, sql } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, inArray, sql } from "drizzle-orm";
 import * as schema from "../db/schema.js";
 import { TaskIdParamsSchema, GetTasksQuerySchema } from "@teko/shared";
 import { getNow } from "../domain/clock.js";
 import { computeProjectProgress } from "../domain/project.js";
-import { getAllDescendants } from "./tasks.js";
+import { fetchSubtreesByRoot } from "../db/queries.js";
 import { taskToResponse } from "./taskResponseHelper.js";
 import "../types.js";
 import type { Db } from "../db/client.js";
 
-function getLastActivityAt(db: Db, allTaskIds: string[]): Date | null {
-  if (allTaskIds.length === 0) return null;
-  const latest = db
-    .select({ completed_at: schema.completions.completed_at })
+type TaskRow = typeof schema.tasks.$inferSelect;
+
+// One query for the latest completion per root: aggregate completed_at from
+// all tasks in each subtree.
+function fetchLastActivityByRoot(
+  db: Db,
+  subtrees: Map<string, TaskRow[]>,
+): Map<string, Date | null> {
+  const result = new Map<string, Date | null>();
+  for (const root of subtrees.keys()) result.set(root, null);
+
+  // Build flat (root_id, task_id) pairs then a single GROUP BY query.
+  const taskToRoot = new Map<string, string>();
+  for (const [rootId, descendants] of subtrees) {
+    taskToRoot.set(rootId, rootId);
+    for (const d of descendants) taskToRoot.set(d.id, rootId);
+  }
+
+  const allTaskIds = [...taskToRoot.keys()];
+  if (allTaskIds.length === 0) return result;
+
+  const rows = db
+    .select({
+      task_id: schema.completions.task_id,
+      completed_at: schema.completions.completed_at,
+    })
     .from(schema.completions)
     .where(inArray(schema.completions.task_id, allTaskIds))
-    .orderBy(desc(schema.completions.completed_at))
-    .limit(1)
-    .get();
-  return latest?.completed_at ?? null;
+    .all();
+
+  for (const row of rows) {
+    const rootId = taskToRoot.get(row.task_id);
+    if (!rootId) continue;
+    const current = result.get(rootId) ?? null;
+    if (current === null || row.completed_at > current) {
+      result.set(rootId, row.completed_at);
+    }
+  }
+
+  return result;
 }
 
 const projects: FastifyPluginAsync = async (fastify) => {
@@ -51,7 +81,7 @@ const projects: FastifyPluginAsync = async (fastify) => {
       inArray(schema.tasks.id, projectIds),
     ] as const;
 
-    let rows: (typeof schema.tasks.$inferSelect)[];
+    let rows: TaskRow[];
 
     if (assignee === "mine") {
       rows = db
@@ -84,10 +114,14 @@ const projects: FastifyPluginAsync = async (fastify) => {
         .all();
     }
 
+    const rootIds = rows.map((r) => r.id);
+    const subtrees = fetchSubtreesByRoot(db, rootIds);
+    const lastActivityByRoot = fetchLastActivityByRoot(db, subtrees);
+
     const now = getNow();
 
     return rows.map((project) => {
-      const descendants = getAllDescendants(db, project.id);
+      const descendants = subtrees.get(project.id) ?? [];
       const progress = computeProjectProgress(
         descendants.map((d) => ({
           id: d.id,
@@ -98,8 +132,7 @@ const projects: FastifyPluginAsync = async (fastify) => {
         })),
       );
       const directChildCount = descendants.filter((d) => d.parent_id === project.id).length;
-      const allTaskIds = [project.id, ...descendants.map((d) => d.id)];
-      const lastActivityAt = getLastActivityAt(db, allTaskIds);
+      const lastActivityAt = lastActivityByRoot.get(project.id) ?? null;
 
       return {
         ...taskToResponse(project, now, { childCount: directChildCount }),
@@ -111,7 +144,6 @@ const projects: FastifyPluginAsync = async (fastify) => {
 
   // ── GET /api/tasks/:id/tree ─────────────────────────────────────────────────
   // Returns the root task + all descendants as a flat array.
-  // Each item includes child_count so the frontend can build the tree structure.
 
   fastify.get("/api/tasks/:id/tree", async (request, reply) => {
     const params = TaskIdParamsSchema.safeParse(request.params);
@@ -120,10 +152,10 @@ const projects: FastifyPluginAsync = async (fastify) => {
     const root = db.select().from(schema.tasks).where(eq(schema.tasks.id, params.data.id)).get();
     if (!root) return reply.code(404).send({ error: "Task not found" });
 
-    const descendants = getAllDescendants(db, root.id);
+    const subtrees = fetchSubtreesByRoot(db, [root.id]);
+    const descendants = subtrees.get(root.id) ?? [];
     const allNodes = [root, ...descendants];
 
-    // Build child count map from the descendants
     const childCounts = new Map<string, number>();
     for (const d of descendants) {
       if (d.parent_id) {
@@ -155,7 +187,6 @@ const projects: FastifyPluginAsync = async (fastify) => {
 
     const childIds = children.map((c) => c.id);
 
-    // Count grandchildren (one query)
     const grandchildRows = db
       .select({
         parent_id: schema.tasks.parent_id,

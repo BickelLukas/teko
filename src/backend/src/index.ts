@@ -15,7 +15,7 @@ async function init() {
 
   const { db } = createDb(config.dbPath);
   const app = await buildApp(db, config);
-  startScheduler(db);
+  startScheduler(db, app.log);
   await app.listen({ port: config.port, host: "0.0.0.0" });
 }
 

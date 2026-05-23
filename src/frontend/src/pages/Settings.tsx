@@ -15,17 +15,21 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { fetchMe, updatePreferences } from "@/lib/api";
+import { parseEnum } from "@/lib/utils";
 
-const FormSchema = z.object({
-  display_name: z.string().optional(),
-  notification_time: z
-    .string()
-    .regex(/^$|^(?:[01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM format (e.g. 08:00)")
-    .optional(),
-});
-type FormValues = z.infer<typeof FormSchema>;
+function buildFormSchema(timeFormatMsg: string) {
+  return z.object({
+    display_name: z.string().optional(),
+    notification_time: z
+      .string()
+      .regex(/^$|^(?:[01]\d|2[0-3]):[0-5]\d$/, timeFormatMsg)
+      .optional(),
+  });
+}
+type FormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
-type Theme = "light" | "dark" | "system";
+const THEMES = ["light", "dark", "system"] as const;
+type Theme = (typeof THEMES)[number];
 
 export function SettingsPage() {
   const { t, i18n } = useTranslation("pages");
@@ -49,6 +53,7 @@ export function SettingsPage() {
 
   const { data: me, isLoading } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
 
+  const FormSchema = buildFormSchema(t("common:form.time_format", { ns: "common" }));
   const {
     register,
     handleSubmit,
@@ -63,8 +68,8 @@ export function SettingsPage() {
         notification_time: me.notification_time ?? "",
       });
       setLocale(me.locale ?? "en");
-      setTheme((me.theme ?? "system") as Theme);
-      setWeekStartDay((me.week_start_day ?? 1) as 0 | 1);
+      setTheme(parseEnum(me.theme, THEMES, "system"));
+      setWeekStartDay(me.week_start_day === 0 ? 0 : 1);
     }
   }, [me, reset]);
 
@@ -98,7 +103,7 @@ export function SettingsPage() {
     );
   }
 
-  const appVersion = "0.1.0";
+  const appVersion = __APP_VERSION__;
 
   return (
     <div className="mx-auto max-w-md space-y-6 px-4 py-6">
@@ -162,7 +167,10 @@ export function SettingsPage() {
                 <label className="mb-1 block text-xs font-medium">
                   {t("settings.theme_label")}
                 </label>
-                <SelectRoot value={theme} onValueChange={(v) => setTheme(v as Theme)}>
+                <SelectRoot
+                  value={theme}
+                  onValueChange={(v) => setTheme(parseEnum(v, THEMES, "system"))}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

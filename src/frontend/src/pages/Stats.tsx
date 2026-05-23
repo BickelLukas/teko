@@ -226,27 +226,15 @@ function HouseholdSection({
               <p className="mb-3 text-xs text-muted-foreground/70">
                 {t("stats.contributions_note")}
               </p>
-              <ul className="space-y-3">
-                {stats.week.contributions.map((c) => {
-                  const maxPoints = Math.max(1, ...stats.week.contributions.map((x) => x.points));
-                  const pct = Math.round((c.points / maxPoints) * 100);
-                  return (
-                    <li key={c.user_id}>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="truncate font-medium">{c.name}</span>
-                        <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
-                          {t("stats.pts", { count: c.points })}
-                        </span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary/50 transition-all duration-500"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </li>
-                  );
-                })}
+              <ul className="space-y-2">
+                {stats.week.contributions.map((c) => (
+                  <li key={c.user_id} className="flex items-center justify-between text-sm">
+                    <span className="truncate font-medium">{c.name}</span>
+                    <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
+                      {t("stats.pts", { count: c.points })}
+                    </span>
+                  </li>
+                ))}
               </ul>
             </CardContent>
           </Card>

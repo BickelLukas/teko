@@ -2,8 +2,10 @@ import { useEffect } from "react";
 import type React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchMe } from "@/lib/api";
+import { parseEnum } from "@/lib/utils";
 
-type Theme = "light" | "dark" | "system";
+const THEMES = ["light", "dark", "system"] as const;
+type Theme = (typeof THEMES)[number];
 
 const THEME_KEY = "teko-theme";
 
@@ -14,18 +16,20 @@ function applyTheme(theme: Theme) {
   root.classList.toggle("dark", dark);
 }
 
-// Apply cached theme immediately at module load to avoid flash on subsequent visits
-try {
-  applyTheme((localStorage.getItem(THEME_KEY) as Theme) ?? "system");
-} catch {
-  /* localStorage unavailable */
+function readStoredTheme(): Theme {
+  try {
+    return parseEnum(localStorage.getItem(THEME_KEY), THEMES, "system");
+  } catch {
+    return "system";
+  }
 }
+
+// Apply cached theme immediately at module load to avoid flash on subsequent visits
+applyTheme(readStoredTheme());
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
-  const theme = (me?.theme ??
-    (localStorage.getItem(THEME_KEY) as Theme | null) ??
-    "system") as Theme;
+  const theme: Theme = me?.theme ?? readStoredTheme();
 
   useEffect(() => {
     applyTheme(theme);

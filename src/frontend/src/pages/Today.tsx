@@ -11,13 +11,6 @@ import { useLocale, formatDateLong } from "@/lib/locale";
 import { getNow } from "@/lib/clock";
 import type { TaskResponse } from "@teko/shared";
 
-function useGreeting(name: string): string {
-  const { t } = useTranslation("pages");
-  const h = getNow().getHours();
-  const key = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
-  return t(`today.greeting.${key}`, { name });
-}
-
 type Sections = {
   overdue: TaskResponse[];
   today: TaskResponse[];
@@ -120,8 +113,10 @@ export function TodayPage() {
     sections.eligible.length > 0 ||
     sections.comingUp.length > 0;
 
-  const displayName = me?.display_name ?? me?.name ?? "there";
-  const greeting = useGreeting(displayName);
+  const displayName = me?.display_name ?? me?.name ?? t("common:person.you");
+  const hour = now.getHours();
+  const greetingKey = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+  const greeting = t(`today.greeting.${greetingKey}`, { name: displayName });
 
   const streakByTask = new Map<string, number>();
   if (meStats) {

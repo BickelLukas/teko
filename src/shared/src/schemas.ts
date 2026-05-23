@@ -95,7 +95,7 @@ export const TaskIdParamsSchema = z.object({
 export type TaskIdParams = z.infer<typeof TaskIdParamsSchema>;
 
 export const CreateTaskBodySchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1),
   description: z.string().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
   parent_id: z.string().uuid().nullable().optional(),

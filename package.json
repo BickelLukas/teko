@@ -1,0 +1,32 @@
+{
+  "name": "teko",
+  "private": true,
+  "packageManager": "yarn@4.15.0",
+  "workspaces": [
+    "src/backend",
+    "src/frontend",
+    "src/shared"
+  ],
+  "scripts": {
+    "dev": "concurrently --names backend,frontend --prefix-colors cyan,magenta \"yarn workspace @teko/backend dev\" \"yarn workspace @teko/frontend dev\"",
+    "build": "yarn workspaces foreach -A --topological-dev run build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "typecheck": "yarn workspaces foreach -A run typecheck",
+    "test": "yarn workspaces foreach -A run test"
+  },
+  "dependenciesMeta": {
+    "esbuild": {
+      "built": true
+    }
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "eslint": "^10.4.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.4"
+  }
+}

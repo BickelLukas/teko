@@ -1,0 +1,25 @@
+# Yarn Berry — commit releases, plugins, patches, sdks; ignore everything else
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Build outputs
+dist/
+build/
+
+# Node
+node_modules/
+
+# Environment — only .env.example is committed
+.env
+.env.local
+.env.*.local
+.env.development
+
+# Claude Code — commit settings.json (project config), ignore local overrides
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db

@@ -3544,10 +3544,14 @@ __metadata:
     "@teko/shared": "workspace:^"
     "@types/better-sqlite3": "npm:^7.6.13"
     "@types/node": "npm:^25.9.1"
+    "@types/node-cron": "npm:^3.0.11"
     better-sqlite3: "npm:^12.10.0"
+    date-fns: "npm:^4.2.1"
     drizzle-kit: "npm:0.31.10"
     drizzle-orm: "npm:0.45.2"
     fastify: "npm:^5.8.5"
+    node-cron: "npm:^4.2.1"
+    rrule: "npm:^2.8.1"
     tsup: "npm:^8.5.1"
     tsx: "npm:^4.22.3"
     typescript: "npm:^6.0.3"
@@ -3571,11 +3575,13 @@ __metadata:
     "@vitejs/plugin-react": "npm:^6.0.2"
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
+    date-fns: "npm:^4.2.1"
     jsdom: "npm:^29.1.1"
     radix-ui: "npm:^1.4.3"
     react: "npm:^19.2.6"
     react-dom: "npm:^19.2.6"
     react-hook-form: "npm:^7.76.0"
+    rrule: "npm:^2.8.1"
     shadcn: "npm:^4.8.0"
     tailwind-merge: "npm:^3.6.0"
     tailwindcss: "npm:^4.3.0"
@@ -3667,6 +3673,13 @@ __metadata:
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
   checksum: 10c0/a996a745e6c5d60292f36731dd41341339d4eeed8180bb09226e5c8d23759067692b1d88e5d91d72ee83dfc00d3aca8e7bd43ea120516c17922cbcb7c3e252db
+  languageName: node
+  linkType: hard
+
+"@types/node-cron@npm:^3.0.11":
+  version: 3.0.11
+  resolution: "@types/node-cron@npm:3.0.11"
+  checksum: 10c0/21cd0255988da2935bc8bf010da8b31624911ec10ef5d9a96a59c57193f60b27c1749b2e27c2a292a697d00195da5b8848a707345bb276abc39c96287ee82005
   languageName: node
   linkType: hard
 
@@ -4639,6 +4652,13 @@ __metadata:
     whatwg-mimetype: "npm:^5.0.0"
     whatwg-url: "npm:^16.0.0"
   checksum: 10c0/08d88ef50d8966a070ffdaa703e1e4b29f01bb2da364dfbc1612b1c2a4caa8045802c9532d81347b21781100132addb36a585071c8323b12cce97973961dee9f
+  languageName: node
+  linkType: hard
+
+"date-fns@npm:^4.2.1":
+  version: 4.2.1
+  resolution: "date-fns@npm:4.2.1"
+  checksum: 10c0/1694c57a180a76c1001401fde85925cebb3b89594d37625063be0a571eddde278a87d3c76ecad5759c3dbeabcc34a5c5757eb6b3487d89a9a61ef48571791166
   languageName: node
   linkType: hard
 
@@ -7110,6 +7130,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"node-cron@npm:^4.2.1":
+  version: 4.2.1
+  resolution: "node-cron@npm:4.2.1"
+  checksum: 10c0/804df01df230e96fd2f8ffcde004f4d5af953bccdf3ccf993dc450526dd65f553a2f2ad4bc0faf55c90c38cbc99c9ddbb88ee16cba3fc6bc74e606da6efb249e
+  languageName: node
+  linkType: hard
+
 "node-domexception@npm:^1.0.0":
   version: 1.0.0
   resolution: "node-domexception@npm:1.0.0"
@@ -8150,6 +8177,15 @@ __metadata:
     parseurl: "npm:^1.3.3"
     path-to-regexp: "npm:^8.0.0"
   checksum: 10c0/3279de7450c8eae2f6e095e9edacbdeec0abb5cb7249c6e719faa0db2dba43574b4fff5892d9220631c9abaff52dd3cad648cfea2aaace845e1a071915ac8867
+  languageName: node
+  linkType: hard
+
+"rrule@npm:^2.8.1":
+  version: 2.8.1
+  resolution: "rrule@npm:2.8.1"
+  dependencies:
+    tslib: "npm:^2.4.0"
+  checksum: 10c0/c9350620bbd57d0cdf99320b576121a2d7ed579fda4ae50891e2779c7dfd6dc7b174b558b6598adefb1f0e053549dc977740e1a265f77dcf0827aaeea60b45e7
   languageName: node
   linkType: hard
 

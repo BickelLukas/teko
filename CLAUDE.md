@@ -170,6 +170,12 @@ For anything else, check `package.json`.
 
 ---
 
+### Packages
+
+When installing packages, always install them using yarn add instead of just adding them to the package.json to ensure you install the latest version.
+
+---
+
 ## Testing Expectations
 
 - **Pure domain logic (recurrence, state, streaks, points, windows): high coverage, written first.** These are the heart of the product. Tests are the spec.

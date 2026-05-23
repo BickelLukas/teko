@@ -63,10 +63,18 @@ export type Completion = z.infer<typeof CompletionSchema>;
 
 // ── API request schemas ───────────────────────────────────────────────────────
 
+export const TaskIdParamsSchema = z.object({
+  id: z.string().uuid("Invalid task ID"),
+});
+export type TaskIdParams = z.infer<typeof TaskIdParamsSchema>;
+
 export const CreateTaskBodySchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   assignee_id: z.string().uuid().optional(),
+  recurrence_rule: z.string().optional(),
+  recurrence_mode: RecurrenceModeSchema.optional(),
+  completion_window_days: z.number().int().nonnegative().optional(),
 });
 export type CreateTaskBody = z.infer<typeof CreateTaskBodySchema>;
 
@@ -74,6 +82,16 @@ export const CompleteTaskParamsSchema = z.object({
   id: z.string().uuid("Invalid task ID"),
 });
 export type CompleteTaskParams = z.infer<typeof CompleteTaskParamsSchema>;
+
+export const ScheduleTaskBodySchema = z.object({
+  planned_for: z.string().datetime({ message: "planned_for must be an ISO datetime" }),
+});
+export type ScheduleTaskBody = z.infer<typeof ScheduleTaskBodySchema>;
+
+export const SnoozeTaskBodySchema = z.object({
+  until: z.string().datetime({ message: "until must be an ISO datetime" }),
+});
+export type SnoozeTaskBody = z.infer<typeof SnoozeTaskBodySchema>;
 
 // ── API response schemas ──────────────────────────────────────────────────────
 
@@ -88,6 +106,11 @@ export const TaskResponseSchema = TaskSchema.pick({
   created_by: true,
   points: true,
   tags: true,
+  recurrence_rule: true,
+  recurrence_mode: true,
+  completion_window_days: true,
+  next_due_at: true,
+  planned_for: true,
 });
 export type TaskResponse = z.infer<typeof TaskResponseSchema>;
 

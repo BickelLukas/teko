@@ -1,11 +1,12 @@
 import Fastify from "fastify";
 import type { FastifyInstance } from "fastify";
-import type { Db } from "./db/client";
-import health from "./routes/health";
-import tasks from "./routes/tasks";
-import { registerAuth } from "./middleware/auth";
-import type { Config } from "./config";
-import "./types";
+import type { Db } from "./db/client.js";
+import health from "./routes/health.js";
+import tasks from "./routes/tasks.js";
+import dev from "./routes/dev.js";
+import { registerAuth } from "./middleware/auth.js";
+import type { Config } from "./config.js";
+import "./types.js";
 
 export async function buildApp(db: Db, config: Config): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -27,6 +28,10 @@ export async function buildApp(db: Db, config: Config): Promise<FastifyInstance>
   await registerAuth(fastify, config);
   await fastify.register(health);
   await fastify.register(tasks);
+
+  if (config.devMode) {
+    await fastify.register(dev);
+  }
 
   return fastify;
 }

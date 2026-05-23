@@ -217,4 +217,200 @@ describe("POST /api/tasks/:id/complete", () => {
     });
     expect(res.statusCode).toBe(409);
   });
+
+  it("recurring task cycles to next due date on completion", async () => {
+    const taskId = randomUUID();
+    db.insert(schema.tasks)
+      .values({
+        id: taskId,
+        title: "Vacuum",
+        assignee_id: userId,
+        created_by: userId,
+        state: "eligible",
+        recurrence_rule: "RRULE:FREQ=WEEKLY;INTERVAL=1",
+        recurrence_mode: "after_completion",
+        completion_window_days: 1,
+        next_due_at: new Date(), // due now
+      })
+      .run();
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/tasks/${taskId}/complete`,
+    });
+    expect(res.statusCode).toBe(204);
+
+    // Should NOT be marked "done" — it should cycle
+    const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();
+    expect(task?.state).not.toBe("done");
+    // next_due_at should be roughly a week from now
+    expect(task?.next_due_at?.getTime()).toBeGreaterThan(Date.now());
+
+    // Completion row exists
+    const completion = db
+      .select()
+      .from(schema.completions)
+      .where(eq(schema.completions.task_id, taskId))
+      .get();
+    expect(completion).toBeTruthy();
+    expect(completion?.was_on_time).toBe(true);
+  });
+});
+
+describe("POST /api/tasks/:id/schedule and /unschedule", () => {
+  let app: FastifyInstance;
+  let db: Db;
+  let userId: string;
+
+  beforeEach(async () => {
+    ({ db, userId } = buildTestDb());
+    app = await buildApp(db, TEST_CONFIG);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it("schedule sets planned_for and state=planned", async () => {
+    const taskId = randomUUID();
+    const nextDue = new Date();
+    db.insert(schema.tasks)
+      .values({
+        id: taskId,
+        title: "Trim bushes",
+        assignee_id: userId,
+        created_by: userId,
+        state: "eligible",
+        recurrence_rule: "RRULE:FREQ=MONTHLY;INTERVAL=6",
+        recurrence_mode: "fixed",
+        completion_window_days: 30,
+        next_due_at: nextDue,
+      })
+      .run();
+
+    const plannedFor = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/tasks/${taskId}/schedule`,
+      payload: { planned_for: plannedFor.toISOString() },
+    });
+    expect(res.statusCode).toBe(200);
+
+    const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();
+    expect(task?.state).toBe("planned");
+    expect(task?.planned_for).toBeTruthy();
+  });
+
+  it("unschedule clears planned_for", async () => {
+    const taskId = randomUUID();
+    const nextDue = new Date();
+    db.insert(schema.tasks)
+      .values({
+        id: taskId,
+        title: "Trim bushes",
+        assignee_id: userId,
+        created_by: userId,
+        state: "planned",
+        recurrence_rule: "RRULE:FREQ=MONTHLY;INTERVAL=6",
+        recurrence_mode: "fixed",
+        completion_window_days: 30,
+        next_due_at: nextDue,
+        planned_for: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      })
+      .run();
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/tasks/${taskId}/unschedule`,
+    });
+    expect(res.statusCode).toBe(204);
+
+    const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();
+    expect(task?.planned_for).toBeNull();
+  });
+});
+
+describe("POST /api/tasks/:id/snooze", () => {
+  let app: FastifyInstance;
+  let db: Db;
+  let userId: string;
+
+  beforeEach(async () => {
+    ({ db, userId } = buildTestDb());
+    app = await buildApp(db, TEST_CONFIG);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it("pushes next_due_at to until", async () => {
+    const taskId = randomUUID();
+    db.insert(schema.tasks)
+      .values({
+        id: taskId,
+        title: "Snooze me",
+        assignee_id: userId,
+        created_by: userId,
+        state: "eligible",
+        recurrence_rule: "RRULE:FREQ=DAILY",
+        recurrence_mode: "fixed",
+        completion_window_days: 0,
+        next_due_at: new Date(),
+      })
+      .run();
+
+    const until = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/tasks/${taskId}/snooze`,
+      payload: { until: until.toISOString() },
+    });
+    expect(res.statusCode).toBe(204);
+
+    const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();
+    expect(task?.next_due_at?.getTime()).toBeCloseTo(until.getTime(), -3);
+    expect(task?.state).toBe("not_yet");
+  });
+});
+
+describe("POST /api/_dev/tick", () => {
+  let app: FastifyInstance;
+  let db: Db;
+  let userId: string;
+
+  beforeEach(async () => {
+    ({ db, userId } = buildTestDb());
+    app = await buildApp(db, TEST_CONFIG);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it("returns updated count", async () => {
+    // Insert a not_yet task whose due date is in the past
+    const taskId = randomUUID();
+    db.insert(schema.tasks)
+      .values({
+        id: taskId,
+        title: "Past due",
+        assignee_id: userId,
+        created_by: userId,
+        state: "not_yet",
+        recurrence_rule: "RRULE:FREQ=DAILY",
+        recurrence_mode: "fixed",
+        completion_window_days: 0,
+        next_due_at: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
+      })
+      .run();
+
+    const res = await app.inject({ method: "POST", url: "/api/_dev/tick" });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { updated: number };
+    expect(body.updated).toBe(1);
+
+    const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();
+    expect(task?.state).toBe("eligible");
+  });
 });

@@ -1,6 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// i18n must be imported before App so translations are ready on first render
+import "./i18n/index";
 import { App } from "./App";
 import "./index.css";
 

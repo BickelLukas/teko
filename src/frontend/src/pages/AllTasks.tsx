@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { fetchTasks, fetchMe } from "@/lib/api";
 import { TaskCard } from "@/components/TaskCard";
+import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
 import { AddTaskModal } from "@/components/AddTaskModal";
+import { Button } from "@/components/ui/button";
 import {
   SelectRoot,
   SelectTrigger,
@@ -23,6 +26,7 @@ const STATE_ORDER: Record<string, number> = {
 };
 
 export function AllTasksPage() {
+  const { t } = useTranslation(["pages", "common"]);
   const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilter>("all");
   const [includeProjects, setIncludeProjects] = useState(false);
 
@@ -30,7 +34,12 @@ export function AllTasksPage() {
 
   const scope = includeProjects ? "all" : "leaves";
 
-  const { data: tasks = [], isLoading } = useQuery({
+  const {
+    data: tasks = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["tasks", assigneeFilter, scope],
     queryFn: () => fetchTasks(assigneeFilter, scope),
   });
@@ -44,27 +53,28 @@ export function AllTasksPage() {
   return (
     <div className="mx-auto max-w-xl space-y-4 px-4 py-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">All tasks</h1>
+        <h1 className="text-xl font-semibold">{t("pages:all_tasks.title")}</h1>
         <div className="flex items-center gap-2">
           <SelectRoot
             value={assigneeFilter}
             onValueChange={(v) => setAssigneeFilter(v as AssigneeFilter)}
           >
-            <SelectTrigger size="sm" className="w-36">
+            <SelectTrigger size="sm" className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="mine">Mine + unassigned</SelectItem>
-              <SelectItem value="me">{displayName} only</SelectItem>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
-              <SelectItem value="all">Everyone</SelectItem>
+              <SelectItem value="mine">{t("common:filters.mine")}</SelectItem>
+              <SelectItem value="me">
+                {t("common:filters.me_only", { name: displayName })}
+              </SelectItem>
+              <SelectItem value="unassigned">{t("common:filters.unassigned")}</SelectItem>
+              <SelectItem value="all">{t("common:filters.all")}</SelectItem>
             </SelectContent>
           </SelectRoot>
           <AddTaskModal />
         </div>
       </div>
 
-      {/* Include projects toggle */}
       <label className="flex items-center gap-2 text-xs text-muted-foreground">
         <input
           type="checkbox"
@@ -72,13 +82,24 @@ export function AllTasksPage() {
           onChange={(e) => setIncludeProjects(e.target.checked)}
           className="size-3"
         />
-        Include projects
+        {t("pages:all_tasks.include_projects")}
       </label>
 
-      {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+      {isLoading && <TaskListSkeleton />}
 
-      {!isLoading && tasks.length === 0 && (
-        <p className="py-8 text-center text-sm text-muted-foreground">No tasks found.</p>
+      {isError && (
+        <div className="py-8 text-center">
+          <p className="text-sm text-muted-foreground">{t("common:error.load_failed")}</p>
+          <Button variant="ghost" size="sm" className="mt-2" onClick={() => void refetch()}>
+            {t("common:error.retry")}
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && !isError && tasks.length === 0 && (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          {t("pages:all_tasks.no_tasks")}
+        </p>
       )}
 
       <ul className="space-y-2">

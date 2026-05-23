@@ -1,0 +1,144 @@
+{
+  "nav": {
+    "today": "Today",
+    "chores": "Chores",
+    "all_tasks": "All tasks",
+    "projects": "Projects",
+    "stats": "Stats",
+    "settings": "Settings"
+  },
+  "actions": {
+    "mark_done": "Mark done",
+    "snooze": "Snooze",
+    "schedule": "Schedule",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "add_task": "Add task",
+    "adding": "Adding…",
+    "new_project": "New project",
+    "creating": "Creating…",
+    "create_project": "Create project",
+    "confirm": "Confirm"
+  },
+  "states": {
+    "overdue": "Overdue",
+    "eligible": "Eligible",
+    "planned": "Planned",
+    "not_yet": "Not yet",
+    "done": "Done"
+  },
+  "filters": {
+    "mine": "Mine + unassigned",
+    "me_only": "{{name}} only",
+    "unassigned": "Unassigned",
+    "all": "Everyone"
+  },
+  "loading": "Loading…",
+  "error": {
+    "load_failed": "Something went wrong.",
+    "retry": "Retry"
+  },
+  "snooze_options": {
+    "one_hour": "1 hour",
+    "tomorrow": "Until tomorrow",
+    "next_week": "Until next week"
+  },
+  "schedule_panel": {
+    "title": "Schedule for:",
+    "tomorrow": "Tomorrow",
+    "in_3_days": "In 3 days",
+    "next_week": "Next week"
+  },
+  "days": {
+    "MO": "Mon",
+    "TU": "Tue",
+    "WE": "Wed",
+    "TH": "Thu",
+    "FR": "Fri",
+    "SA": "Sat",
+    "SU": "Sun"
+  },
+  "assignee": {
+    "me": "Me ({{name}})",
+    "anyone": "Anyone (unassigned)",
+    "assign_to": "Assign to"
+  },
+  "task": {
+    "dropdown_label": "Actions",
+    "mark_done_aria": "Mark done",
+    "actions_aria": "Task actions",
+    "add_subtask_aria": "Add sub-task",
+    "state_badge": {
+      "due": "Due {{time}}",
+      "do_until": "Do any time until {{date}}",
+      "ready": "Ready to do",
+      "planned_for": "Planned for {{date}}",
+      "plan_passed": "(plan date passed)",
+      "overdue_by": "Overdue by {{time}}"
+    },
+    "milestone": "{{count}}-day streak on {{title}} 🔥"
+  },
+  "project_card": {
+    "done_progress": "{{completed}} / {{total}} done",
+    "pending_one": "{{count}} pending",
+    "pending_other": "{{count}} pending",
+    "no_tasks": "No tasks yet",
+    "active": "Active {{time}}"
+  },
+  "task_tree": {
+    "no_tasks": "No tasks yet.",
+    "add_first": "Add first task",
+    "overdue_badge": "Overdue",
+    "expand": "Expand {{title}}",
+    "collapse": "Collapse {{title}}"
+  },
+  "add_task": {
+    "title": "New task",
+    "title_placeholder": "Task name",
+    "description_placeholder": "Description (optional)",
+    "project_optional": "Part of project (optional)",
+    "none": "None",
+    "hide_recurrence": "Hide recurrence",
+    "add_recurrence": "+ Add recurrence"
+  },
+  "recurrence": {
+    "label": "Recurrence",
+    "none": "None",
+    "daily": "Daily",
+    "every_n_days": "Every N days",
+    "weekly": "Weekly on specific days",
+    "monthly_date": "Monthly on date",
+    "every_n_months": "Every N months",
+    "yearly": "Yearly",
+    "custom": "Custom (RRULE)",
+    "every": "Every",
+    "days": "days",
+    "on_the": "On the",
+    "of_each_month": "of each month",
+    "months": "months",
+    "advanced_hide": "Hide advanced RRULE",
+    "advanced_show": "Show advanced RRULE",
+    "schedule_type": "Schedule type",
+    "fixed_title": "Fixed schedule",
+    "fixed_description": "Due on specific dates regardless of when last done",
+    "after_completion_title": "After completion",
+    "after_completion_description": "Due N days/months after it was last completed",
+    "after_completion_desc": "Every {{unit}} after last completion",
+    "window_label": "Completion window — how long do you have once it's due?",
+    "window_days": "days",
+    "window_zero_hint": "(due on the day only)"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "add_task": "Add task",
+    "close": "Close dialog",
+    "help": "Show this list",
+    "or": "or"
+  },
+  "date_formats": {
+    "long": "EEEE, MMMM d, yyyy",
+    "short": "MMM d"
+  }
+}

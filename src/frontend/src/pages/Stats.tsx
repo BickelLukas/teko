@@ -1,21 +1,25 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { fetchMe, fetchMeStats, fetchHouseholdStats } from "@/lib/api";
 import type { MeStats, HouseholdStats } from "@teko/shared";
 
 // ── Mini charts ───────────────────────────────────────────────────────────────
 
-const DAY_LABELS_MON = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DAY_LABELS_SUN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 function WeekBars({ data, weekStartsOnMonday }: { data: number[]; weekStartsOnMonday: boolean }) {
-  const labels = weekStartsOnMonday ? DAY_LABELS_MON : DAY_LABELS_SUN;
+  const { t } = useTranslation("common");
+  const dayOrderMon = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const;
+  const dayOrderSun = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const;
+  const dayOrder = weekStartsOnMonday ? dayOrderMon : dayOrderSun;
+  const labels = dayOrder.map((d) => t(`days.${d}`));
+
   const today = new Date().getDay(); // 0=Sun
-  // Convert to weekStart-relative index
   const todayIdx = weekStartsOnMonday ? (today === 0 ? 6 : today - 1) : today;
   const chartData = data.map((v, i) => ({ day: labels[i]!, value: v, isToday: i === todayIdx }));
+
   return (
     <ResponsiveContainer width="100%" height={60}>
       <BarChart data={chartData} margin={{ top: 4, right: 0, left: -32, bottom: 0 }}>
@@ -24,7 +28,7 @@ function WeekBars({ data, weekStartsOnMonday }: { data: number[]; weekStartsOnMo
         <Tooltip
           cursor={{ fill: "transparent" }}
           contentStyle={{ fontSize: 11, padding: "2px 8px" }}
-          formatter={(v) => [v ?? 0, "completed"]}
+          formatter={(v) => [v ?? 0, t("pages:stats.completed_tooltip", { ns: "pages" })]}
         />
         <Bar dataKey="value" radius={[3, 3, 0, 0]}>
           {chartData.map((entry, i) => (
@@ -40,6 +44,7 @@ function WeekBars({ data, weekStartsOnMonday }: { data: number[]; weekStartsOnMo
 }
 
 function HistoryBars({ data }: { data: number[] }) {
+  const { t } = useTranslation("pages");
   const chartData = data.map((v, i) => ({ week: `W${i + 1}`, value: v }));
   return (
     <ResponsiveContainer width="100%" height={52}>
@@ -49,7 +54,7 @@ function HistoryBars({ data }: { data: number[] }) {
         <Tooltip
           cursor={{ fill: "transparent" }}
           contentStyle={{ fontSize: 11, padding: "2px 8px" }}
-          formatter={(v) => [v ?? 0, "points"]}
+          formatter={(v) => [v ?? 0, t("stats.points_tooltip")]}
         />
         <Bar dataKey="value" fill="hsl(var(--muted-foreground) / 0.3)" radius={[2, 2, 0, 0]} />
       </BarChart>
@@ -59,19 +64,25 @@ function HistoryBars({ data }: { data: number[] }) {
 
 // ── Sub-sections ──────────────────────────────────────────────────────────────
 
-function PersonalSection({ stats, weekStartsOnMonday }: { stats: MeStats; weekStartsOnMonday: boolean }) {
+function PersonalSection({
+  stats,
+  weekStartsOnMonday,
+}: {
+  stats: MeStats;
+  weekStartsOnMonday: boolean;
+}) {
+  const { t } = useTranslation("pages");
 
   return (
     <section className="space-y-4">
-      <h1 className="text-xl font-semibold">You</h1>
+      <h1 className="text-xl font-semibold">{t("stats.you")}</h1>
 
-      {/* This week */}
       <Card>
         <CardContent className="pt-5">
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-bold tabular-nums">{stats.week.points}</span>
             <span className="text-sm text-muted-foreground">
-              pts · {stats.week.completions} completed this week
+              {t("stats.this_week", { completions: stats.week.completions })}
             </span>
           </div>
           <div className="mt-3">
@@ -83,12 +94,11 @@ function PersonalSection({ stats, weekStartsOnMonday }: { stats: MeStats; weekSt
         </CardContent>
       </Card>
 
-      {/* Active streaks */}
       {stats.streaks.active.length > 0 && (
         <Card>
           <CardContent className="pt-5">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Active streaks
+              {t("stats.active_streaks")}
             </p>
             <ul className="divide-y divide-border">
               {stats.streaks.active.map((s) => (
@@ -96,7 +106,7 @@ function PersonalSection({ stats, weekStartsOnMonday }: { stats: MeStats; weekSt
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{s.task_title}</p>
                     <p className="text-xs text-muted-foreground">
-                      longest ever: {s.longest_length} days
+                      {t("stats.longest_ever_label", { count: s.longest_length })}
                     </p>
                   </div>
                   <div className="ml-4 shrink-0 text-right">
@@ -106,9 +116,9 @@ function PersonalSection({ stats, weekStartsOnMonday }: { stats: MeStats; weekSt
                         s.at_risk ? "text-amber-500" : "text-foreground",
                       ].join(" ")}
                     >
-                      🔥 {s.current_length} days
+                      {t("stats.streak_days", { count: s.current_length })}
                     </span>
-                    {s.at_risk && <p className="text-xs text-amber-500/80">at risk</p>}
+                    {s.at_risk && <p className="text-xs text-amber-500/80">{t("stats.at_risk")}</p>}
                   </div>
                 </li>
               ))}
@@ -117,30 +127,28 @@ function PersonalSection({ stats, weekStartsOnMonday }: { stats: MeStats; weekSt
         </Card>
       )}
 
-      {/* Personal best */}
       {stats.streaks.longest_ever && stats.streaks.longest_ever.length > 0 && (
         <Card>
           <CardContent className="pt-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Personal best
+              {t("stats.personal_best")}
             </p>
             <p className="mt-1 text-2xl font-bold tabular-nums">
-              🔥 {stats.streaks.longest_ever.length} days
+              {t("stats.streak_days", { count: stats.streaks.longest_ever.length })}
             </p>
             {stats.streaks.longest_ever.task_title && (
               <p className="text-xs text-muted-foreground">
-                on {stats.streaks.longest_ever.task_title}
+                {t("stats.on_task", { title: stats.streaks.longest_ever.task_title })}
               </p>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* 12-week history */}
       <Card>
         <CardContent className="pt-5">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Last 12 weeks
+            {t("stats.last_12_weeks")}
           </p>
           <HistoryBars data={stats.history.last_12_weeks} />
         </CardContent>
@@ -149,19 +157,25 @@ function PersonalSection({ stats, weekStartsOnMonday }: { stats: MeStats; weekSt
   );
 }
 
-function HouseholdSection({ stats, weekStartsOnMonday }: { stats: HouseholdStats; weekStartsOnMonday: boolean }) {
+function HouseholdSection({
+  stats,
+  weekStartsOnMonday,
+}: {
+  stats: HouseholdStats;
+  weekStartsOnMonday: boolean;
+}) {
+  const { t } = useTranslation("pages");
   const [showContributions, setShowContributions] = useState(false);
 
   return (
     <section className="space-y-4">
-      <h2 className="text-lg font-semibold text-muted-foreground">Household</h2>
+      <h2 className="text-lg font-semibold text-muted-foreground">{t("stats.household")}</h2>
 
-      {/* This week */}
       <Card>
         <CardContent className="pt-5">
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold tabular-nums">{stats.week.points}</span>
-            <span className="text-sm text-muted-foreground">pts this week</span>
+            <span className="text-sm text-muted-foreground">{t("stats.pts_this_week")}</span>
           </div>
           <div className="mt-3">
             <WeekBars
@@ -172,49 +186,44 @@ function HouseholdSection({ stats, weekStartsOnMonday }: { stats: HouseholdStats
         </CardContent>
       </Card>
 
-      {/* Household streak */}
       {stats.longest_household_streak > 0 && (
         <Card>
           <CardContent className="pt-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Household streak
+              {t("stats.household_streak")}
             </p>
             <p className="mt-1 text-2xl font-bold tabular-nums">
-              {stats.longest_household_streak}{" "}
-              <span className="text-base font-normal text-muted-foreground">
-                consecutive week{stats.longest_household_streak !== 1 ? "s" : ""}
-              </span>
+              {t("stats.consecutive_week", { count: stats.longest_household_streak })}
             </p>
-            <p className="text-xs text-muted-foreground">with at least one task completed</p>
+            <p className="text-xs text-muted-foreground">{t("stats.with_completions")}</p>
           </CardContent>
         </Card>
       )}
 
-      {/* 12-week history */}
       <Card>
         <CardContent className="pt-5">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Last 12 weeks
+            {t("stats.last_12_weeks")}
           </p>
           <HistoryBars data={stats.history.last_12_weeks} />
         </CardContent>
       </Card>
 
-      {/* Contributions — collapsed by default */}
       <div>
         <button
           onClick={() => setShowContributions((v) => !v)}
-          className="flex w-full items-center justify-between rounded-md border border-border px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="flex w-full items-center justify-between rounded-md border border-border px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-expanded={showContributions}
         >
-          <span>Contributions this week</span>
-          <span className="text-xs">{showContributions ? "▲ Hide" : "▼ Show"}</span>
+          <span>{t("stats.contributions_title")}</span>
+          <span className="text-xs">{showContributions ? t("stats.hide") : t("stats.show")}</span>
         </button>
 
         {showContributions && (
           <Card className="mt-2">
             <CardContent className="pt-5">
               <p className="mb-3 text-xs text-muted-foreground/70">
-                Contributions, not rankings — alphabetical order.
+                {t("stats.contributions_note")}
               </p>
               <ul className="space-y-3">
                 {stats.week.contributions.map((c) => {
@@ -225,7 +234,7 @@ function HouseholdSection({ stats, weekStartsOnMonday }: { stats: HouseholdStats
                       <div className="flex items-center justify-between text-sm">
                         <span className="truncate font-medium">{c.name}</span>
                         <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
-                          {c.points} pts
+                          {t("stats.pts", { count: c.points })}
                         </span>
                       </div>
                       <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -249,6 +258,7 @@ function HouseholdSection({ stats, weekStartsOnMonday }: { stats: HouseholdStats
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function StatsPage() {
+  const { t } = useTranslation("pages");
   const { data: me, isLoading: meLoading } = useQuery({
     queryKey: ["me"],
     queryFn: fetchMe,
@@ -265,7 +275,14 @@ export function StatsPage() {
   });
 
   if (meLoading || statsLoading || householdLoading) {
-    return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
+    return (
+      <div className="mx-auto max-w-xl space-y-4 px-4 py-6">
+        <Skeleton className="h-6 w-24" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    );
   }
 
   const weekStartsOnMonday = (me?.week_start_day ?? 1) === 1;
@@ -273,8 +290,11 @@ export function StatsPage() {
   return (
     <div className="mx-auto max-w-xl space-y-10 px-4 py-6">
       {meStats && <PersonalSection stats={meStats} weekStartsOnMonday={weekStartsOnMonday} />}
+      {!meStats && <p className="text-sm text-muted-foreground">{t("stats.no_stats")}</p>}
       <div className="border-t border-border" />
-      {householdStats && <HouseholdSection stats={householdStats} weekStartsOnMonday={weekStartsOnMonday} />}
+      {householdStats && (
+        <HouseholdSection stats={householdStats} weekStartsOnMonday={weekStartsOnMonday} />
+      )}
     </div>
   );
 }

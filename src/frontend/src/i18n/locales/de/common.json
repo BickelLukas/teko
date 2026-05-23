@@ -1,0 +1,144 @@
+{
+  "nav": {
+    "today": "Heute",
+    "chores": "Aufgaben",
+    "all_tasks": "Alle Aufgaben",
+    "projects": "Projekte",
+    "stats": "Statistik",
+    "settings": "Einstellungen"
+  },
+  "actions": {
+    "mark_done": "Erledigt",
+    "snooze": "Zurückstellen",
+    "schedule": "Einplanen",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "saving": "Wird gespeichert…",
+    "saved": "Gespeichert.",
+    "add_task": "Aufgabe hinzufügen",
+    "adding": "Wird hinzugefügt…",
+    "new_project": "Neues Projekt",
+    "creating": "Wird erstellt…",
+    "create_project": "Projekt erstellen",
+    "confirm": "Bestätigen"
+  },
+  "states": {
+    "overdue": "Überfällig",
+    "eligible": "Fällig",
+    "planned": "Geplant",
+    "not_yet": "Noch nicht",
+    "done": "Erledigt"
+  },
+  "filters": {
+    "mine": "Meine + nicht zugewiesene",
+    "me_only": "Nur {{name}}",
+    "unassigned": "Nicht zugewiesen",
+    "all": "Alle"
+  },
+  "loading": "Wird geladen…",
+  "error": {
+    "load_failed": "Etwas ist schiefgelaufen.",
+    "retry": "Erneut versuchen"
+  },
+  "snooze_options": {
+    "one_hour": "1 Stunde",
+    "tomorrow": "Bis morgen",
+    "next_week": "Bis nächste Woche"
+  },
+  "schedule_panel": {
+    "title": "Einplanen für:",
+    "tomorrow": "Morgen",
+    "in_3_days": "In 3 Tagen",
+    "next_week": "Nächste Woche"
+  },
+  "days": {
+    "MO": "Mo",
+    "TU": "Di",
+    "WE": "Mi",
+    "TH": "Do",
+    "FR": "Fr",
+    "SA": "Sa",
+    "SU": "So"
+  },
+  "assignee": {
+    "me": "Ich ({{name}})",
+    "anyone": "Alle (nicht zugewiesen)",
+    "assign_to": "Zuweisen an"
+  },
+  "task": {
+    "dropdown_label": "Aktionen",
+    "mark_done_aria": "Erledigt",
+    "actions_aria": "Aufgaben-Aktionen",
+    "add_subtask_aria": "Teilaufgabe hinzufügen",
+    "state_badge": {
+      "due": "Fällig {{time}}",
+      "do_until": "Jederzeit bis {{date}}",
+      "ready": "Bereit zum Erledigen",
+      "planned_for": "Geplant für {{date}}",
+      "plan_passed": "(geplantes Datum vergangen)",
+      "overdue_by": "Seit {{time}} überfällig"
+    },
+    "milestone": "{{count}}-Tage-Serie bei {{title}} 🔥"
+  },
+  "project_card": {
+    "done_progress": "{{completed}} / {{total}} erledigt",
+    "pending_one": "{{count}} offen",
+    "pending_other": "{{count}} offen",
+    "no_tasks": "Noch keine Aufgaben",
+    "active": "Zuletzt aktiv {{time}}"
+  },
+  "task_tree": {
+    "no_tasks": "Noch keine Aufgaben.",
+    "add_first": "Erste Aufgabe hinzufügen",
+    "overdue_badge": "Überfällig",
+    "expand": "{{title}} ausklappen",
+    "collapse": "{{title}} einklappen"
+  },
+  "add_task": {
+    "title": "Neue Aufgabe",
+    "title_placeholder": "Aufgabenname",
+    "description_placeholder": "Beschreibung (optional)",
+    "project_optional": "Teil eines Projekts (optional)",
+    "none": "Keines",
+    "hide_recurrence": "Wiederholung ausblenden",
+    "add_recurrence": "+ Wiederholung hinzufügen"
+  },
+  "recurrence": {
+    "label": "Wiederholung",
+    "none": "Keine",
+    "daily": "Täglich",
+    "every_n_days": "Alle N Tage",
+    "weekly": "Wöchentlich an bestimmten Tagen",
+    "monthly_date": "Monatlich am Datum",
+    "every_n_months": "Alle N Monate",
+    "yearly": "Jährlich",
+    "custom": "Benutzerdefiniert (RRULE)",
+    "every": "Alle",
+    "days": "Tage",
+    "on_the": "Am",
+    "of_each_month": "jeden Monat",
+    "months": "Monate",
+    "advanced_hide": "Erweiterte RRULE ausblenden",
+    "advanced_show": "Erweiterte RRULE anzeigen",
+    "schedule_type": "Zeitplantyp",
+    "fixed_title": "Fester Zeitplan",
+    "fixed_description": "Fällig an bestimmten Daten, unabhängig von der letzten Erledigung",
+    "after_completion_title": "Nach Erledigung",
+    "after_completion_description": "Fällig N Tage/Monate nach der letzten Erledigung",
+    "after_completion_desc": "Alle {{unit}} nach letzter Erledigung",
+    "window_label": "Erledigungsfenster — wie lange hast du Zeit, sobald es fällig ist?",
+    "window_days": "Tage",
+    "window_zero_hint": "(nur am Fälligkeitstag)"
+  },
+  "shortcuts": {
+    "title": "Tastaturkürzel",
+    "add_task": "Aufgabe hinzufügen",
+    "close": "Dialog schließen",
+    "help": "Liste anzeigen",
+    "or": "oder"
+  },
+  "date_formats": {
+    "long": "EEEE, d. MMMM yyyy",
+    "short": "d. MMM"
+  }
+}

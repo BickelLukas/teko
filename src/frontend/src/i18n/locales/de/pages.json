@@ -1,0 +1,115 @@
+{
+  "today": {
+    "greeting": {
+      "morning": "Guten Morgen, {{name}}",
+      "afternoon": "Guten Tag, {{name}}",
+      "evening": "Guten Abend, {{name}}"
+    },
+    "all_caught_up": "Alles erledigt.",
+    "sections": {
+      "overdue": "Überfällig",
+      "today": "Heute",
+      "eligible": "Fällig in diesem Zeitraum",
+      "eligible_subtitle": "Wann du möchtest",
+      "coming_up": "Demnächst"
+    },
+    "footer": {
+      "completed_one": "1 Aufgabe heute erledigt",
+      "completed_other": "{{count}} Aufgaben heute erledigt",
+      "streak": "🔥 {{count}} Tage bei {{title}}"
+    }
+  },
+  "chores": {
+    "title": "Aufgaben",
+    "no_chores": "Keine wiederkehrenden Aufgaben gefunden.",
+    "sections": {
+      "overdue": "Überfällig",
+      "eligible": "Jetzt fällig",
+      "planned": "Geplant",
+      "coming_up": "Demnächst"
+    }
+  },
+  "all_tasks": {
+    "title": "Alle Aufgaben",
+    "no_tasks": "Keine Aufgaben gefunden.",
+    "include_projects": "Projekte einbeziehen"
+  },
+  "projects": {
+    "title": "Projekte",
+    "no_projects_title": "Noch keine Projekte",
+    "no_projects_description": "Mit Projekten lassen sich größere Vorhaben in kleinere Schritte aufteilen.",
+    "new_project": "Neues Projekt",
+    "new_project_title": "Neues Projekt",
+    "project_name_placeholder": "Projektname",
+    "first_task_label": "Erste Aufgabe (optional)",
+    "first_task_placeholder": "z. B. Flüge buchen",
+    "sort": {
+      "activity": "Zuletzt aktiv",
+      "alpha": "Alphabetisch",
+      "progress_desc": "Meiste Fortschritte",
+      "progress_asc": "Wenigste Fortschritte"
+    },
+    "sections": {
+      "active": "Aktiv",
+      "completed": "Abgeschlossen"
+    }
+  },
+  "project_detail": {
+    "not_found": "Projekt nicht gefunden.",
+    "back": "Projekte",
+    "tasks_progress": "{{completed}} von {{total}} Aufgaben erledigt ({{percent}} %)",
+    "tasks_label": "Aufgaben",
+    "add_task": "Aufgabe hinzufügen",
+    "settings_title": "Projekteinstellungen",
+    "auto_complete_label": "Automatisch abschließen, wenn alle Aufgaben erledigt sind"
+  },
+  "stats": {
+    "you": "Du",
+    "household": "Haushalt",
+    "this_week": "Pkt. · {{completions}} diese Woche erledigt",
+    "pts_this_week": "Pkt. diese Woche",
+    "active_streaks": "Aktive Serien",
+    "longest_ever_label": "persönlicher Rekord: {{count}} Tage",
+    "streak_days": "🔥 {{count}} Tage",
+    "at_risk": "gefährdet",
+    "personal_best": "Persönlicher Rekord",
+    "on_task": "bei {{title}}",
+    "last_12_weeks": "Letzte 12 Wochen",
+    "household_streak": "Haushaltsserie",
+    "consecutive_week_one": "{{count}} Woche in Folge",
+    "consecutive_week_other": "{{count}} Wochen in Folge",
+    "with_completions": "mit mindestens einer erledigten Aufgabe",
+    "contributions_title": "Beiträge diese Woche",
+    "contributions_note": "Beiträge, keine Rangliste — alphabetische Reihenfolge.",
+    "pts": "{{count}} Pkt.",
+    "hide": "▲ Ausblenden",
+    "show": "▼ Einblenden",
+    "completed_tooltip": "erledigt",
+    "points_tooltip": "Punkte",
+    "no_stats": "Noch keine Erledigungen diese Woche — das ist okay.",
+    "loading": "Wird geladen…"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "profile_section": "Profil",
+    "signed_in_as": "Angemeldet als",
+    "display_name_label": "Anzeigename",
+    "display_name_hint": "(überschreibt HA-Name)",
+    "language_label": "Sprache",
+    "week_starts_label": "Woche beginnt am",
+    "week_monday": "Montag",
+    "week_sunday": "Sonntag",
+    "theme_label": "Darstellung",
+    "theme_light": "Hell",
+    "theme_dark": "Dunkel",
+    "theme_system": "System",
+    "notifications_section": "Benachrichtigungen",
+    "notifications_disabled": "Benachrichtigungen noch nicht konfiguriert — verbinde Home Assistant, um sie zu aktivieren.",
+    "digest_time_label": "Tägliche Zusammenfassung",
+    "notification_time_hint": "(noch nicht aktiv)",
+    "about_section": "Über",
+    "about_version": "Version {{version}}",
+    "about_github": "Auf GitHub ansehen",
+    "about_license": "MIT-Lizenz"
+  }
+}

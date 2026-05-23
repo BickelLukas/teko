@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { RRule } from "rrule";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { describeRecurrenceLocalized } from "@/lib/recurrence";
+import { useLocale } from "@/lib/locale";
 
 export type RecurrenceValue = {
   rule: string | null;
@@ -25,15 +28,6 @@ type Preset =
   | "custom";
 
 const WEEKDAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const;
-const WEEKDAY_LABELS: Record<string, string> = {
-  MO: "Mon",
-  TU: "Tue",
-  WE: "Wed",
-  TH: "Thu",
-  FR: "Fri",
-  SA: "Sat",
-  SU: "Sun",
-};
 
 function detectPreset(rule: string | null): Preset {
   if (!rule) return "none";
@@ -82,39 +76,6 @@ function buildRule(
   }
 }
 
-function humanDesc(rule: string | null, mode: "fixed" | "after_completion"): string | null {
-  if (!rule) return null;
-  try {
-    const r = RRule.fromString(rule);
-    if (mode === "after_completion") {
-      const freq = r.options.freq;
-      const interval = r.options.interval ?? 1;
-      const unit =
-        freq === RRule.DAILY
-          ? interval === 1
-            ? "day"
-            : `${interval} days`
-          : freq === RRule.WEEKLY
-            ? interval === 1
-              ? "week"
-              : `${interval} weeks`
-            : freq === RRule.MONTHLY
-              ? interval === 1
-                ? "month"
-                : `${interval} months`
-              : freq === RRule.YEARLY
-                ? interval === 1
-                  ? "year"
-                  : `${interval} years`
-                : `${interval} day${interval === 1 ? "" : "s"}`;
-      return `Every ${unit} after last completion`;
-    }
-    return r.toText();
-  } catch {
-    return null;
-  }
-}
-
 function validateRaw(raw: string): string | null {
   if (!raw) return null;
   try {
@@ -126,6 +87,8 @@ function validateRaw(raw: string): string | null {
 }
 
 export function RecurrencePicker({ value, onChange }: Props) {
+  const { t } = useTranslation("common");
+  const { locale } = useLocale();
   const [preset, setPreset] = useState<Preset>(() => detectPreset(value.rule));
   const [mode, setMode] = useState<"fixed" | "after_completion">(value.mode);
   const [nDays, setNDays] = useState(7);
@@ -137,7 +100,6 @@ export function RecurrencePicker({ value, onChange }: Props) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [windowDays, setWindowDays] = useState<number>(value.windowDays ?? 0);
 
-  // Sync outward whenever inputs change
   useEffect(() => {
     const rule = buildRule(preset, nDays, nMonths, weekdays, monthDay, rawRule);
     if (preset === "custom") {
@@ -149,7 +111,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
   }, [preset, mode, nDays, nMonths, weekdays, monthDay, rawRule, windowDays]);
 
   const rule = buildRule(preset, nDays, nMonths, weekdays, monthDay, rawRule);
-  const desc = rule ? humanDesc(rule, mode) : null;
+  const desc = rule ? describeRecurrenceLocalized(rule, mode, locale) : null;
 
   function toggleWeekday(day: string) {
     setWeekdays((prev) =>
@@ -163,29 +125,27 @@ export function RecurrencePicker({ value, onChange }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Tier 1: Preset selector */}
       <div>
-        <label className="text-xs text-muted-foreground mb-1 block">Recurrence</label>
+        <label className="mb-1 block text-xs text-muted-foreground">{t("recurrence.label")}</label>
         <select
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
           value={preset}
           onChange={(e) => setPreset(e.target.value as Preset)}
         >
-          <option value="none">None</option>
-          <option value="daily">Daily</option>
-          <option value="every-n-days">Every N days</option>
-          <option value="weekly">Weekly on specific days</option>
-          <option value="monthly-date">Monthly on date</option>
-          <option value="every-n-months">Every N months</option>
-          <option value="yearly">Yearly</option>
-          <option value="custom">Custom (RRULE)</option>
+          <option value="none">{t("recurrence.none")}</option>
+          <option value="daily">{t("recurrence.daily")}</option>
+          <option value="every-n-days">{t("recurrence.every_n_days")}</option>
+          <option value="weekly">{t("recurrence.weekly")}</option>
+          <option value="monthly-date">{t("recurrence.monthly_date")}</option>
+          <option value="every-n-months">{t("recurrence.every_n_months")}</option>
+          <option value="yearly">{t("recurrence.yearly")}</option>
+          <option value="custom">{t("recurrence.custom")}</option>
         </select>
       </div>
 
-      {/* Preset-specific inputs */}
       {preset === "every-n-days" && (
         <div className="flex items-center gap-2">
-          <span className="text-sm">Every</span>
+          <span className="text-sm">{t("recurrence.every")}</span>
           <Input
             type="number"
             min={2}
@@ -194,7 +154,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
             onChange={(e) => setNDays(Math.max(2, parseInt(e.target.value) || 2))}
             className="w-20"
           />
-          <span className="text-sm">days</span>
+          <span className="text-sm">{t("recurrence.days")}</span>
         </div>
       )}
 
@@ -211,7 +171,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
                   : "bg-background border-input text-foreground"
               }`}
             >
-              {WEEKDAY_LABELS[d]}
+              {t(`days.${d}`)}
             </button>
           ))}
         </div>
@@ -219,7 +179,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
 
       {preset === "monthly-date" && (
         <div className="flex items-center gap-2">
-          <span className="text-sm">On the</span>
+          <span className="text-sm">{t("recurrence.on_the")}</span>
           <Input
             type="number"
             min={1}
@@ -228,13 +188,13 @@ export function RecurrencePicker({ value, onChange }: Props) {
             onChange={(e) => setMonthDay(Math.min(31, Math.max(1, parseInt(e.target.value) || 1)))}
             className="w-20"
           />
-          <span className="text-sm">of each month</span>
+          <span className="text-sm">{t("recurrence.of_each_month")}</span>
         </div>
       )}
 
       {preset === "every-n-months" && (
         <div className="flex items-center gap-2">
-          <span className="text-sm">Every</span>
+          <span className="text-sm">{t("recurrence.every")}</span>
           <Input
             type="number"
             min={2}
@@ -243,11 +203,10 @@ export function RecurrencePicker({ value, onChange }: Props) {
             onChange={(e) => setNMonths(Math.max(2, parseInt(e.target.value) || 2))}
             className="w-20"
           />
-          <span className="text-sm">months</span>
+          <span className="text-sm">{t("recurrence.months")}</span>
         </div>
       )}
 
-      {/* Tier 3: Advanced RRULE input */}
       {preset !== "none" && (
         <div>
           <Button
@@ -257,7 +216,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
             onClick={() => setShowAdvanced((v) => !v)}
             className="text-xs"
           >
-            {showAdvanced ? "Hide" : "Show"} advanced RRULE
+            {showAdvanced ? t("recurrence.advanced_hide") : t("recurrence.advanced_show")}
           </Button>
           {showAdvanced && (
             <div className="mt-2">
@@ -276,10 +235,11 @@ export function RecurrencePicker({ value, onChange }: Props) {
         </div>
       )}
 
-      {/* Tier 2: Mode toggle — visible when recurrence is set */}
       {preset !== "none" && (
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Schedule type</label>
+          <label className="mb-1 block text-xs text-muted-foreground">
+            {t("recurrence.schedule_type")}
+          </label>
           <div className="flex gap-2">
             {(["fixed", "after_completion"] as const).map((m) => (
               <button
@@ -292,13 +252,15 @@ export function RecurrencePicker({ value, onChange }: Props) {
                     : "border-input bg-background"
                 }`}
               >
-                <span className="font-medium block">
-                  {m === "fixed" ? "Fixed schedule" : "After completion"}
+                <span className="block font-medium">
+                  {m === "fixed"
+                    ? t("recurrence.fixed_title")
+                    : t("recurrence.after_completion_title")}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {m === "fixed"
-                    ? "Due on specific dates regardless of when last done"
-                    : "Due N days/months after it was last completed"}
+                    ? t("recurrence.fixed_description")
+                    : t("recurrence.after_completion_description")}
                 </span>
               </button>
             ))}
@@ -306,14 +268,12 @@ export function RecurrencePicker({ value, onChange }: Props) {
         </div>
       )}
 
-      {/* Human-readable description */}
       {desc && <p className="text-sm text-muted-foreground italic">{desc}</p>}
 
-      {/* Completion window */}
       {preset !== "none" && (
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">
-            Completion window — how long do you have once it&apos;s due?
+          <label className="mb-1 block text-xs text-muted-foreground">
+            {t("recurrence.window_label")}
           </label>
           <div className="flex items-center gap-2">
             <Input
@@ -326,9 +286,11 @@ export function RecurrencePicker({ value, onChange }: Props) {
               }
               className="w-24"
             />
-            <span className="text-sm">days</span>
+            <span className="text-sm">{t("recurrence.window_days")}</span>
             {windowDays === 0 && (
-              <span className="text-xs text-muted-foreground">(due on the day only)</span>
+              <span className="text-xs text-muted-foreground">
+                {t("recurrence.window_zero_hint")}
+              </span>
             )}
           </div>
         </div>

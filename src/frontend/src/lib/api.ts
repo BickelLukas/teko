@@ -144,6 +144,7 @@ export async function fetchMe(): Promise<UserResponse> {
 export async function updatePreferences(
   prefs: Partial<{
     locale: string;
+    theme: "light" | "dark" | "system";
     notification_time: string | null;
     display_name: string | null;
     week_start_day: 0 | 1;

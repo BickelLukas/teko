@@ -21,6 +21,7 @@ const me: FastifyPluginAsync = async (fastify) => {
       name: user.name,
       display_name: user.display_name,
       locale: user.locale,
+      theme: user.theme ?? "system",
       notification_time: user.notification_time,
       is_admin: user.is_admin,
       is_active: user.is_active,
@@ -38,6 +39,7 @@ const me: FastifyPluginAsync = async (fastify) => {
 
     const updates: Partial<typeof schema.users.$inferInsert> = {};
     if (parsed.data.locale !== undefined) updates.locale = parsed.data.locale;
+    if (parsed.data.theme !== undefined) updates.theme = parsed.data.theme;
     if (parsed.data.notification_time !== undefined)
       updates.notification_time = parsed.data.notification_time;
     if (parsed.data.display_name !== undefined) updates.display_name = parsed.data.display_name;
@@ -58,6 +60,7 @@ const me: FastifyPluginAsync = async (fastify) => {
       name: user.name,
       display_name: user.display_name,
       locale: user.locale,
+      theme: user.theme ?? "system",
       notification_time: user.notification_time,
       is_admin: user.is_admin,
       is_active: user.is_active,

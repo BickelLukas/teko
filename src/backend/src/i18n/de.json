@@ -1,0 +1,23 @@
+{
+  "errors": {
+    "task_not_found": "Aufgabe nicht gefunden.",
+    "user_not_found": "Benutzer nicht gefunden.",
+    "forbidden": "Du hast keine Berechtigung für diese Aktion.",
+    "validation": "Ungültige Anfragedaten.",
+    "internal": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.",
+    "cycle_detected": "Eine Aufgabe kann nicht ihr eigener Vorfahre sein.",
+    "already_completed": "Diese Aufgabe ist bereits erledigt.",
+    "already_archived": "Diese Aufgabe ist bereits archiviert.",
+    "not_archivable": "Aktive Aufgaben mit offenen Unteraufgaben können nicht archiviert werden.",
+    "snooze_past": "Die Zurückstellzeit muss in der Zukunft liegen."
+  },
+  "notifications": {
+    "morning_digest_subject": "Guten Morgen. Du hast heute {{count}} Dinge zu tun.",
+    "morning_digest_item": "{{title}}",
+    "streak_milestone": "Super — das sind {{count}} Tage in Folge bei {{title}} 🔥",
+    "overdue_reminder": "{{title}}. Es sind schon {{days}} Tage vergangen.",
+    "eligible_mention": "{{title}} kann diesen {{period}} jederzeit erledigt werden — kein Stress.",
+    "planned_reminder": "Erinnerung: Du hast geplant, heute {{title}} zu erledigen.",
+    "weekly_summary": "Diese Woche hat der Haushalt {{points}} Punkte gesammelt 🎉"
+  }
+}

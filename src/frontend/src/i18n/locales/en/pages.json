@@ -1,0 +1,115 @@
+{
+  "today": {
+    "greeting": {
+      "morning": "Good morning, {{name}}",
+      "afternoon": "Good afternoon, {{name}}",
+      "evening": "Good evening, {{name}}"
+    },
+    "all_caught_up": "All caught up.",
+    "sections": {
+      "overdue": "Overdue",
+      "today": "Today",
+      "eligible": "Eligible this period",
+      "eligible_subtitle": "Ready when you are",
+      "coming_up": "Coming up"
+    },
+    "footer": {
+      "completed_one": "1 task completed today",
+      "completed_other": "{{count}} tasks completed today",
+      "streak": "🔥 {{count}} days on {{title}}"
+    }
+  },
+  "chores": {
+    "title": "Chores",
+    "no_chores": "No recurring chores found.",
+    "sections": {
+      "overdue": "Overdue",
+      "eligible": "Eligible now",
+      "planned": "Planned",
+      "coming_up": "Coming up"
+    }
+  },
+  "all_tasks": {
+    "title": "All tasks",
+    "no_tasks": "No tasks found.",
+    "include_projects": "Include projects"
+  },
+  "projects": {
+    "title": "Projects",
+    "no_projects_title": "No projects yet",
+    "no_projects_description": "Projects let you break bigger goals into smaller tasks.",
+    "new_project": "New project",
+    "new_project_title": "New project",
+    "project_name_placeholder": "Project name",
+    "first_task_label": "First task (optional)",
+    "first_task_placeholder": "e.g. Book flights",
+    "sort": {
+      "activity": "Recent activity",
+      "alpha": "Alphabetical",
+      "progress_desc": "Most progress",
+      "progress_asc": "Least progress"
+    },
+    "sections": {
+      "active": "Active",
+      "completed": "Completed"
+    }
+  },
+  "project_detail": {
+    "not_found": "Project not found.",
+    "back": "Projects",
+    "tasks_progress": "{{completed}} of {{total}} tasks done ({{percent}}%)",
+    "tasks_label": "Tasks",
+    "add_task": "Add task",
+    "settings_title": "Project settings",
+    "auto_complete_label": "Auto-complete when all tasks are done"
+  },
+  "stats": {
+    "you": "You",
+    "household": "Household",
+    "this_week": "pts · {{completions}} completed this week",
+    "pts_this_week": "pts this week",
+    "active_streaks": "Active streaks",
+    "longest_ever_label": "longest ever: {{count}} days",
+    "streak_days": "🔥 {{count}} days",
+    "at_risk": "at risk",
+    "personal_best": "Personal best",
+    "on_task": "on {{title}}",
+    "last_12_weeks": "Last 12 weeks",
+    "household_streak": "Household streak",
+    "consecutive_week_one": "{{count}} consecutive week",
+    "consecutive_week_other": "{{count}} consecutive weeks",
+    "with_completions": "with at least one task completed",
+    "contributions_title": "Contributions this week",
+    "contributions_note": "Contributions, not rankings — alphabetical order.",
+    "pts": "{{count}} pts",
+    "hide": "▲ Hide",
+    "show": "▼ Show",
+    "completed_tooltip": "completed",
+    "points_tooltip": "points",
+    "no_stats": "No completions yet this week — that's okay.",
+    "loading": "Loading…"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile_section": "Profile",
+    "signed_in_as": "Signed in as",
+    "display_name_label": "Display name",
+    "display_name_hint": "(overrides HA name)",
+    "language_label": "Language",
+    "week_starts_label": "Week starts on",
+    "week_monday": "Monday",
+    "week_sunday": "Sunday",
+    "theme_label": "Appearance",
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "theme_system": "System",
+    "notifications_section": "Notifications",
+    "notifications_disabled": "Notifications not yet configured — connect Home Assistant to enable.",
+    "digest_time_label": "Daily digest time",
+    "notification_time_hint": "(not active yet)",
+    "about_section": "About",
+    "about_version": "Version {{version}}",
+    "about_github": "View on GitHub",
+    "about_license": "MIT License"
+  }
+}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { fetchProjects, createTask } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { ProjectResponse } from "@teko/shared";
 
 type SortKey = "activity" | "alpha" | "progress_asc" | "progress_desc";
@@ -35,8 +37,8 @@ function sortProjects(projects: ProjectResponse[], key: SortKey): ProjectRespons
   });
 }
 
-// Modal to create a new project (task with a pre-filled first child slot)
 function NewProjectModal() {
+  const { t } = useTranslation("pages");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -68,12 +70,12 @@ function NewProjectModal() {
       <DialogTrigger asChild>
         <Button size="sm">
           <IconPlus className="mr-1 size-4" />
-          New project
+          {t("projects.new_project")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New project</DialogTitle>
+          <DialogTitle>{t("projects.new_project_title")}</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={(e) => {
@@ -84,7 +86,7 @@ function NewProjectModal() {
         >
           <div>
             <Input
-              placeholder="Project name"
+              placeholder={t("projects.project_name_placeholder")}
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -92,20 +94,22 @@ function NewProjectModal() {
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              First task (optional)
+              {t("projects.first_task_label")}
             </label>
             <Input
-              placeholder="e.g. Book flights"
+              placeholder={t("projects.first_task_placeholder")}
               value={firstTask}
               onChange={(e) => setFirstTask(e.target.value)}
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
-              Cancel
+              {t("common:actions.cancel", { ns: "common" })}
             </Button>
             <Button type="submit" size="sm" disabled={!title.trim() || createMutation.isPending}>
-              {createMutation.isPending ? "Creating…" : "Create project"}
+              {createMutation.isPending
+                ? t("common:actions.creating", { ns: "common" })
+                : t("common:actions.create_project", { ns: "common" })}
             </Button>
           </div>
         </form>
@@ -115,6 +119,7 @@ function NewProjectModal() {
 }
 
 export function ProjectsPage() {
+  const { t } = useTranslation(["pages", "common"]);
   const [sort, setSort] = useState<SortKey>("activity");
 
   const { data: projects = [], isLoading } = useQuery({
@@ -128,31 +133,36 @@ export function ProjectsPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Projects</h1>
+        <h1 className="text-xl font-semibold">{t("pages:projects.title")}</h1>
         <div className="flex items-center gap-2">
           <select
             className="rounded border border-input bg-background px-2 py-1 text-xs text-foreground"
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
           >
-            <option value="activity">Recent activity</option>
-            <option value="alpha">Alphabetical</option>
-            <option value="progress_desc">Most progress</option>
-            <option value="progress_asc">Least progress</option>
+            <option value="activity">{t("pages:projects.sort.activity")}</option>
+            <option value="alpha">{t("pages:projects.sort.alpha")}</option>
+            <option value="progress_desc">{t("pages:projects.sort.progress_desc")}</option>
+            <option value="progress_asc">{t("pages:projects.sort.progress_asc")}</option>
           </select>
           <NewProjectModal />
         </div>
       </div>
 
-      {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+      {isLoading && (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
+          ))}
+        </div>
+      )}
 
       {!isLoading && projects.length === 0 && (
         <div className="py-16 text-center">
-          <p className="text-base font-medium">No projects yet</p>
+          <p className="text-base font-medium">{t("pages:projects.no_projects_title")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Projects let you break bigger goals into smaller tasks.
+            {t("pages:projects.no_projects_description")}
           </p>
           <div className="mt-4">
             <NewProjectModal />
@@ -160,12 +170,11 @@ export function ProjectsPage() {
         </div>
       )}
 
-      {/* Active projects */}
       {active.length > 0 && (
         <section className="space-y-2">
           {completed.length > 0 && (
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Active
+              {t("pages:projects.sections.active")}
             </h2>
           )}
           {active.map((p) => (
@@ -174,11 +183,10 @@ export function ProjectsPage() {
         </section>
       )}
 
-      {/* Completed projects */}
       {completed.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Completed
+            {t("pages:projects.sections.completed")}
           </h2>
           {completed.map((p) => (
             <ProjectCard key={p.id} project={p} />

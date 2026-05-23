@@ -1,15 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { isSameDay, isWithinInterval, addDays, startOfDay } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { fetchTasks, fetchMe, fetchTodayStats, fetchMeStats } from "@/lib/api";
 import { TaskCard } from "@/components/TaskCard";
+import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
 import { AddTaskModal } from "@/components/AddTaskModal";
+import { Button } from "@/components/ui/button";
+import { useLocale, formatDateLong } from "@/lib/locale";
 import type { TaskResponse } from "@teko/shared";
 
-function greeting(name: string): string {
+function useGreeting(name: string): string {
+  const { t } = useTranslation("pages");
   const h = new Date().getHours();
-  const part = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
-  return `Good ${part}, ${name}`;
+  const key = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
+  return t(`today.greeting.${key}`, { name });
 }
 
 type Sections = {
@@ -58,7 +63,6 @@ function bucketTasks(tasks: TaskResponse[], now: Date): Sections {
   return { overdue, today: todayTasks, eligible, comingUp };
 }
 
-// Breadcrumb shown beneath a task title when the task belongs to a project
 function ProjectBreadcrumb({ task }: { task: TaskResponse }) {
   const navigate = useNavigate();
   if (!task.parent_id || !task.parent_title) return null;
@@ -69,7 +73,8 @@ function ProjectBreadcrumb({ task }: { task: TaskResponse }) {
         e.stopPropagation();
         navigate(`/projects/${task.parent_id}`);
       }}
-      className="mt-0.5 block text-left text-xs text-muted-foreground/70 hover:text-primary"
+      className="mt-0.5 block text-left text-xs text-muted-foreground/70 hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      aria-label={task.parent_title}
     >
       ↳ {task.parent_title}
     </button>
@@ -77,10 +82,16 @@ function ProjectBreadcrumb({ task }: { task: TaskResponse }) {
 }
 
 export function TodayPage() {
+  const { t } = useTranslation("pages");
+  const { locale } = useLocale();
   const now = new Date();
 
-  // scope=leaves: projects don't appear as line items, only their leaf tasks do
-  const { data: tasks = [], isLoading } = useQuery({
+  const {
+    data: tasks = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["tasks", "mine", "leaves"],
     queryFn: () => fetchTasks("mine", "leaves"),
   });
@@ -109,8 +120,8 @@ export function TodayPage() {
     sections.comingUp.length > 0;
 
   const displayName = me?.display_name ?? me?.name ?? "there";
+  const greeting = useGreeting(displayName);
 
-  // Build task_id → streak_length lookup for badge rendering
   const streakByTask = new Map<string, number>();
   if (meStats) {
     for (const s of meStats.streaks.active) {
@@ -118,33 +129,38 @@ export function TodayPage() {
     }
   }
 
-  // Footer: longest active streak
   const longestActive = meStats?.streaks.active[0] ?? null;
 
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">{greeting(displayName)}</h1>
-          <p className="text-sm text-muted-foreground">
-            {now.toLocaleDateString("en", { weekday: "long", month: "long", day: "numeric" })}
-          </p>
+          <h1 className="text-xl font-semibold">{greeting}</h1>
+          <p className="text-sm text-muted-foreground">{formatDateLong(now, locale)}</p>
         </div>
         <AddTaskModal />
       </div>
 
-      {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+      {isLoading && <TaskListSkeleton />}
 
-      {!isLoading && !hasAny && (
+      {isError && (
+        <div className="py-8 text-center">
+          <p className="text-sm text-muted-foreground">{t("common:error.load_failed")}</p>
+          <Button variant="ghost" size="sm" className="mt-2" onClick={() => void refetch()}>
+            {t("common:error.retry")}
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && !isError && !hasAny && (
         <div className="py-12 text-center">
-          <p className="text-base text-muted-foreground">All caught up.</p>
+          <p className="text-base text-muted-foreground">{t("today.all_caught_up")}</p>
         </div>
       )}
 
       {sections.overdue.length > 0 && (
         <Section
-          title="Overdue"
+          title={t("today.sections.overdue")}
           accent="text-destructive"
           tasks={sections.overdue}
           streakByTask={streakByTask}
@@ -152,13 +168,17 @@ export function TodayPage() {
       )}
 
       {sections.today.length > 0 && (
-        <Section title="Today" tasks={sections.today} streakByTask={streakByTask} />
+        <Section
+          title={t("today.sections.today")}
+          tasks={sections.today}
+          streakByTask={streakByTask}
+        />
       )}
 
       {sections.eligible.length > 0 && (
         <Section
-          title="Eligible this period"
-          subtitle="Ready when you are"
+          title={t("today.sections.eligible")}
+          subtitle={t("today.sections.eligible_subtitle")}
           muted
           tasks={sections.eligible}
           streakByTask={streakByTask}
@@ -166,23 +186,28 @@ export function TodayPage() {
       )}
 
       {sections.comingUp.length > 0 && (
-        <Section title="Coming up" muted tasks={sections.comingUp} streakByTask={streakByTask} />
+        <Section
+          title={t("today.sections.coming_up")}
+          muted
+          tasks={sections.comingUp}
+          streakByTask={streakByTask}
+        />
       )}
 
-      {/* Footer */}
       <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground/60">
         {stats !== undefined && stats.completions_today > 0 ? (
           <p className="text-center">
-            {stats.completions_today === 1
-              ? "1 task completed today"
-              : `${stats.completions_today} tasks completed today`}
+            {t("today.footer.completed", { count: stats.completions_today })}
           </p>
         ) : (
           <span />
         )}
         {longestActive && (
           <p className="text-right">
-            🔥 {longestActive.current_length} days on {longestActive.task_title}
+            {t("today.footer.streak", {
+              count: longestActive.current_length,
+              title: longestActive.task_title,
+            })}
           </p>
         )}
       </div>

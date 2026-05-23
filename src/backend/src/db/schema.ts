@@ -7,6 +7,9 @@ export const users = sqliteTable("users", {
   name: text("name").notNull(),
   display_name: text("display_name"),
   locale: text("locale").notNull().default("en"),
+  theme: text("theme", { enum: ["light", "dark", "system"] })
+    .notNull()
+    .default("system"),
   notification_time: text("notification_time"),
   is_admin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   is_active: integer("is_active", { mode: "boolean" }).notNull().default(true),

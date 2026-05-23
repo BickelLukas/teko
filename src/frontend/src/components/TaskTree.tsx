@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { IconCheck, IconChevronDown, IconChevronRight, IconPlus } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { completeTask } from "@/lib/api";
@@ -33,6 +34,7 @@ type TaskTreeNodeProps = {
 };
 
 function TaskTreeNodeRow({ node, depth, onAddChild }: TaskTreeNodeProps) {
+  const { t } = useTranslation("common");
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(true);
   const hasChildren = node.children.length > 0;
@@ -51,11 +53,16 @@ function TaskTreeNodeRow({ node, depth, onAddChild }: TaskTreeNodeProps) {
         className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/40"
         style={{ paddingLeft: `${depth * 20 + 8}px` }}
       >
-        {/* Expand/collapse toggle for sub-projects */}
         {hasChildren ? (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="flex size-4 items-center justify-center text-muted-foreground"
+            className="flex size-4 items-center justify-center rounded text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            aria-label={
+              expanded
+                ? t("task_tree.collapse", { title: node.title })
+                : t("task_tree.expand", { title: node.title })
+            }
+            aria-expanded={expanded}
           >
             {expanded ? (
               <IconChevronDown className="size-3" />
@@ -67,13 +74,12 @@ function TaskTreeNodeRow({ node, depth, onAddChild }: TaskTreeNodeProps) {
           <span className="size-4" />
         )}
 
-        {/* Complete button */}
         {!isProject && (
           <button
             onClick={() => completeMutation.mutate()}
             disabled={isDone || completeMutation.isPending}
-            className="flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-border transition-colors hover:border-primary hover:bg-primary/10 disabled:opacity-40"
-            aria-label="Mark done"
+            className="flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-border transition-colors hover:border-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-40"
+            aria-label={t("task.mark_done_aria")}
           >
             {(isDone || completeMutation.isPending) && (
               <IconCheck className="size-2.5 text-primary" />
@@ -82,7 +88,6 @@ function TaskTreeNodeRow({ node, depth, onAddChild }: TaskTreeNodeProps) {
         )}
         {isProject && <span className="size-4" />}
 
-        {/* Task title */}
         <span
           className={[
             "flex-1 text-sm",
@@ -93,7 +98,6 @@ function TaskTreeNodeRow({ node, depth, onAddChild }: TaskTreeNodeProps) {
           {node.title}
         </span>
 
-        {/* State badge */}
         {!isDone && !isProject && (
           <span
             className={[
@@ -101,21 +105,19 @@ function TaskTreeNodeRow({ node, depth, onAddChild }: TaskTreeNodeProps) {
               node.state === "overdue" ? "text-destructive" : "text-muted-foreground",
             ].join(" ")}
           >
-            {node.state === "overdue" ? "Overdue" : node.state === "eligible" ? "" : node.state}
+            {node.state === "overdue" ? t("task_tree.overdue_badge") : ""}
           </span>
         )}
 
-        {/* Add child button */}
         <button
           onClick={() => onAddChild(node.id)}
-          className="hidden size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground group-hover:flex"
-          aria-label="Add sub-task"
+          className="hidden size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 group-hover:flex"
+          aria-label={t("task.add_subtask_aria")}
         >
           <IconPlus className="size-3" />
         </button>
       </div>
 
-      {/* Children */}
       {hasChildren && expanded && (
         <ul>
           {node.children.map((child) => (
@@ -139,15 +141,16 @@ type TaskTreeProps = {
 };
 
 export function TaskTree({ nodes, rootId, onAddChild }: TaskTreeProps) {
+  const { t } = useTranslation("common");
   const children = buildTree(nodes, rootId);
 
   if (children.length === 0) {
     return (
       <div className="py-6 text-center">
-        <p className="text-sm text-muted-foreground">No tasks yet.</p>
+        <p className="text-sm text-muted-foreground">{t("task_tree.no_tasks")}</p>
         <Button size="sm" variant="outline" className="mt-3" onClick={() => onAddChild(rootId)}>
           <IconPlus className="mr-1 size-4" />
-          Add first task
+          {t("task_tree.add_first")}
         </Button>
       </div>
     );

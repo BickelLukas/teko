@@ -16,6 +16,7 @@ export const UserSchema = z.object({
   name: z.string().min(1),
   display_name: z.string().nullable(),
   locale: z.string().min(2),
+  theme: z.enum(["light", "dark", "system"]).default("system"),
   notification_time: z.string().nullable(),
   is_admin: z.boolean(),
   is_active: z.boolean(),
@@ -30,6 +31,7 @@ export const UserResponseSchema = UserSchema.pick({
   name: true,
   display_name: true,
   locale: true,
+  theme: true,
   notification_time: true,
   is_admin: true,
   is_active: true,
@@ -39,6 +41,7 @@ export type UserResponse = z.infer<typeof UserResponseSchema>;
 
 export const UpdatePreferencesBodySchema = z.object({
   locale: z.string().min(2).optional(),
+  theme: z.enum(["light", "dark", "system"]).optional(),
   notification_time: z.string().nullable().optional(),
   display_name: z.string().nullable().optional(),
   week_start_day: z.union([z.literal(0), z.literal(1)]).optional(),

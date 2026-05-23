@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { IconArrowLeft, IconPlus, IconSettings } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -17,9 +18,8 @@ import { fetchTaskTree, updateTask } from "@/lib/api";
 import { computeProjectProgress } from "@/lib/projectUtils";
 import type { TaskResponse } from "@teko/shared";
 
-// ── Settings modal ────────────────────────────────────────────────────────────
-
 function ProjectSettingsModal({ project, onDone }: { project: TaskResponse; onDone: () => void }) {
+  const { t } = useTranslation("pages");
   const queryClient = useQueryClient();
   const [autoComplete, setAutoComplete] = useState(project.auto_complete_when_children_done);
 
@@ -46,23 +46,22 @@ function ProjectSettingsModal({ project, onDone }: { project: TaskResponse; onDo
           onChange={(e) => setAutoComplete(e.target.checked)}
           className="size-4"
         />
-        <span className="text-sm">Auto-complete when all tasks are done</span>
+        <span className="text-sm">{t("project_detail.auto_complete_label")}</span>
       </label>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onDone}>
-          Cancel
+          {t("common:actions.cancel", { ns: "common" })}
         </Button>
         <Button type="submit" size="sm" disabled={updateMutation.isPending}>
-          Save
+          {t("common:actions.save", { ns: "common" })}
         </Button>
       </div>
     </form>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export function ProjectDetailPage() {
+  const { t } = useTranslation(["pages", "common"]);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -97,7 +96,7 @@ export function ProjectDetailPage() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-xl px-4 py-6">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t("common:loading")}</p>
       </div>
     );
   }
@@ -105,9 +104,9 @@ export function ProjectDetailPage() {
   if (!root) {
     return (
       <div className="mx-auto max-w-xl px-4 py-6">
-        <p className="text-sm text-muted-foreground">Project not found.</p>
+        <p className="text-sm text-muted-foreground">{t("pages:project_detail.not_found")}</p>
         <Link to="/projects" className="mt-2 inline-block text-sm text-primary underline">
-          Back to projects
+          {t("pages:project_detail.back")}
         </Link>
       </div>
     );
@@ -115,29 +114,31 @@ export function ProjectDetailPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-6">
-      {/* Back nav */}
       <button
         onClick={() => navigate("/projects")}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <IconArrowLeft className="size-4" />
-        Projects
+        {t("pages:project_detail.back")}
       </button>
 
-      {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-2">
           <h1 className="text-xl font-semibold">{root.title}</h1>
           <div className="flex shrink-0 gap-1">
             <DialogRoot open={settingsOpen} onOpenChange={setSettingsOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon-xs" aria-label="Project settings">
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={t("pages:project_detail.settings_title")}
+                >
                   <IconSettings className="size-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-sm">
+              <DialogContent className="sm:max-w-sm">
                 <DialogHeader>
-                  <DialogTitle>Project settings</DialogTitle>
+                  <DialogTitle>{t("pages:project_detail.settings_title")}</DialogTitle>
                 </DialogHeader>
                 <ProjectSettingsModal project={root} onDone={() => setSettingsOpen(false)} />
               </DialogContent>
@@ -147,24 +148,28 @@ export function ProjectDetailPage() {
 
         {root.description && <p className="text-sm text-muted-foreground">{root.description}</p>}
 
-        {/* Progress */}
         {descendants.length > 0 && (
           <div className="space-y-1">
             <Progress value={progress.percent} className="h-3" />
             <p className="text-xs text-muted-foreground">
-              {progress.completedLeaves} of {progress.totalLeaves} tasks done ({progress.percent}%)
+              {t("pages:project_detail.tasks_progress", {
+                completed: progress.completedLeaves,
+                total: progress.totalLeaves,
+                percent: progress.percent,
+              })}
             </p>
           </div>
         )}
       </div>
 
-      {/* Task tree */}
       <div className="rounded-lg border border-border">
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <span className="text-xs font-medium text-muted-foreground">Tasks</span>
+          <span className="text-xs font-medium text-muted-foreground">
+            {t("pages:project_detail.tasks_label")}
+          </span>
           <Button size="sm" variant="ghost" onClick={() => handleAddChild(id!)}>
             <IconPlus className="mr-1 size-3" />
-            Add task
+            {t("pages:project_detail.add_task")}
           </Button>
         </div>
         <div className="p-2">

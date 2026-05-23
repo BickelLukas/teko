@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import type React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { formatDistanceToNow, isPast, addHours, addDays, addWeeks } from "date-fns";
+import { useTranslation } from "react-i18next";
+import { isPast, addHours, addDays, addWeeks } from "date-fns";
 import { IconCheck, IconDots, IconCalendar, IconZzz, IconFlame } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { completeTask, snoozeTask, scheduleTask } from "@/lib/api";
 import type { TaskResponse } from "@teko/shared";
-import { describeRecurrence } from "@/lib/recurrence";
+import { describeRecurrenceLocalized } from "@/lib/recurrence";
+import { useLocale, formatDateMedium, formatDistance } from "@/lib/locale";
 import confetti from "canvas-confetti";
 
 // ── Milestone confetti ────────────────────────────────────────────────────────
@@ -34,13 +36,15 @@ function fireMilestoneConfetti() {
 // ── State badge ───────────────────────────────────────────────────────────────
 
 function StateBadge({ task }: { task: TaskResponse }) {
+  const { t } = useTranslation("common");
+  const { locale } = useLocale();
   const nextDue = task.next_due_at ? new Date(task.next_due_at) : null;
   const plannedFor = task.planned_for ? new Date(task.planned_for) : null;
 
   if (task.state === "not_yet" && nextDue) {
     return (
       <span className="text-xs text-muted-foreground">
-        Due {formatDistanceToNow(nextDue, { addSuffix: true })}
+        {t("task.state_badge.due", { time: formatDistance(nextDue, locale, { addSuffix: true }) })}
       </span>
     );
   }
@@ -51,24 +55,24 @@ function StateBadge({ task }: { task: TaskResponse }) {
       );
       return (
         <span className="text-xs text-blue-500">
-          Do any time until {windowEnd.toLocaleDateString()}
+          {t("task.state_badge.do_until", { date: formatDateMedium(windowEnd, locale) })}
         </span>
       );
     }
-    return <span className="text-xs text-blue-500">Ready to do</span>;
+    return <span className="text-xs text-blue-500">{t("task.state_badge.ready")}</span>;
   }
   if (task.state === "planned" && plannedFor) {
     return (
       <span className="text-xs text-violet-500">
-        Planned for {plannedFor.toLocaleDateString()}
-        {isPast(plannedFor) ? " (plan date passed)" : ""}
+        {t("task.state_badge.planned_for", { date: formatDateMedium(plannedFor, locale) })}
+        {isPast(plannedFor) ? ` ${t("task.state_badge.plan_passed")}` : ""}
       </span>
     );
   }
   if (task.state === "overdue" && nextDue) {
     return (
       <span className="text-xs font-medium text-destructive">
-        Overdue by {formatDistanceToNow(nextDue)}
+        {t("task.state_badge.overdue_by", { time: formatDistance(nextDue, locale) })}
       </span>
     );
   }
@@ -78,6 +82,7 @@ function StateBadge({ task }: { task: TaskResponse }) {
 // ── Snooze/schedule panel ─────────────────────────────────────────────────────
 
 function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => void }) {
+  const { t } = useTranslation("common");
   const queryClient = useQueryClient();
   const [customDate, setCustomDate] = useState("");
 
@@ -91,7 +96,7 @@ function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => voi
 
   return (
     <div className="mt-2 rounded-md border border-border bg-muted/40 p-3">
-      <p className="mb-2 text-xs font-medium text-muted-foreground">Schedule for:</p>
+      <p className="mb-2 text-xs font-medium text-muted-foreground">{t("schedule_panel.title")}</p>
       <div className="flex flex-wrap gap-2">
         <Button
           size="xs"
@@ -99,7 +104,7 @@ function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => voi
           disabled={scheduleMutation.isPending}
           onClick={() => scheduleMutation.mutate({ date: addDays(new Date(), 1) })}
         >
-          Tomorrow
+          {t("schedule_panel.tomorrow")}
         </Button>
         <Button
           size="xs"
@@ -107,7 +112,7 @@ function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => voi
           disabled={scheduleMutation.isPending}
           onClick={() => scheduleMutation.mutate({ date: addDays(new Date(), 3) })}
         >
-          In 3 days
+          {t("schedule_panel.in_3_days")}
         </Button>
         <Button
           size="xs"
@@ -115,7 +120,7 @@ function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => voi
           disabled={scheduleMutation.isPending}
           onClick={() => scheduleMutation.mutate({ date: addWeeks(new Date(), 1) })}
         >
-          Next week
+          {t("schedule_panel.next_week")}
         </Button>
       </div>
       <div className="mt-2 flex items-center gap-2">
@@ -135,10 +140,10 @@ function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => voi
             }
           }}
         >
-          Confirm
+          {t("actions.confirm")}
         </Button>
         <Button size="xs" variant="ghost" onClick={onDone}>
-          Cancel
+          {t("actions.cancel")}
         </Button>
       </div>
     </div>
@@ -162,6 +167,8 @@ export function TaskCard({
   breadcrumb,
   streakLength = 0,
 }: TaskCardProps) {
+  const { t } = useTranslation("common");
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [showSchedule, setShowSchedule] = useState(false);
   const [justDone, setJustDone] = useState(false);
@@ -169,8 +176,8 @@ export function TaskCard({
 
   useEffect(() => {
     if (!justDone) return;
-    const t = setTimeout(() => setJustDone(false), 2000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setJustDone(false), 2000);
+    return () => clearTimeout(timer);
   }, [justDone]);
 
   const completeMutation = useMutation({
@@ -180,7 +187,9 @@ export function TaskCard({
 
       if (result.streak.milestone_reached !== null && result.completion.was_on_time) {
         fireMilestoneConfetti();
-        setMilestoneCaption(`${result.streak.milestone_reached}-day streak on ${task.title} 🔥`);
+        setMilestoneCaption(
+          t("task.milestone", { count: result.streak.milestone_reached, title: task.title }),
+        );
         setTimeout(() => setMilestoneCaption(null), 4000);
       }
 
@@ -202,7 +211,7 @@ export function TaskCard({
 
   const recurrenceSummary =
     task.recurrence_rule && task.recurrence_mode
-      ? describeRecurrence(task.recurrence_rule, task.recurrence_mode)
+      ? describeRecurrenceLocalized(task.recurrence_rule, task.recurrence_mode, locale)
       : null;
 
   if (justDone) {
@@ -235,8 +244,8 @@ export function TaskCard({
           <button
             onClick={() => completeMutation.mutate()}
             disabled={completeMutation.isPending}
-            className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border transition-all duration-200 hover:border-primary hover:bg-primary/10 hover:scale-110 disabled:opacity-50"
-            aria-label="Mark done"
+            className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border transition-all duration-200 hover:scale-110 hover:border-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-50"
+            aria-label={t("task.mark_done_aria")}
           >
             {completeMutation.isPending && <IconCheck className="size-3 text-primary/50" />}
           </button>
@@ -263,7 +272,7 @@ export function TaskCard({
                 {breadcrumb}
                 {showAssignee && (
                   <span className="mt-0.5 inline-block text-xs text-muted-foreground/60">
-                    {assigneeName ?? "Unassigned"}
+                    {assigneeName ?? t("filters.unassigned")}
                   </span>
                 )}
               </div>
@@ -274,49 +283,50 @@ export function TaskCard({
                     variant="ghost"
                     size="icon-xs"
                     className="shrink-0 text-muted-foreground"
-                    aria-label="Task actions"
+                    aria-label={t("task.actions_aria")}
                   >
                     <IconDots />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t("task.dropdown_label")}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => completeMutation.mutate()}
                     disabled={completeMutation.isPending}
                   >
                     <IconCheck className="mr-2 size-4" />
-                    Mark done
+                    {t("actions.mark_done")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel>Snooze</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t("actions.snooze")}</DropdownMenuLabel>
                   <DropdownMenuItem
                     disabled={snoozeMutation.isPending}
                     onClick={() => snoozeMutation.mutate(addHours(new Date(), 1))}
                   >
-                    <IconZzz className="mr-2 size-4" />1 hour
+                    <IconZzz className="mr-2 size-4" />
+                    {t("snooze_options.one_hour")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={snoozeMutation.isPending}
                     onClick={() => snoozeMutation.mutate(addDays(new Date(), 1))}
                   >
                     <IconZzz className="mr-2 size-4" />
-                    Until tomorrow
+                    {t("snooze_options.tomorrow")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={snoozeMutation.isPending}
                     onClick={() => snoozeMutation.mutate(addWeeks(new Date(), 1))}
                   >
                     <IconZzz className="mr-2 size-4" />
-                    Until next week
+                    {t("snooze_options.next_week")}
                   </DropdownMenuItem>
                   {(task.state === "eligible" || task.state === "overdue") && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setShowSchedule((v) => !v)}>
                         <IconCalendar className="mr-2 size-4" />
-                        Schedule
+                        {t("actions.schedule")}
                       </DropdownMenuItem>
                     </>
                   )}

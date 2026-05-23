@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,6 @@ type FormValues = z.infer<typeof FormSchema>;
 
 type AddTaskModalProps = {
   defaultParentId?: string | null;
-  // Controlled mode — when provided, no trigger button is rendered
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 };
@@ -42,6 +42,7 @@ export function AddTaskModal({
   open: controlledOpen,
   onOpenChange,
 }: AddTaskModalProps = {}) {
+  const { t } = useTranslation("common");
   const isControlled = controlledOpen !== undefined;
   const queryClient = useQueryClient();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -53,6 +54,7 @@ export function AddTaskModal({
   useEffect(() => {
     setParentId(defaultParentId ?? "__none__");
   }, [defaultParentId]);
+
   const [recurrence, setRecurrence] = useState<RecurrenceValue>({
     rule: null,
     mode: "fixed",
@@ -124,13 +126,13 @@ export function AddTaskModal({
         <DialogTrigger asChild>
           <Button size="sm">
             <IconPlus className="mr-1 size-4" />
-            Add task
+            {t("actions.add_task")}
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New task</DialogTitle>
+          <DialogTitle>{t("add_task.title")}</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={handleSubmit((data) => createMutation.mutate(data))}
@@ -138,8 +140,8 @@ export function AddTaskModal({
         >
           <div>
             <Input
-              placeholder="Task title"
-              aria-label="Task title"
+              placeholder={t("add_task.title_placeholder")}
+              aria-label={t("add_task.title_placeholder")}
               autoFocus
               {...register("title")}
             />
@@ -148,13 +150,12 @@ export function AddTaskModal({
             )}
           </div>
 
-          <Input placeholder="Description (optional)" {...register("description")} />
+          <Input placeholder={t("add_task.description_placeholder")} {...register("description")} />
 
-          {/* Assignee — only show when dev users available */}
           {devUsers.length > 0 && (
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Assign to
+                {t("assignee.assign_to")}
               </label>
               <SelectRoot value={assigneeId} onValueChange={setAssigneeId}>
                 <SelectTrigger>
@@ -162,9 +163,9 @@ export function AddTaskModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__me__">
-                    Me ({me?.display_name ?? me?.name ?? "current user"})
+                    {t("assignee.me", { name: me?.display_name ?? me?.name ?? "current user" })}
                   </SelectItem>
-                  <SelectItem value="__unassigned__">Anyone (unassigned)</SelectItem>
+                  <SelectItem value="__unassigned__">{t("assignee.anyone")}</SelectItem>
                   {devUsers.map((u) => (
                     <SelectItem key={u.id} value={u.id}>
                       {u.name}
@@ -175,18 +176,17 @@ export function AddTaskModal({
             </div>
           )}
 
-          {/* Part of project — hidden when parent is set by context (controlled mode) */}
           {!isControlled && projects.length > 0 && (
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Part of project (optional)
+                {t("add_task.project_optional")}
               </label>
               <SelectRoot value={parentId} onValueChange={setParentId}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
+                  <SelectItem value="__none__">{t("add_task.none")}</SelectItem>
                   {projects.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.title}
@@ -197,24 +197,23 @@ export function AddTaskModal({
             </div>
           )}
 
-          {/* Recurrence — collapsed by default */}
           <div>
             <button
               type="button"
               className="mb-2 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
               onClick={() => setShowRecurrence((v) => !v)}
             >
-              {showRecurrence ? "Hide recurrence" : "+ Add recurrence"}
+              {showRecurrence ? t("add_task.hide_recurrence") : t("add_task.add_recurrence")}
             </button>
             {showRecurrence && <RecurrencePicker value={recurrence} onChange={setRecurrence} />}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
-              Cancel
+              {t("actions.cancel")}
             </Button>
             <Button type="submit" size="sm" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Adding…" : "Add task"}
+              {createMutation.isPending ? t("actions.adding") : t("actions.add_task")}
             </Button>
           </div>
         </form>

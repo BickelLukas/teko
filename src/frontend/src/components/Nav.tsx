@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   IconHome,
   IconRepeat,
@@ -9,38 +10,72 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
-const links = [
-  { to: "/", label: "Today", icon: IconHome, end: true },
-  { to: "/chores", label: "Chores", icon: IconRepeat, end: false },
-  { to: "/tasks", label: "All tasks", icon: IconList, end: false },
-  { to: "/projects", label: "Projects", icon: IconStack2, end: false },
-  { to: "/stats", label: "Stats", icon: IconChartBar, end: false },
-  { to: "/settings", label: "Settings", icon: IconSettings, end: false },
-];
-
 export function Nav() {
+  const { t } = useTranslation("common");
+
+  const links = [
+    { to: "/", label: t("nav.today"), icon: IconHome, end: true },
+    { to: "/chores", label: t("nav.chores"), icon: IconRepeat, end: false },
+    { to: "/tasks", label: t("nav.all_tasks"), icon: IconList, end: false },
+    { to: "/projects", label: t("nav.projects"), icon: IconStack2, end: false },
+    { to: "/stats", label: t("nav.stats"), icon: IconChartBar, end: false },
+    { to: "/settings", label: t("nav.settings"), icon: IconSettings, end: false },
+  ];
+
   return (
-    <nav className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
-      <div className="mx-auto flex max-w-xl items-center gap-1 px-4">
-        {links.map(({ to, label, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-3 text-sm transition-colors",
-                isActive
-                  ? "font-medium text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )
-            }
-          >
-            <Icon className="size-4 shrink-0" />
-            <span className="hidden sm:inline">{label}</span>
-          </NavLink>
-        ))}
-      </div>
-    </nav>
+    <>
+      {/* Top nav — tablet and above */}
+      <nav
+        className="sticky top-0 z-40 hidden border-b border-border bg-background/95 backdrop-blur sm:block"
+        aria-label="Main navigation"
+      >
+        <div className="mx-auto flex max-w-xl items-center gap-1 px-4">
+          {links.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-1.5 rounded-md px-3 py-3 text-sm transition-colors",
+                  isActive
+                    ? "font-medium text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )
+              }
+            >
+              <Icon className="size-4 shrink-0" />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </div>
+      </nav>
+
+      {/* Bottom tab bar — mobile only */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur sm:hidden"
+        aria-label="Mobile navigation"
+      >
+        <div className="flex items-stretch">
+          {links.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                cn(
+                  "flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[10px] transition-colors",
+                  isActive ? "font-medium text-foreground" : "text-muted-foreground",
+                )
+              }
+            >
+              <Icon className="size-5 shrink-0" />
+              <span className="truncate">{label}</span>
+            </NavLink>
+          ))}
+        </div>
+      </nav>
+
+    </>
   );
 }

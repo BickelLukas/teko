@@ -1,0 +1,23 @@
+{
+  "errors": {
+    "task_not_found": "Task not found.",
+    "user_not_found": "User not found.",
+    "forbidden": "You do not have permission to perform this action.",
+    "validation": "Invalid request data.",
+    "internal": "An unexpected error occurred. Please try again.",
+    "cycle_detected": "A task cannot be its own ancestor.",
+    "already_completed": "This task is already completed.",
+    "already_archived": "This task is already archived.",
+    "not_archivable": "Active tasks with open children cannot be archived.",
+    "snooze_past": "Snooze time must be in the future."
+  },
+  "notifications": {
+    "morning_digest_subject": "Good morning. You have {{count}} things today.",
+    "morning_digest_item": "{{title}}",
+    "streak_milestone": "Nice — that's {{count}} days in a row on {{title}} 🔥",
+    "overdue_reminder": "{{title}}. It's been {{days}} days.",
+    "eligible_mention": "{{title}} can be done any time this {{period}} — no rush.",
+    "planned_reminder": "Reminder: you planned to do {{title}} today.",
+    "weekly_summary": "This week the household earned {{points}} points 🎉"
+  }
+}

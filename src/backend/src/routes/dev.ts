@@ -6,7 +6,6 @@ import { SwitchUserBodySchema, ClockActionSchema } from "@teko/shared";
 import { getNow, getOffsetMs, setOffsetMs } from "../domain/clock.js";
 import "../types.js";
 
-
 const dev: FastifyPluginAsync = async (fastify) => {
   const db = fastify.db;
 

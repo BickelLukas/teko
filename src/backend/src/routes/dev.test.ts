@@ -20,6 +20,7 @@ const DEV_CONFIG = {
   devUserId: "test-user",
   devUserName: "Test User",
   dbPath: ":memory:",
+  publicDir: null,
 };
 
 const PROD_CONFIG = { ...DEV_CONFIG, devMode: false };

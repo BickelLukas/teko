@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { basePath } from "@/lib/basePath";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -89,7 +90,7 @@ function LocaleSync() {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={basePath}>
         <ThemeProvider>
           <LocaleSync />
           <KeyboardShortcuts />

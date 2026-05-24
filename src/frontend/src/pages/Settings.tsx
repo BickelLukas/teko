@@ -265,7 +265,7 @@ export function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <a
-                href="https://github.com/anthropics/teko"
+                href="https://github.com/BickelLukas/teko"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary underline-offset-2 hover:underline"

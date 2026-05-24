@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch --env-file=../../.env src/index.ts",
-    "build": "tsup src/index.ts --format cjs --out-dir dist",
+    "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
+    "@fastify/static": "^9.1.3",
     "@teko/shared": "workspace:^",
     "better-sqlite3": "^12.10.0",
     "date-fns": "^4.2.1",

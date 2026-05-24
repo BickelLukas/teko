@@ -1,6 +1,9 @@
 import Fastify from "fastify";
 import type { FastifyInstance } from "fastify";
 import fastifyCookie from "@fastify/cookie";
+import fastifyStatic from "@fastify/static";
+import path from "path";
+import fs from "fs";
 import type { Db } from "./db/client.js";
 import health from "./routes/health.js";
 import tasks from "./routes/tasks.js";
@@ -47,6 +50,36 @@ export async function buildApp(db: Db, config: Config): Promise<FastifyInstance>
       }
     }
     initClock({ devMode: config.devMode, initialOffsetMs });
+  }
+
+  // In production, serve the bundled SPA. Must be registered before auth so
+  // static asset requests (JS/CSS/fonts) bypass the auth hook — only /api/*
+  // requests need authentication.
+  if (config.publicDir) {
+    const publicDir = path.resolve(config.publicDir);
+    const indexPath = path.join(publicDir, "index.html");
+
+    let cachedIndex: Buffer;
+    try {
+      cachedIndex = await fs.promises.readFile(indexPath);
+    } catch (err) {
+      fastify.log.error({ err, indexPath }, "Failed to read index.html — aborting startup");
+      process.exit(1);
+    }
+
+    await fastify.register(fastifyStatic, {
+      root: publicDir,
+      wildcard: false,
+    });
+
+    // SPA fallback: any non-API path that doesn't match a file returns index.html
+    // so client-side routing works on hard reload.
+    fastify.setNotFoundHandler((_request, reply) => {
+      if (_request.url.startsWith("/api/") || _request.url.startsWith("/ws")) {
+        return reply.code(404).send({ error: "Not found" });
+      }
+      return reply.type("text/html").send(cachedIndex);
+    });
   }
 
   await registerAuth(fastify, config);

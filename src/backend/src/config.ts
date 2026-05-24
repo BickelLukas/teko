@@ -5,6 +5,7 @@ export type Config = {
   devUserId: string;
   devUserName: string;
   dbPath: string;
+  publicDir: string | null;
 };
 
 export function loadConfig(): Config {
@@ -30,12 +31,22 @@ export function loadConfig(): Config {
     );
   }
 
+  // DATABASE_PATH is the canonical env var (matches HA add-on conventions).
+  // DB_PATH is kept as a fallback for existing .env files.
+  const dbPath = process.env["DATABASE_PATH"] ?? process.env["DB_PATH"] ?? "./data/teko.db";
+
+  // In production, Fastify serves the bundled SPA. Computed in index.ts from
+  // __dirname so it resolves correctly in both local prod test and Docker.
+  // Overridable via PUBLIC_DIR env var.
+  const publicDir = nodeEnv === "production" ? (process.env["PUBLIC_DIR"] ?? null) : null;
+
   return {
     port: rawPort,
     nodeEnv,
     devMode,
     devUserId: process.env["DEV_USER_ID"] ?? "dev-alice",
     devUserName: process.env["DEV_USER_NAME"] ?? "Alice",
-    dbPath: process.env["DB_PATH"] ?? "./data/teko.db",
+    dbPath,
+    publicDir,
   };
 }

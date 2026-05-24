@@ -9,5 +9,6 @@
       "Bash(yarn test *)",
       "Bash(yarn typecheck *)"
     ]
-  }
+  },
+  "model": "opusplan"
 }

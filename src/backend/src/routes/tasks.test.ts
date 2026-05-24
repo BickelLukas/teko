@@ -20,6 +20,7 @@ const TEST_CONFIG = {
   devUserId: "test-user",
   devUserName: "Test User",
   dbPath: ":memory:",
+  publicDir: null,
 };
 
 function buildTestDb(): { db: Db; userId: string } {

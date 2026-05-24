@@ -78,17 +78,13 @@ English and German are both first-class. Strings are externalised from the start
 
 ## Installation
 
-*Not yet available — under active development. Watch this repo for the first release.*
+Add this repository as a custom add-on repository in HA:
 
-When ready, installation will be:
+**Settings → Add-ons → Add-on Store → ⋮ → Repositories → Add `https://github.com/BickelLukas/teko`**
 
-1. Add the Teko add-on repository to Home Assistant
-2. Install the Teko add-on
-3. Install the Teko integration via HACS
-4. Add the integration from Settings → Devices & Services
-5. Open Teko from the sidebar
+The Teko add-on will appear in the store. Click **Install** — HA Supervisor pulls the pre-built image from GitHub Container Registry. No local building required.
 
-Total time: under five minutes, no YAML.
+> If you fork this repository, update the `image` field in `addon/config.yaml` to point to your own GHCR path before installing.
 
 ---
 

@@ -14,6 +14,7 @@ import type {
   TaskStreak,
 } from "@teko/shared";
 import { setOffsetMs } from "./clock.js";
+import { basePath } from "./basePath.js";
 
 // Tracks whether the backend reported dev mode via response header.
 // Set on first response that carries X-Teko-Dev-Mode: true.
@@ -32,8 +33,8 @@ export function onDevModeChange(cb: (active: boolean) => void): () => void {
   };
 }
 
-async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
-  const res = await fetch(input, init);
+async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(`${basePath}${path}`, init);
   const devModeHeader = res.headers.get("X-Teko-Dev-Mode");
   if (devModeHeader?.toLowerCase() === "true" && !_devModeActive) {
     _devModeActive = true;

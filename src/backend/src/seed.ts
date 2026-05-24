@@ -14,7 +14,7 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const { db } = createDb(config.dbPath);
+const { db } = createDb(config.dbPath, path.join(__dirname, "../drizzle/migrations"));
 
 // ── Reset all seed data ───────────────────────────────────────────────────────
 // Idempotent: delete everything tied to seed ha_user_ids and recreate.

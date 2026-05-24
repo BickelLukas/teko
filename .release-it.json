@@ -1,0 +1,30 @@
+{
+  "git": {
+    "commitMessage": "chore: release v${version}",
+    "tagName": "v${version}",
+    "tagAnnotation": "Release v${version}",
+    "push": true,
+    "requireCleanWorkingDir": true,
+    "requireBranch": "main",
+    "requireUpstream": true
+  },
+  "github": {
+    "release": false
+  },
+  "npm": {
+    "publish": false
+  },
+  "hooks": {
+    "before:init": ["yarn lint", "yarn typecheck", "yarn test"]
+  },
+  "plugins": {
+    "@release-it/bumper": {
+      "out": [
+        { "file": "src/shared/package.json" },
+        { "file": "src/frontend/package.json" },
+        { "file": "src/backend/package.json" },
+        { "file": "addon/config.yaml", "path": "version" }
+      ]
+    }
+  }
+}

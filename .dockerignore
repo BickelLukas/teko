@@ -1,0 +1,45 @@
+# Yarn Berry cache (fetched during build)
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Build outputs (rebuilt in Docker)
+dist/
+build/
+src/backend/dist/
+src/frontend/dist/
+
+# Node modules (reinstalled in Docker)
+node_modules/
+
+# Runtime data
+src/backend/data/
+
+# Env files
+.env
+.env.local
+.env.*.local
+.env.development
+
+# Docs and dev tooling
+docs/
+addon/
+.github/
+.claude/
+*.md
+!README.md
+
+# Tests
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore

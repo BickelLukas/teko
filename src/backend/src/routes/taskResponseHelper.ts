@@ -1,16 +1,33 @@
-import type * as schema from "../db/schema.js";
+import * as schema from "../db/schema.js";
+import { inArray } from "drizzle-orm";
 import { computeTaskState } from "../domain/recurrence.js";
+import type { Db } from "../db/client.js";
+
+export function buildAssigneeNameMap(db: Db, assigneeIds: string[]): Map<string, string> {
+  if (assigneeIds.length === 0) return new Map();
+  const rows = db
+    .select({
+      id: schema.users.id,
+      name: schema.users.name,
+      display_name: schema.users.display_name,
+    })
+    .from(schema.users)
+    .where(inArray(schema.users.id, assigneeIds))
+    .all();
+  return new Map(rows.map((r) => [r.id, r.display_name ?? r.name]));
+}
 
 export function taskToResponse(
   t: typeof schema.tasks.$inferSelect,
   now: Date,
-  opts: { childCount?: number; parentTitle?: string | null } = {},
+  opts: { childCount?: number; parentTitle?: string | null; assigneeName?: string | null } = {},
 ) {
   return {
     id: t.id,
     title: t.title,
     description: t.description,
     assignee_id: t.assignee_id,
+    assignee_name: opts.assigneeName ?? null,
     parent_id: t.parent_id,
     parent_title: opts.parentTitle ?? null,
     state: computeTaskState(t, now),

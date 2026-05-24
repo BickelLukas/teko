@@ -188,6 +188,7 @@ export const TaskResponseSchema = TaskSchema.pick({
 }).extend({
   child_count: z.number().int().nonnegative(),
   parent_title: z.string().nullable(),
+  assignee_name: z.string().nullable(),
 });
 export type TaskResponse = z.infer<typeof TaskResponseSchema>;
 

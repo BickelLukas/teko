@@ -5,7 +5,7 @@ import { TaskIdParamsSchema, GetTasksQuerySchema } from "@teko/shared";
 import { getNow } from "../domain/clock.js";
 import { computeProjectProgress } from "../domain/project.js";
 import { fetchSubtreesByRoot } from "../db/queries.js";
-import { taskToResponse } from "./taskResponseHelper.js";
+import { taskToResponse, buildAssigneeNameMap } from "./taskResponseHelper.js";
 import "../types.js";
 import type { Db } from "../db/client.js";
 
@@ -117,6 +117,8 @@ const projects: FastifyPluginAsync = async (fastify) => {
     const rootIds = rows.map((r) => r.id);
     const subtrees = fetchSubtreesByRoot(db, rootIds);
     const lastActivityByRoot = fetchLastActivityByRoot(db, subtrees);
+    const assigneeIds = [...new Set(rows.filter((r) => r.assignee_id).map((r) => r.assignee_id!))];
+    const assigneeNames = buildAssigneeNameMap(db, assigneeIds);
 
     const now = getNow();
 
@@ -135,7 +137,12 @@ const projects: FastifyPluginAsync = async (fastify) => {
       const lastActivityAt = lastActivityByRoot.get(project.id) ?? null;
 
       return {
-        ...taskToResponse(project, now, { childCount: directChildCount }),
+        ...taskToResponse(project, now, {
+          childCount: directChildCount,
+          assigneeName: project.assignee_id
+            ? (assigneeNames.get(project.assignee_id) ?? null)
+            : null,
+        }),
         progress,
         last_activity_at: lastActivityAt,
       };
@@ -164,7 +171,16 @@ const projects: FastifyPluginAsync = async (fastify) => {
     }
 
     const now = getNow();
-    return allNodes.map((t) => taskToResponse(t, now, { childCount: childCounts.get(t.id) ?? 0 }));
+    const treeAssigneeIds = [
+      ...new Set(allNodes.filter((n) => n.assignee_id).map((n) => n.assignee_id!)),
+    ];
+    const treeAssigneeNames = buildAssigneeNameMap(db, treeAssigneeIds);
+    return allNodes.map((t) =>
+      taskToResponse(t, now, {
+        childCount: childCounts.get(t.id) ?? 0,
+        assigneeName: t.assignee_id ? (treeAssigneeNames.get(t.assignee_id) ?? null) : null,
+      }),
+    );
   });
 
   // ── GET /api/tasks/:id/children ─────────────────────────────────────────────
@@ -203,10 +219,15 @@ const projects: FastifyPluginAsync = async (fastify) => {
     }
 
     const now = getNow();
+    const childAssigneeIds = [
+      ...new Set(children.filter((c) => c.assignee_id).map((c) => c.assignee_id!)),
+    ];
+    const childAssigneeNames = buildAssigneeNameMap(db, childAssigneeIds);
     return children.map((c) =>
       taskToResponse(c, now, {
         childCount: grandchildCounts.get(c.id) ?? 0,
         parentTitle: parent.title,
+        assigneeName: c.assignee_id ? (childAssigneeNames.get(c.assignee_id) ?? null) : null,
       }),
     );
   });

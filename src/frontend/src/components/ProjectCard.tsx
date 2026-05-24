@@ -22,10 +22,9 @@ import { ArchiveConfirmDialog } from "@/components/ArchiveConfirmDialog";
 
 type ProjectCardProps = {
   project: ProjectResponse;
-  assigneeName?: string;
 };
 
-export function ProjectCard({ project, assigneeName }: ProjectCardProps) {
+export function ProjectCard({ project }: ProjectCardProps) {
   const { t } = useTranslation("common");
   const { locale } = useLocale();
   const navigate = useNavigate();
@@ -67,9 +66,9 @@ export function ProjectCard({ project, assigneeName }: ProjectCardProps) {
                       </p>
                     )}
                   </div>
-                  {assigneeName && (
+                  {project.assignee_name && (
                     <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                      {assigneeName}
+                      {project.assignee_name}
                     </span>
                   )}
                 </div>

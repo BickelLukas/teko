@@ -85,12 +85,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
 
   const saveMutation = useMutation({
     mutationFn: (data: FormValues) => {
-      const resolvedAssignee =
-        assigneeId === "__unassigned__"
-          ? null
-          : assigneeId === "__me__"
-            ? (me?.id ?? null)
-            : assigneeId;
+      const resolvedAssignee = assigneeId === "__unassigned__" ? null : assigneeId;
       const resolvedParent = parentId === "__none__" ? null : parentId;
 
       return updateTask(task.id, {
@@ -145,11 +140,11 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__me__">
-                    {t("assignee.me", {
-                      name: me?.display_name ?? me?.name ?? t("person.current_user"),
-                    })}
-                  </SelectItem>
+                  {me && (
+                    <SelectItem value={me.id}>
+                      {t("assignee.me", { name: me.display_name ?? me.name })}
+                    </SelectItem>
+                  )}
                   <SelectItem value="__unassigned__">{t("assignee.anyone")}</SelectItem>
                   {users
                     .filter((u) => u.id !== me?.id)

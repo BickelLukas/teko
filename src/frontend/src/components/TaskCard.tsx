@@ -51,18 +51,11 @@ function fireMilestoneConfetti() {
 type TaskCardProps = {
   task: TaskResponse;
   showAssignee?: boolean;
-  assigneeName?: string;
   breadcrumb?: React.ReactNode;
   streakLength?: number;
 };
 
-export function TaskCard({
-  task,
-  showAssignee,
-  assigneeName,
-  breadcrumb,
-  streakLength = 0,
-}: TaskCardProps) {
+export function TaskCard({ task, showAssignee, breadcrumb, streakLength = 0 }: TaskCardProps) {
   const { t } = useTranslation("common");
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -182,8 +175,8 @@ export function TaskCard({
                   <TaskStateBadge task={task} />
                   {breadcrumb}
                   {showAssignee && (
-                    <span className="mt-0.5 inline-block text-xs text-muted-foreground/60">
-                      {assigneeName ?? t("filters.unassigned")}
+                    <span className="mt-0.5 ml-1 inline-block text-xs text-muted-foreground/60">
+                      {task.assignee_name ?? t("filters.unassigned")}
                     </span>
                   )}
                 </div>

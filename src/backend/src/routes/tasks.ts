@@ -21,7 +21,7 @@ import {
   suggestCompletionWindow,
 } from "../domain/recurrence.js";
 import { computeStreakUpdate, awardPoints, detectStreakMilestone } from "../domain/streaks.js";
-import { taskToResponse } from "./taskResponseHelper.js";
+import { taskToResponse, buildAssigneeNameMap } from "./taskResponseHelper.js";
 import { fetchDescendants } from "../db/queries.js";
 import type { Db } from "../db/client.js";
 import "../types.js";
@@ -194,11 +194,14 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const childCounts = buildChildCountMap(db);
     const parentIds = [...new Set(rows.filter((r) => r.parent_id).map((r) => r.parent_id!))];
     const parentTitles = buildParentTitleMap(db, parentIds);
+    const assigneeIds = [...new Set(rows.filter((r) => r.assignee_id).map((r) => r.assignee_id!))];
+    const assigneeNames = buildAssigneeNameMap(db, assigneeIds);
 
     return rows.map((t) =>
       taskToResponse(t, now, {
         childCount: childCounts.get(t.id) ?? 0,
         parentTitle: t.parent_id ? (parentTitles.get(t.parent_id) ?? null) : null,
+        assigneeName: t.assignee_id ? (assigneeNames.get(t.assignee_id) ?? null) : null,
       }),
     );
   });
@@ -304,7 +307,12 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, id)).get();
     if (!task) return reply.code(500).send({ error: "Failed to retrieve created task" });
 
-    return reply.code(201).send(taskToResponse(task, getNow()));
+    const assigneeNames = buildAssigneeNameMap(db, task.assignee_id ? [task.assignee_id] : []);
+    return reply.code(201).send(
+      taskToResponse(task, getNow(), {
+        assigneeName: task.assignee_id ? (assigneeNames.get(task.assignee_id) ?? null) : null,
+      }),
+    );
   });
 
   // ── PATCH /api/tasks/:id ────────────────────────────────────────────────────
@@ -412,7 +420,15 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     }
 
     if (Object.keys(updates).length === 0) {
-      return reply.code(200).send(taskToResponse(task, getNow()));
+      const assigneeNamesNoOp = buildAssigneeNameMap(
+        db,
+        task.assignee_id ? [task.assignee_id] : [],
+      );
+      return reply.code(200).send(
+        taskToResponse(task, getNow(), {
+          assigneeName: task.assignee_id ? (assigneeNamesNoOp.get(task.assignee_id) ?? null) : null,
+        }),
+      );
     }
 
     db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, task.id)).run();
@@ -428,10 +444,17 @@ const tasks: FastifyPluginAsync = async (fastify) => {
           .where(eq(schema.tasks.id, updated.parent_id))
           .get()?.title ?? null)
       : null;
+    const assigneeNamesUpdated = buildAssigneeNameMap(
+      db,
+      updated.assignee_id ? [updated.assignee_id] : [],
+    );
     return reply.code(200).send(
       taskToResponse(updated, getNow(), {
         childCount: childCounts.get(updated.id) ?? 0,
         parentTitle,
+        assigneeName: updated.assignee_id
+          ? (assigneeNamesUpdated.get(updated.assignee_id) ?? null)
+          : null,
       }),
     );
   });
@@ -575,9 +598,19 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     }
 
     const updatedTask = db.select().from(schema.tasks).where(eq(schema.tasks.id, task.id)).get();
+    const completeAssigneeNames = buildAssigneeNameMap(
+      db,
+      updatedTask?.assignee_id ? [updatedTask.assignee_id] : [],
+    );
 
     return reply.code(200).send({
-      task: updatedTask ? taskToResponse(updatedTask, getNow()) : null,
+      task: updatedTask
+        ? taskToResponse(updatedTask, getNow(), {
+            assigneeName: updatedTask.assignee_id
+              ? (completeAssigneeNames.get(updatedTask.assignee_id) ?? null)
+              : null,
+          })
+        : null,
       completion: { was_on_time: wasOnTime, points_awarded: pointsAwarded },
       streak: {
         current: newLength,

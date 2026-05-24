@@ -41,35 +41,24 @@ function buildTestDb(): { db: Db; userId: string } {
   return { db, userId };
 }
 
-describe("GET /api/_dev/clock", () => {
-  let app: FastifyInstance;
-  let db: Db;
-
-  beforeEach(async () => {
-    ({ db } = buildTestDb());
-    app = await buildApp(db, DEV_CONFIG);
-  });
-
-  afterEach(async () => {
-    await app.close();
-    // Reset clock between tests
+describe("clock module defaults", () => {
+  afterEach(() => {
     initClock({ devMode: true, initialOffsetMs: 0 });
   });
 
-  it("returns offsetMs=0 by default", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/_dev/clock" });
-    expect(res.statusCode).toBe(200);
-    const body = res.json() as { offsetMs: number; virtualNow: string; realNow: string };
-    expect(body.offsetMs).toBe(0);
-    expect(body.virtualNow).toBeDefined();
-    expect(body.realNow).toBeDefined();
+  it("offsetMs is 0 by default", () => {
+    expect(getOffsetMs()).toBe(0);
   });
 
-  it("returns 404 when devMode is false", async () => {
+  it("POST /api/_dev/clock returns 401 in prod (route not registered)", async () => {
+    const { db } = buildTestDb();
     const prodApp = await buildApp(db, PROD_CONFIG);
     try {
-      const res = await prodApp.inject({ method: "GET", url: "/api/_dev/clock" });
-      // Auth middleware returns 401 before route lookup; route is never registered
+      const res = await prodApp.inject({
+        method: "POST",
+        url: "/api/_dev/clock",
+        payload: { action: "reset" },
+      });
       expect(res.statusCode).toBe(401);
     } finally {
       await prodApp.close();
@@ -92,7 +81,7 @@ describe("POST /api/_dev/clock", () => {
     initClock({ devMode: true, initialOffsetMs: 0 });
   });
 
-  it("advance: GET reflects new offset", async () => {
+  it("advance: response body and header reflect new offset", async () => {
     const advanceMs = 3 * 3_600_000; // +3h
 
     const post = await app.inject({
@@ -103,10 +92,8 @@ describe("POST /api/_dev/clock", () => {
     expect(post.statusCode).toBe(200);
     const postBody = post.json() as { offsetMs: number };
     expect(postBody.offsetMs).toBe(advanceMs);
-
-    const get = await app.inject({ method: "GET", url: "/api/_dev/clock" });
-    const getBody = get.json() as { offsetMs: number };
-    expect(getBody.offsetMs).toBe(advanceMs);
+    expect(post.headers["x-teko-clock-offset"]).toBe(String(advanceMs));
+    expect(getOffsetMs()).toBe(advanceMs);
   });
 
   it("set: jumps to target datetime", async () => {
@@ -221,9 +208,7 @@ describe("POST /api/_dev/clock", () => {
     // Build a fresh app — simulates restart with saved offset
     const freshApp = await buildApp(db, DEV_CONFIG);
     try {
-      const res = await freshApp.inject({ method: "GET", url: "/api/_dev/clock" });
-      const body = res.json() as { offsetMs: number };
-      expect(body.offsetMs).toBe(savedMs);
+      expect(getOffsetMs()).toBe(savedMs);
     } finally {
       await freshApp.close();
       initClock({ devMode: true, initialOffsetMs: 0 });

@@ -26,7 +26,7 @@ export async function registerAuth(fastify: FastifyInstance, config: Config): Pr
 
       const targetHaId = cookieUserId ?? config.devUserId;
 
-      const { user } = upsertHaUser(db, targetHaId, targetHaId, targetHaId === config.devUserId);
+      const { user } = upsertHaUser(db, targetHaId, targetHaId);
 
       request.user = {
         id: user.id,
@@ -52,12 +52,15 @@ export async function registerAuth(fastify: FastifyInstance, config: Config): Pr
       // request came through ingress.
       const ingressPath = request.headers["x-ingress-path"];
       const haUserId = request.headers["x-remote-user-id"];
+      const haUserDisplayName = request.headers["x-remote-user-display-name"];
       const haUserName = request.headers["x-remote-user-name"];
 
       if (ingressPath && typeof haUserId === "string" && haUserId) {
-        const displayName = typeof haUserName === "string" ? haUserName : haUserId;
+        const rawDisplay = typeof haUserDisplayName === "string" ? haUserDisplayName.trim() : "";
+        const fallback = typeof haUserName === "string" ? haUserName : haUserId;
+        const displayName = rawDisplay || fallback;
 
-        const { user } = upsertHaUser(fastify.db, haUserId, displayName, false);
+        const { user } = upsertHaUser(fastify.db, haUserId, displayName);
 
         request.user = {
           id: user.id,

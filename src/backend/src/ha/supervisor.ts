@@ -1,36 +1,29 @@
 import { z } from "zod";
 
-const HaUserSchema = z
-  .object({
-    id: z.string(),
-    name: z.string().nullable().optional(),
-    username: z.string().nullable().optional(),
-    is_owner: z.boolean(),
-    is_admin: z.boolean(),
-    system_generated: z.boolean().default(false),
-  })
-  .passthrough();
+// Person entities from HA Core REST /core/api/states.
+// Only persons with a linked user_id can authenticate via ingress.
+const PersonAttributesSchema = z.looseObject({
+  user_id: z.string().optional().nullable(),
+  friendly_name: z.string().optional().nullable(),
+  name: z.string().optional().nullable(),
+});
+
+const PersonStateSchema = z.looseObject({
+  entity_id: z.string(),
+  attributes: PersonAttributesSchema,
+});
+
+const StatesResponseSchema = z.array(PersonStateSchema);
 
 export type HaUser = {
   id: string;
   name: string;
-  is_owner: boolean;
-  is_admin: boolean;
 };
 
-const UserListResponseSchema = z.object({
-  result: z.literal("ok"),
-  data: z.object({
-    users: z.array(HaUserSchema),
-  }),
+const AddOnInfoDataSchema = z.looseObject({
+  version: z.string(),
+  hostname: z.string().optional(),
 });
-
-const AddOnInfoDataSchema = z
-  .object({
-    version: z.string(),
-    hostname: z.string().optional(),
-  })
-  .passthrough();
 
 const AddOnInfoResponseSchema = z.object({
   result: z.literal("ok"),
@@ -105,17 +98,25 @@ export function createSupervisorClient(token: string): SupervisorClient {
     return parsed.data;
   }
 
+  type PersonWithUserId = z.infer<typeof PersonStateSchema> & {
+    attributes: { user_id: string };
+  };
+
+  function hasUserId(s: z.infer<typeof PersonStateSchema>): s is PersonWithUserId {
+    return (
+      s.entity_id.startsWith("person.") &&
+      typeof s.attributes.user_id === "string" &&
+      s.attributes.user_id.length > 0
+    );
+  }
+
   return {
     async getUsers(): Promise<HaUser[]> {
-      const resp = await request(UserListResponseSchema, "/auth/list_users");
-      return resp.data.users
-        .filter((u) => !u.system_generated)
-        .map((u) => ({
-          id: u.id,
-          name: u.name ?? u.username ?? u.id,
-          is_owner: u.is_owner,
-          is_admin: u.is_admin,
-        }));
+      const states = await request(StatesResponseSchema, "/core/api/states");
+      return states.filter(hasUserId).map((s) => ({
+        id: s.attributes.user_id,
+        name: s.attributes.friendly_name ?? s.attributes.name ?? s.entity_id,
+      }));
     },
 
     async getInfo(): Promise<AddOnInfo> {

@@ -108,7 +108,6 @@
     "digest_time_label": "Daily digest time",
     "notification_time_hint": "(not active yet)",
     "household_section": "Household members",
-    "household_admin": "admin",
     "household_empty": "No members found.",
     "household_refresh": "Refresh from Home Assistant",
     "household_syncing": "Syncing…",

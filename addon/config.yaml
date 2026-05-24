@@ -2,6 +2,7 @@ name: Teko
 version: 0.0.3
 slug: teko
 description: A calm, household-shared task tracker.
+url: https://github.com/bickellukas/teko
 image: ghcr.io/bickellukas/teko-addon
 arch:
   - amd64
@@ -12,6 +13,7 @@ ingress: true
 ingress_port: 3000
 panel_icon: mdi:checkbox-multiple-marked-circle-outline
 panel_title: Teko
+panel_admin: false
 map:
   - data:rw
 homeassistant_api: true

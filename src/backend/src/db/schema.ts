@@ -12,6 +12,7 @@ export const users = sqliteTable("users", {
     .notNull()
     .default("system"),
   notification_time: text("notification_time"),
+  // Reserved. Always false in v0.x. See ADR-0005.
   is_admin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   is_active: integer("is_active", { mode: "boolean" }).notNull().default(true),
   week_start_day: integer("week_start_day").notNull().default(1),

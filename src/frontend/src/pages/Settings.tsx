@@ -274,11 +274,6 @@ export function SettingsPage() {
                 {householdUsers.map((u) => (
                   <li key={u.id} className="flex items-center gap-2 text-sm">
                     <span className="font-medium">{u.display_name ?? u.name}</span>
-                    {u.is_admin && (
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                        {t("settings.household_admin")}
-                      </span>
-                    )}
                   </li>
                 ))}
               </ul>

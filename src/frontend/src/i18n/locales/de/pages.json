@@ -108,7 +108,6 @@
     "digest_time_label": "Tägliche Zusammenfassung",
     "notification_time_hint": "(noch nicht aktiv)",
     "household_section": "Haushaltsmitglieder",
-    "household_admin": "Admin",
     "household_empty": "Keine Mitglieder gefunden.",
     "household_refresh": "Von Home Assistant aktualisieren",
     "household_syncing": "Wird synchronisiert…",

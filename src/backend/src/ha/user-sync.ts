@@ -24,7 +24,7 @@ export function syncUsers(haUsers: HaUser[], db: Db): SyncCounts {
 
   db.transaction((tx) => {
     for (const haUser of haUsers) {
-      const { action } = upsertHaUser(tx as unknown as Db, haUser.id, haUser.name, haUser.is_admin);
+      const { action } = upsertHaUser(tx as unknown as Db, haUser.id, haUser.name);
       if (action === "inserted") added++;
       else if (action === "updated") updated++;
       else if (action === "reactivated") reactivated++;

@@ -19,8 +19,8 @@ function buildTestDb(): Db {
   return db;
 }
 
-function haUser(id: string, name: string, isAdmin = false, isOwner = false): HaUser {
-  return { id, name, is_admin: isAdmin, is_owner: isOwner };
+function haUser(id: string, name: string): HaUser {
+  return { id, name };
 }
 
 function activeUsers(db: Db) {
@@ -40,7 +40,7 @@ describe("syncUsers", () => {
 
   it("first sync: inserts all HA users", () => {
     const result = syncUsers(
-      [haUser("ha-1", "Alice", true), haUser("ha-2", "Bob"), haUser("ha-3", "Charlie")],
+      [haUser("ha-1", "Alice"), haUser("ha-2", "Bob"), haUser("ha-3", "Charlie")],
       db,
     );
 

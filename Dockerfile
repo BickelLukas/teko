@@ -61,9 +61,9 @@ COPY --from=backend-builder /workspace/src/backend/drizzle ./backend/drizzle
 # Frontend SPA served as static files by Fastify
 COPY --from=frontend-builder /workspace/src/frontend/dist ./backend/dist/public
 
-COPY run.sh /run.sh
-RUN chmod +x /run.sh
+COPY run.sh ./run.sh
+RUN chmod +x ./run.sh
 
 EXPOSE 3000
 
-CMD ["/run.sh"]
+CMD ["/app/run.sh"]

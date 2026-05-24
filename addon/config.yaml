@@ -1,5 +1,5 @@
 name: Teko
-version: 0.0.2
+version: 0.0.3
 slug: teko
 description: A calm, household-shared task tracker.
 image: ghcr.io/bickellukas/teko-addon

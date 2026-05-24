@@ -219,6 +219,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       recurrence_rule,
       recurrence_mode,
       completion_window_days,
+      start_date,
     } = parsed.data;
 
     if (parent_id) {
@@ -231,14 +232,34 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const id = randomUUID();
     const now = getNow();
 
+    // Parse optional start date anchor (noon UTC to avoid DST edge cases)
+    let anchor: Date | null = null;
+    if (start_date) {
+      anchor = new Date(`${start_date}T12:00:00Z`);
+      const todayNoon = new Date(`${now.toISOString().split("T")[0]}T12:00:00Z`);
+      if (anchor < todayNoon) {
+        return reply.code(400).send({ error: "start_date cannot be in the past" });
+      }
+    }
+
     let nextDueAt: Date | null = null;
     let windowDays: number | null = completion_window_days ?? null;
     let normalizedRule: string | null = recurrence_rule ?? null;
-    let initialState: "eligible" | "not_yet" = "eligible";
+    let initialState: "eligible" | "not_yet" | "planned" = "eligible";
+    let plannedFor: Date | null = null;
 
     if (recurrence_rule && recurrence_mode) {
-      const taskForDue = { recurrence_rule, recurrence_mode, next_due_at: null };
-      nextDueAt = computeNextDueAt(taskForDue, null, now);
+      const effectiveNow = anchor ?? now;
+
+      if (recurrence_mode === "after_completion" && anchor !== null) {
+        // User chose an anchor date: treat it as the first due date directly.
+        // Standard creation (no anchor) would compute anchor+interval, which is wrong here.
+        nextDueAt = anchor;
+      } else {
+        const taskForDue = { recurrence_rule, recurrence_mode, next_due_at: null };
+        nextDueAt = computeNextDueAt(taskForDue, null, effectiveNow);
+      }
+
       normalizedRule = normalizeRrule(recurrence_rule, nextDueAt);
       if (windowDays === null) {
         windowDays = suggestCompletionWindow(recurrence_rule);
@@ -255,6 +276,10 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         now,
       );
       initialState = computed === "not_yet" ? "not_yet" : "eligible";
+    } else if (anchor !== null && anchor > now) {
+      // One-off task with a future start date: schedule it directly.
+      plannedFor = anchor;
+      initialState = "planned";
     }
 
     const resolvedAssignee = assignee_id === null ? null : (assignee_id ?? request.user.id);
@@ -272,6 +297,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         recurrence_mode: recurrence_mode ?? null,
         completion_window_days: windowDays,
         next_due_at: nextDueAt,
+        planned_for: plannedFor,
       })
       .run();
 

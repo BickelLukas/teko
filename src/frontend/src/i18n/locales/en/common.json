@@ -123,7 +123,13 @@
     "project_optional": "Part of project (optional)",
     "none": "None",
     "hide_recurrence": "Hide recurrence",
-    "add_recurrence": "+ Add recurrence"
+    "add_recurrence": "+ Add recurrence",
+    "when": "When?",
+    "starting": "Starting"
+  },
+  "date_picker": {
+    "pick_date": "Pick a date",
+    "clear": "Clear"
   },
   "recurrence": {
     "label": "Recurrence",

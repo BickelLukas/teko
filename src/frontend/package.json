@@ -11,6 +11,7 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
     "@hookform/resolvers": "^5.4.0",
+    "@radix-ui/react-popover": "^1.1.15",
     "@tabler/icons-react": "^3.44.0",
     "@tanstack/react-query": "^5.100.11",
     "@teko/shared": "workspace:^",
@@ -22,6 +23,7 @@
     "i18next-browser-languagedetector": "^8.2.1",
     "radix-ui": "^1.4.3",
     "react": "^19.2.6",
+    "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.6",
     "react-hook-form": "^7.76.0",
     "react-hotkeys-hook": "^5.3.2",

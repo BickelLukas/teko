@@ -114,11 +114,15 @@ export function computeTaskState(task: TaskForState, now: Date): ComputedTaskSta
   // one-off task that was completed
   if (task.state === "done" && task.recurrence_rule === null) return "done";
 
-  // no due date (unscheduled one-off or just-created recurring)
-  if (task.next_due_at === null) return "eligible";
+  const nowMs = now.getTime();
+
+  // no due date: one-off task, may still have a planned_for date
+  if (task.next_due_at === null) {
+    if (task.planned_for !== null && task.planned_for.getTime() >= nowMs) return "planned";
+    return "eligible";
+  }
 
   const nextDueMs = task.next_due_at.getTime();
-  const nowMs = now.getTime();
 
   if (nowMs < nextDueMs) return "not_yet";
 

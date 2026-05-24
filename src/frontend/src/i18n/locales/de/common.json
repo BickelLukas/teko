@@ -123,7 +123,13 @@
     "project_optional": "Teil eines Projekts (optional)",
     "none": "Keines",
     "hide_recurrence": "Wiederholung ausblenden",
-    "add_recurrence": "+ Wiederholung hinzufügen"
+    "add_recurrence": "+ Wiederholung hinzufügen",
+    "when": "Wann?",
+    "starting": "Beginnt am"
+  },
+  "date_picker": {
+    "pick_date": "Datum wählen",
+    "clear": "Zurücksetzen"
   },
   "recurrence": {
     "label": "Wiederholung",

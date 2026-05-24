@@ -141,6 +141,67 @@ describe("POST /api/tasks", () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it("one-off + future start_date → state=planned, planned_for set", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: { title: "Buy milk", start_date: "2099-06-15" },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as TaskResponse;
+    expect(body.state).toBe("planned");
+    expect(body.planned_for).toBeTruthy();
+    expect(new Date(body.planned_for!).toISOString()).toContain("2099-06-15");
+  });
+
+  it("one-off + past start_date → 400", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: { title: "Buy milk", start_date: "2000-01-01" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("recurring fixed + future start_date → next_due_at on/after anchor", async () => {
+    // Weekly on Mondays. 2099-06-15 is a Monday → next_due_at = that Monday.
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: {
+        title: "Weekly chore",
+        start_date: "2099-06-15",
+        recurrence_rule: "DTSTART:20000103T000000Z\nRRULE:FREQ=WEEKLY;INTERVAL=1",
+        recurrence_mode: "fixed",
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as TaskResponse;
+    expect(body.next_due_at).toBeTruthy();
+    // next_due_at must be on or after 2099-06-15T12:00:00Z
+    expect(new Date(body.next_due_at!).getTime()).toBeGreaterThanOrEqual(
+      new Date("2099-06-15T12:00:00Z").getTime(),
+    );
+  });
+
+  it("recurring after_completion + future start_date → next_due_at = anchor", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: {
+        title: "Water plants",
+        start_date: "2099-06-15",
+        recurrence_rule: "RRULE:FREQ=WEEKLY;INTERVAL=1",
+        recurrence_mode: "after_completion",
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as TaskResponse;
+    expect(body.next_due_at).toBeTruthy();
+    // after_completion + anchor: first due = anchor itself (not anchor + interval)
+    expect(new Date(body.next_due_at!).toISOString()).toContain("2099-06-15");
+  });
 });
 
 describe("POST /api/tasks/:id/complete", () => {

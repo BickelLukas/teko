@@ -138,6 +138,41 @@ describe("computeNextDueAt", () => {
     });
   });
 
+  describe("anchored creation (passing anchor as now, lastCompletedAt=null)", () => {
+    // For fixed mode: computeNextDueAt(task, null, anchor) returns rule.after(anchor, inclusive)
+    // so the first occurrence falls on or after the anchor date.
+    it("fixed weekly-monday: anchor on Sunday → first due = next Monday", () => {
+      // WEEKLY_7 fires on Mondays. Feb 11 2024 = Sunday, Feb 12 = Monday.
+      const task = {
+        recurrence_rule: WEEKLY_7,
+        recurrence_mode: "fixed" as const,
+        next_due_at: null,
+      };
+      const result = computeNextDueAt(task, null, utc(2024, 2, 11));
+      expect(result).toEqual(utc(2024, 2, 12));
+    });
+
+    it("fixed weekly-monday: anchor on Monday → first due = that Monday (inclusive)", () => {
+      const task = {
+        recurrence_rule: WEEKLY_7,
+        recurrence_mode: "fixed" as const,
+        next_due_at: null,
+      };
+      const result = computeNextDueAt(task, null, utc(2024, 2, 12));
+      expect(result).toEqual(utc(2024, 2, 12));
+    });
+
+    it("fixed monthly-1st: anchor mid-month → first due = next 1st", () => {
+      const task = {
+        recurrence_rule: MONTHLY_1ST,
+        recurrence_mode: "fixed" as const,
+        next_due_at: null,
+      };
+      const result = computeNextDueAt(task, null, utc(2024, 3, 15));
+      expect(result).toEqual(utc(2024, 4, 1));
+    });
+  });
+
   it("throws when no recurrence_rule", () => {
     const task = { recurrence_rule: null, recurrence_mode: "fixed" as const, next_due_at: null };
     expect(() => computeNextDueAt(task, null, new Date())).toThrow();
@@ -214,6 +249,30 @@ describe("computeTaskState", () => {
       planned_for: null,
     };
     expect(computeTaskState(task, new Date())).toBe("eligible");
+  });
+
+  it("one-off with future planned_for → planned", () => {
+    const task = {
+      archived_at: null,
+      state: "planned" as const,
+      recurrence_rule: null,
+      next_due_at: null,
+      completion_window_days: null,
+      planned_for: utc(2099, 6, 15, 12),
+    };
+    expect(computeTaskState(task, utc(2024, 1, 1))).toBe("planned");
+  });
+
+  it("one-off with past planned_for → eligible", () => {
+    const task = {
+      archived_at: null,
+      state: "planned" as const,
+      recurrence_rule: null,
+      next_due_at: null,
+      completion_window_days: null,
+      planned_for: utc(2020, 1, 1, 12),
+    };
+    expect(computeTaskState(task, utc(2024, 1, 1))).toBe("eligible");
   });
 
   describe("zero-width window", () => {

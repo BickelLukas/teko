@@ -1,16 +1,15 @@
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { addDays, addWeeks } from "date-fns";
 import { getNow } from "@/lib/clock";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { scheduleTask } from "@/lib/api";
 import type { TaskResponse } from "@teko/shared";
 
 export function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: () => void }) {
   const { t } = useTranslation("common");
   const queryClient = useQueryClient();
-  const [customDate, setCustomDate] = useState("");
 
   const scheduleMutation = useMutation({
     mutationFn: ({ date }: { date: Date }) => scheduleTask(task.id, date),
@@ -50,24 +49,18 @@ export function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: ()
         </Button>
       </div>
       <div className="mt-2 flex items-center gap-2">
-        <input
-          type="date"
-          className="rounded border border-input bg-background px-2 py-1 text-xs"
-          value={customDate}
-          onChange={(e) => setCustomDate(e.target.value)}
-          min={getNow().toISOString().split("T")[0]}
-        />
-        <Button
-          size="xs"
-          disabled={!customDate || scheduleMutation.isPending}
-          onClick={() => {
-            if (customDate) {
-              scheduleMutation.mutate({ date: new Date(customDate + "T12:00:00") });
-            }
+        <DatePicker
+          value={null}
+          onChange={(date) => {
+            if (date)
+              scheduleMutation.mutate({
+                date: new Date(date.toISOString().split("T")[0] + "T12:00:00Z"),
+              });
           }}
-        >
-          {t("actions.confirm")}
-        </Button>
+          min={getNow()}
+          disabled={scheduleMutation.isPending}
+          className="h-6 px-2 text-xs"
+        />
         <Button size="xs" variant="ghost" onClick={onDone}>
           {t("actions.cancel")}
         </Button>

@@ -102,6 +102,10 @@ export const CreateTaskBodySchema = z.object({
   recurrence_rule: z.string().optional(),
   recurrence_mode: RecurrenceModeSchema.optional(),
   completion_window_days: z.number().int().nonnegative().optional(),
+  start_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 export type CreateTaskBody = z.infer<typeof CreateTaskBodySchema>;
 

@@ -3,10 +3,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { format } from "date-fns";
 import { z } from "zod";
 import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   DialogRoot,
   DialogTrigger,
@@ -24,6 +26,7 @@ import {
 import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceValue } from "@/components/RecurrencePicker";
 import { createTask, fetchDevUsers, fetchMe, fetchProjects, isDevModeActive } from "@/lib/api";
+import { getNow } from "@/lib/clock";
 
 function buildFormSchema(titleRequired: string) {
   return z.object({
@@ -63,6 +66,7 @@ export function AddTaskModal({
     windowDays: null,
   });
   const [showRecurrence, setShowRecurrence] = useState(false);
+  const [startDate, setStartDate] = useState<Date | null>(null);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
 
@@ -91,6 +95,7 @@ export function AddTaskModal({
     setParentId(defaultParentId ?? "__none__");
     setRecurrence({ rule: null, mode: "fixed", windowDays: null });
     setShowRecurrence(false);
+    setStartDate(null);
   }
 
   const createMutation = useMutation({
@@ -106,6 +111,7 @@ export function AddTaskModal({
         recurrence_rule: recurrence.rule ?? undefined,
         recurrence_mode: recurrence.rule ? recurrence.mode : undefined,
         completion_window_days: recurrence.windowDays ?? undefined,
+        start_date: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
       });
     },
     onSuccess: () => {
@@ -201,6 +207,13 @@ export function AddTaskModal({
               </SelectRoot>
             </div>
           )}
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              {showRecurrence ? t("add_task.starting") : t("add_task.when")}
+            </label>
+            <DatePicker value={startDate} onChange={setStartDate} min={getNow()} />
+          </div>
 
           <div>
             <button

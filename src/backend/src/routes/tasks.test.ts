@@ -21,6 +21,8 @@ const TEST_CONFIG = {
   devUserName: "Test User",
   dbPath: ":memory:",
   publicDir: null,
+  supervisorToken: null,
+  userSyncIntervalMinutes: 30,
 };
 
 function buildTestDb(): { db: Db; userId: string } {

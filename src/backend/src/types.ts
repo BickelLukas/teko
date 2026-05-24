@@ -1,4 +1,5 @@
 import type { Db } from "./db/client";
+import type { SupervisorClient } from "./ha/supervisor";
 
 export type RequestUser = {
   id: string;
@@ -13,5 +14,6 @@ declare module "fastify" {
   }
   interface FastifyInstance {
     db: Db;
+    supervisorClient: SupervisorClient | null;
   }
 }

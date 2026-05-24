@@ -6,6 +6,8 @@ export type Config = {
   devUserName: string;
   dbPath: string;
   publicDir: string | null;
+  supervisorToken: string | null;
+  userSyncIntervalMinutes: number;
 };
 
 export function loadConfig(): Config {
@@ -40,6 +42,14 @@ export function loadConfig(): Config {
   // Overridable via PUBLIC_DIR env var.
   const publicDir = nodeEnv === "production" ? (process.env["PUBLIC_DIR"] ?? null) : null;
 
+  const rawIntervalMinutes = parseInt(process.env["USER_SYNC_INTERVAL_MINUTES"] ?? "30", 10);
+  const userSyncIntervalMinutes =
+    isNaN(rawIntervalMinutes) || rawIntervalMinutes < 1 ? 30 : rawIntervalMinutes;
+
+  // SUPERVISOR_TOKEN is injected by HA Supervisor when the add-on runs.
+  // In dev mode it is never present; treat as null to skip sync entirely.
+  const supervisorToken = devMode ? null : (process.env["SUPERVISOR_TOKEN"] ?? null);
+
   return {
     port: rawPort,
     nodeEnv,
@@ -48,5 +58,7 @@ export function loadConfig(): Config {
     devUserName: process.env["DEV_USER_NAME"] ?? "Alice",
     dbPath,
     publicDir,
+    supervisorToken,
+    userSyncIntervalMinutes,
   };
 }

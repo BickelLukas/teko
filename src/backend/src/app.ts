@@ -10,15 +10,21 @@ import tasks from "./routes/tasks.js";
 import projects from "./routes/projects.js";
 import me from "./routes/me.js";
 import stats from "./routes/stats.js";
+import users from "./routes/users.js";
 import dev from "./routes/dev.js";
 import { eq } from "drizzle-orm";
 import { registerAuth } from "./middleware/auth.js";
 import type { Config } from "./config.js";
+import type { SupervisorClient } from "./ha/supervisor.js";
 import { initClock } from "./domain/clock.js";
 import * as schema from "./db/schema.js";
 import "./types.js";
 
-export async function buildApp(db: Db, config: Config): Promise<FastifyInstance> {
+export async function buildApp(
+  db: Db,
+  config: Config,
+  supervisorClient: SupervisorClient | null = null,
+): Promise<FastifyInstance> {
   const fastify = Fastify({
     logger: config.nodeEnv !== "test",
   });
@@ -36,6 +42,7 @@ export async function buildApp(db: Db, config: Config): Promise<FastifyInstance>
   await fastify.register(fastifyCookie);
 
   fastify.decorate("db", db);
+  fastify.decorate("supervisorClient", supervisorClient);
 
   {
     let initialOffsetMs = 0;
@@ -88,6 +95,7 @@ export async function buildApp(db: Db, config: Config): Promise<FastifyInstance>
   await fastify.register(projects);
   await fastify.register(me);
   await fastify.register(stats);
+  await fastify.register(users);
 
   if (config.devMode) {
     await fastify.register(dev);

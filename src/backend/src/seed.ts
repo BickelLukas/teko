@@ -9,6 +9,17 @@ import { addDays, subDays, startOfMonth, addMonths, startOfDay } from "date-fns"
 
 const config = loadConfig();
 
+if (!config.devMode) {
+  console.error(
+    "ERROR: seed.ts must only run in dev mode (NODE_ENV=development && DEV_MODE=true).\n" +
+      "In production, users are populated by the HA Supervisor sync on startup.",
+  );
+  process.exit(1);
+}
+
+console.log("[DEV] Seeding 3 dev users (Alice, Bob, Charlie).");
+console.log("[DEV] These will NOT be synced from HA in dev mode.");
+
 const dataDir = path.dirname(config.dbPath);
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });

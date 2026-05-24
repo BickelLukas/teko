@@ -21,6 +21,8 @@ const DEV_CONFIG = {
   devUserName: "Test User",
   dbPath: ":memory:",
   publicDir: null,
+  supervisorToken: null,
+  userSyncIntervalMinutes: 30,
 };
 
 const PROD_CONFIG = { ...DEV_CONFIG, devMode: false };

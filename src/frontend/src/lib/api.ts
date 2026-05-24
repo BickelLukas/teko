@@ -12,6 +12,8 @@ import type {
   MeStats,
   HouseholdStats,
   TaskStreak,
+  SyncResult,
+  HealthResponse,
 } from "@teko/shared";
 import { setOffsetMs } from "./clock.js";
 import { basePath } from "./basePath.js";
@@ -180,6 +182,22 @@ export async function fetchHouseholdStats(): Promise<HouseholdStats> {
 
 export async function fetchTaskStreak(taskId: string): Promise<TaskStreak[]> {
   return json(await apiFetch(`/api/tasks/${taskId}/streak`));
+}
+
+// ── Users (household) ────────────────────────────────────────────────────────
+
+export async function fetchUsers(): Promise<UserResponse[]> {
+  return json(await apiFetch("/api/users"));
+}
+
+export async function triggerUserSync(): Promise<SyncResult> {
+  return json(await apiFetch("/api/users/sync", { method: "POST" }));
+}
+
+// ── Health ────────────────────────────────────────────────────────────────────
+
+export async function fetchHealth(): Promise<HealthResponse> {
+  return json(await apiFetch("/api/health"));
 }
 
 // ── Dev ───────────────────────────────────────────────────────────────────────

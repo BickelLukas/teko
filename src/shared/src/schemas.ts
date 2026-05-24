@@ -247,6 +247,17 @@ export const CompleteTaskResultSchema = z.object({
 });
 export type CompleteTaskResult = z.infer<typeof CompleteTaskResultSchema>;
 
+// ── User sync ─────────────────────────────────────────────────────────────────
+
+export const SyncResultSchema = z.object({
+  added: z.number().int().nonnegative(),
+  updated: z.number().int().nonnegative(),
+  deactivated: z.number().int().nonnegative(),
+  reactivated: z.number().int().nonnegative(),
+  synced_at: z.string().datetime(),
+});
+export type SyncResult = z.infer<typeof SyncResultSchema>;
+
 // ── Stats schemas ─────────────────────────────────────────────────────────────
 
 export const MeStatsSchema = z.object({

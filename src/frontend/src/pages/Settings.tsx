@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { fetchMe, updatePreferences } from "@/lib/api";
+import { fetchMe, updatePreferences, fetchUsers, fetchHealth, triggerUserSync } from "@/lib/api";
 import { parseEnum } from "@/lib/utils";
 
 function buildFormSchema(timeFormatMsg: string) {
@@ -52,6 +53,16 @@ export function SettingsPage() {
   }, []);
 
   const { data: me, isLoading } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
+  const { data: householdUsers } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
+  const { data: healthData } = useQuery({ queryKey: ["health"], queryFn: fetchHealth });
+
+  const syncMutation = useMutation({
+    mutationFn: triggerUserSync,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["users"] });
+      void queryClient.invalidateQueries({ queryKey: ["health"] });
+    },
+  });
 
   const FormSchema = buildFormSchema(t("common:form.time_format", { ns: "common" }));
   const {
@@ -243,6 +254,85 @@ export function SettingsPage() {
                 value={me?.notification_time ?? ""}
                 readOnly
               />
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* ── Household members ── */}
+      <section aria-labelledby="household-heading">
+        <h2
+          id="household-heading"
+          className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        >
+          {t("settings.household_section")}
+        </h2>
+        <Card>
+          <CardContent className="space-y-4 pt-5">
+            {householdUsers && householdUsers.length > 0 ? (
+              <ul className="space-y-1">
+                {householdUsers.map((u) => (
+                  <li key={u.id} className="flex items-center gap-2 text-sm">
+                    <span className="font-medium">{u.display_name ?? u.name}</span>
+                    {u.is_admin && (
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                        {t("settings.household_admin")}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">{t("settings.household_empty")}</p>
+            )}
+
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={syncMutation.isPending}
+                onClick={() => syncMutation.mutate()}
+              >
+                {syncMutation.isPending
+                  ? t("settings.household_syncing")
+                  : t("settings.household_refresh")}
+              </Button>
+
+              {healthData?.last_user_sync_at && (
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.household_last_synced", {
+                    time: formatDistanceToNow(new Date(healthData.last_user_sync_at), {
+                      addSuffix: true,
+                    }),
+                  })}
+                </p>
+              )}
+
+              {syncMutation.isSuccess &&
+                syncMutation.data &&
+                (() => {
+                  const { added, updated, deactivated, reactivated } = syncMutation.data;
+                  const changes = added + updated + deactivated + reactivated;
+                  return (
+                    <p className="text-xs text-muted-foreground">
+                      {changes === 0
+                        ? t("settings.household_sync_uptodate")
+                        : t("settings.household_sync_result", {
+                            added,
+                            updated,
+                            deactivated,
+                            reactivated,
+                          })}
+                    </p>
+                  );
+                })()}
+
+              {syncMutation.isError && (
+                <p className="text-xs text-destructive">
+                  {t("common:error.load_failed", { ns: "common" })}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

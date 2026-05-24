@@ -2,6 +2,9 @@ import { loadConfig } from "./config.js";
 import { createDb } from "./db/client.js";
 import { buildApp } from "./app.js";
 import { startScheduler } from "./scheduler/index.js";
+import { createSupervisorClient } from "./ha/supervisor.js";
+import { syncUsers } from "./ha/user-sync.js";
+import { updateSyncState } from "./ha/sync-state.js";
 import fs from "fs";
 import path from "path";
 
@@ -27,8 +30,33 @@ async function init() {
   }
 
   const { db } = createDb(config.dbPath, migrationsFolder);
-  const app = await buildApp(db, config);
-  startScheduler(db, app.log);
+
+  const supervisorClient = config.supervisorToken
+    ? createSupervisorClient(config.supervisorToken)
+    : null;
+
+  // Startup user sync — runs before the server accepts requests so the user
+  // list is current before the first ingress request arrives.
+  if (supervisorClient) {
+    try {
+      const haUsers = await supervisorClient.getUsers();
+      updateSyncState(true, null);
+      const counts = syncUsers(haUsers, db);
+      updateSyncState(true, new Date());
+      console.log(
+        `[startup] User sync complete: +${counts.added} added, ~${counts.updated} updated, -${counts.deactivated} deactivated, ↩${counts.reactivated} reactivated`,
+      );
+    } catch (err) {
+      updateSyncState(false, null);
+      console.warn(
+        "[startup] User sync failed (will retry on schedule):",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
+  const app = await buildApp(db, config, supervisorClient);
+  startScheduler(db, app.log, supervisorClient, config.userSyncIntervalMinutes);
   await app.listen({ port: config.port, host: "0.0.0.0" });
 }
 

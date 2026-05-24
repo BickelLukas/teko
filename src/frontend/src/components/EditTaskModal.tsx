@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceValue } from "@/components/RecurrencePicker";
-import { updateTask, fetchDevUsers, fetchMe, fetchProjects, isDevModeActive } from "@/lib/api";
+import { updateTask, fetchMe, fetchProjects, fetchUsers } from "@/lib/api";
 import type { TaskResponse } from "@teko/shared";
 
 function buildFormSchema(titleRequired: string) {
@@ -52,10 +52,9 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
 
-  const { data: devUsers = [] } = useQuery({
-    queryKey: ["dev-users"],
-    queryFn: fetchDevUsers,
-    enabled: import.meta.env.DEV && isDevModeActive(),
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: fetchUsers,
   });
 
   const { data: projects = [] } = useQuery({
@@ -136,7 +135,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
 
           <Input placeholder={t("add_task.description_placeholder")} {...register("description")} />
 
-          {devUsers.length > 0 && (
+          {users.length > 0 && (
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
                 {t("assignee.assign_to")}
@@ -152,11 +151,13 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
                     })}
                   </SelectItem>
                   <SelectItem value="__unassigned__">{t("assignee.anyone")}</SelectItem>
-                  {devUsers.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name}
-                    </SelectItem>
-                  ))}
+                  {users
+                    .filter((u) => u.id !== me?.id)
+                    .map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </SelectRoot>
             </div>

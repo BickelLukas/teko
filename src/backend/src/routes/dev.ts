@@ -1,12 +1,11 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { runTick } from "../scheduler/tick.js";
 import * as schema from "../db/schema.js";
 import { SwitchUserBodySchema, ClockActionSchema } from "@teko/shared";
 import { getNow, getOffsetMs, setOffsetMs } from "../domain/clock.js";
 import "../types.js";
 
-const SEED_HA_IDS = ["dev-alice", "dev-bob", "dev-charlie"];
 
 const dev: FastifyPluginAsync = async (fastify) => {
   const db = fastify.db;
@@ -14,23 +13,6 @@ const dev: FastifyPluginAsync = async (fastify) => {
   fastify.post("/api/_dev/tick", async (_request, reply) => {
     const updated = await runTick(db);
     return reply.code(200).send({ updated });
-  });
-
-  // Returns the list of seeded dev users for the switcher to populate
-  fastify.get("/api/_dev/users", async (_request, reply) => {
-    const users = db
-      .select({
-        id: schema.users.id,
-        ha_user_id: schema.users.ha_user_id,
-        name: schema.users.name,
-        locale: schema.users.locale,
-        is_admin: schema.users.is_admin,
-      })
-      .from(schema.users)
-      .where(inArray(schema.users.ha_user_id, SEED_HA_IDS))
-      .all();
-
-    return reply.code(200).send(users);
   });
 
   // Sets a dev_user_id cookie to switch the active dev user
@@ -64,15 +46,6 @@ const dev: FastifyPluginAsync = async (fastify) => {
       name: user.name,
       locale: user.locale,
       is_admin: user.is_admin,
-    });
-  });
-
-  fastify.get("/api/_dev/clock", async (_request, reply) => {
-    const offsetMs = getOffsetMs();
-    return reply.code(200).send({
-      offsetMs,
-      virtualNow: getNow().toISOString(),
-      realNow: new Date().toISOString(),
     });
   });
 

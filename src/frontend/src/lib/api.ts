@@ -202,10 +202,6 @@ export async function fetchHealth(): Promise<HealthResponse> {
 
 // ── Dev ───────────────────────────────────────────────────────────────────────
 
-export async function fetchDevUsers(): Promise<DevUser[]> {
-  return json(await apiFetch("/api/_dev/users"));
-}
-
 export async function switchDevUser(ha_user_id: string): Promise<DevUser> {
   return json(
     await apiFetch("/api/_dev/switch-user", {
@@ -222,10 +218,6 @@ export type DevClockResponse = {
   realNow: string;
   ticked?: number;
 };
-
-export async function fetchDevClock(): Promise<DevClockResponse> {
-  return json(await apiFetch("/api/_dev/clock"));
-}
 
 export async function setDevClock(action: ClockAction): Promise<DevClockResponse> {
   return json(

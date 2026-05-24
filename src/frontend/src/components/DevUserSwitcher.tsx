@@ -4,12 +4,12 @@ import { format } from "date-fns";
 import {
   isDevModeActive,
   onDevModeChange,
-  fetchDevUsers,
+  fetchUsers,
   switchDevUser,
   setDevClock,
 } from "@/lib/api";
 import { getNow, getOffsetMs, onClockOffsetChange } from "@/lib/clock";
-import type { DevUser } from "@teko/shared";
+import type { UserResponse } from "@teko/shared";
 
 const H = 3_600_000;
 const D = 86_400_000;
@@ -32,7 +32,7 @@ function formatOffset(ms: number): string {
 export function DevUserSwitcher() {
   const queryClient = useQueryClient();
   const [devMode, setDevMode] = useState(isDevModeActive());
-  const [users, setUsers] = useState<DevUser[]>([]);
+  const [users, setUsers] = useState<UserResponse[]>([]);
   const [currentHaId, setCurrentHaId] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
   const [virtualNow, setVirtualNow] = useState(() => getNow());
@@ -48,7 +48,7 @@ export function DevUserSwitcher() {
   // Load users once dev mode is confirmed active
   useEffect(() => {
     if (!devMode) return;
-    void fetchDevUsers().then((list) => {
+    void fetchUsers().then((list) => {
       setUsers(list);
     });
     // Read the current user from the cookie if set

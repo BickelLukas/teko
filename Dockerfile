@@ -6,7 +6,6 @@ RUN corepack enable
 WORKDIR /workspace
 
 COPY package.json yarn.lock .yarnrc.yml* ./
-COPY .yarn ./.yarn
 COPY src/frontend/package.json ./src/frontend/package.json
 COPY src/shared/package.json ./src/shared/package.json
 
@@ -28,7 +27,6 @@ RUN corepack enable
 WORKDIR /workspace
 
 COPY package.json yarn.lock .yarnrc.yml* ./
-COPY .yarn ./.yarn
 COPY src/backend/package.json ./src/backend/package.json
 COPY src/shared/package.json ./src/shared/package.json
 

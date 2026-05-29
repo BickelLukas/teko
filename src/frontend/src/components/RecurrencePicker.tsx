@@ -89,6 +89,47 @@ function validateRaw(raw: string): string | null {
   }
 }
 
+type NumberFieldProps = {
+  value: number;
+  min: number;
+  max: number;
+  className?: string;
+  onCommit: (value: number) => void;
+};
+
+// Holds a free-form draft while the user types so the field can be emptied or
+// hold an out-of-range intermediate value. Clamping only runs on commit (blur
+// or Enter), never on every keystroke.
+function NumberField({ value, min, max, className, onCommit }: NumberFieldProps) {
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  function commit() {
+    const parsed = parseInt(draft, 10);
+    const next = Number.isNaN(parsed) ? min : Math.min(max, Math.max(min, parsed));
+    setDraft(String(next));
+    onCommit(next);
+  }
+
+  return (
+    <Input
+      type="number"
+      min={min}
+      max={max}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+      }}
+      className={className}
+    />
+  );
+}
+
 export function RecurrencePicker({ value, onChange }: Props) {
   const { t } = useTranslation("common");
   const { locale } = useLocale();
@@ -149,14 +190,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
       {preset === "every-n-days" && (
         <div className="flex items-center gap-2">
           <span className="text-sm">{t("recurrence.every")}</span>
-          <Input
-            type="number"
-            min={2}
-            max={365}
-            value={nDays}
-            onChange={(e) => setNDays(Math.max(2, parseInt(e.target.value) || 2))}
-            className="w-20"
-          />
+          <NumberField value={nDays} min={2} max={365} onCommit={setNDays} className="w-20" />
           <span className="text-sm">{t("recurrence.days")}</span>
         </div>
       )}
@@ -183,14 +217,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
       {preset === "monthly-date" && (
         <div className="flex items-center gap-2">
           <span className="text-sm">{t("recurrence.on_the")}</span>
-          <Input
-            type="number"
-            min={1}
-            max={31}
-            value={monthDay}
-            onChange={(e) => setMonthDay(Math.min(31, Math.max(1, parseInt(e.target.value) || 1)))}
-            className="w-20"
-          />
+          <NumberField value={monthDay} min={1} max={31} onCommit={setMonthDay} className="w-20" />
           <span className="text-sm">{t("recurrence.of_each_month")}</span>
         </div>
       )}
@@ -198,14 +225,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
       {preset === "every-n-months" && (
         <div className="flex items-center gap-2">
           <span className="text-sm">{t("recurrence.every")}</span>
-          <Input
-            type="number"
-            min={2}
-            max={24}
-            value={nMonths}
-            onChange={(e) => setNMonths(Math.max(2, parseInt(e.target.value) || 2))}
-            className="w-20"
-          />
+          <NumberField value={nMonths} min={2} max={24} onCommit={setNMonths} className="w-20" />
           <span className="text-sm">{t("recurrence.months")}</span>
         </div>
       )}
@@ -279,14 +299,11 @@ export function RecurrencePicker({ value, onChange }: Props) {
             {t("recurrence.window_label")}
           </label>
           <div className="flex items-center gap-2">
-            <Input
-              type="number"
+            <NumberField
+              value={windowDays}
               min={0}
               max={365}
-              value={windowDays}
-              onChange={(e) =>
-                setWindowDays(Math.min(365, Math.max(0, parseInt(e.target.value) || 0)))
-              }
+              onCommit={setWindowDays}
               className="w-24"
             />
             <span className="text-sm">{t("recurrence.window_days")}</span>

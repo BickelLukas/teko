@@ -97,9 +97,9 @@ export function computeNextDueAt(
   const isCreation = lastCompletedAt === null;
 
   if (task.recurrence_mode === "after_completion") {
-    // On creation the task is due now; the interval only starts counting once
-    // the task has been completed at least once.
-    if (isCreation) return now;
+    // On creation the task is due today; the interval only starts counting
+    // once the task has been completed at least once.
+    if (isCreation) return startOfDayUTC(now);
     return computeAfterCompletionNext(
       parseRuleWithEarlyDtstart(task.recurrence_rule),
       lastCompletedAt,
@@ -108,11 +108,12 @@ export function computeNextDueAt(
 
   // fixed: find the occurrence relative to the base date.
   if (isCreation) {
-    // Anchor the schedule at creation time so the first occurrence is "now",
-    // unless a calendar constraint (weekday, day-of-month, or an explicit
-    // DTSTART in the rule) pushes it to a later slot.
-    const rule = parseRuleAnchoredAt(task.recurrence_rule, now);
-    return rule.after(now, true) ?? addDaysUTC(now, 365);
+    // Anchor the schedule at the creation day (start of day UTC) so the first
+    // occurrence is today, unless a calendar constraint (weekday, day-of-month,
+    // or an explicit DTSTART in the rule) pushes it to a later slot.
+    const start = startOfDayUTC(now);
+    const rule = parseRuleAnchoredAt(task.recurrence_rule, start);
+    return rule.after(start, true) ?? addDaysUTC(start, 365);
   }
 
   const rule = parseRuleWithEarlyDtstart(task.recurrence_rule);

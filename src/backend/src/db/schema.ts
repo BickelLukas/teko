@@ -12,6 +12,15 @@ export const users = sqliteTable("users", {
     .notNull()
     .default("system"),
   notification_time: text("notification_time"),
+  // HA notify service id, e.g. "notify.mobile_app_alices_phone".
+  // Null = notifications disabled for this user.
+  notification_service: text("notification_service"),
+  notify_digest_enabled: integer("notify_digest_enabled", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  // Local calendar date (YYYY-MM-DD, household timezone) the most recent digest
+  // was considered for this user. Drives idempotency for the daily digest job.
+  last_digest_sent_date: text("last_digest_sent_date"),
   // Reserved. Always false in v0.x. See ADR-0005.
   is_admin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   is_active: integer("is_active", { mode: "boolean" }).notNull().default(true),

@@ -10,6 +10,16 @@ export type RecurrenceMode = z.infer<typeof RecurrenceModeSchema>;
 
 // ── User ─────────────────────────────────────────────────────────────────────
 
+// Fully-qualified HA notify service id, e.g. "notify.mobile_app_alices_phone".
+// The existence of the service is checked at send time, not here — this is a
+// shape check only.
+export const NOTIFY_SERVICE_REGEX = /^notify\.[a-z0-9_]+$/;
+
+/** Strips the "notify." domain prefix to get the bare HA service name. */
+export function bareNotifyServiceName(serviceId: string): string {
+  return serviceId.startsWith("notify.") ? serviceId.slice("notify.".length) : serviceId;
+}
+
 export const UserSchema = z.object({
   id: z.string().uuid(),
   ha_user_id: z.string().min(1),
@@ -18,6 +28,8 @@ export const UserSchema = z.object({
   locale: z.string().min(2),
   theme: z.enum(["light", "dark", "system"]).default("system"),
   notification_time: z.string().nullable(),
+  notification_service: z.string().nullable(),
+  notify_digest_enabled: z.boolean(),
   is_admin: z.boolean(),
   is_active: z.boolean(),
   week_start_day: z.union([z.literal(0), z.literal(1)]),
@@ -33,6 +45,8 @@ export const UserResponseSchema = UserSchema.pick({
   locale: true,
   theme: true,
   notification_time: true,
+  notification_service: true,
+  notify_digest_enabled: true,
   is_admin: true,
   is_active: true,
   week_start_day: true,
@@ -43,10 +57,32 @@ export const UpdatePreferencesBodySchema = z.object({
   locale: z.string().min(2).optional(),
   theme: z.enum(["light", "dark", "system"]).optional(),
   notification_time: z.string().nullable().optional(),
+  notification_service: z
+    .union([z.string().regex(NOTIFY_SERVICE_REGEX, "Invalid notify service id"), z.null()])
+    .optional(),
+  notify_digest_enabled: z.boolean().optional(),
   display_name: z.string().nullable().optional(),
   week_start_day: z.union([z.literal(0), z.literal(1)]).optional(),
 });
 export type UpdatePreferencesBody = z.infer<typeof UpdatePreferencesBodySchema>;
+
+// ── Notify services ────────────────────────────────────────────────────────────
+
+export const NotifyServiceSchema = z.object({
+  service_name: z.string(),
+  description: z.string().nullable(),
+});
+export type NotifyService = z.infer<typeof NotifyServiceSchema>;
+
+export const NotifyServicesResponseSchema = z.object({
+  services: z.array(NotifyServiceSchema),
+});
+export type NotifyServicesResponse = z.infer<typeof NotifyServicesResponseSchema>;
+
+export const TestNotificationResponseSchema = z.object({
+  sent_to: z.string(),
+});
+export type TestNotificationResponse = z.infer<typeof TestNotificationResponseSchema>;
 
 // ── Task ─────────────────────────────────────────────────────────────────────
 

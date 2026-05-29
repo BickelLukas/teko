@@ -12,12 +12,27 @@
     "snooze_past": "Die Zurückstellzeit muss in der Zukunft liegen."
   },
   "notifications": {
-    "morning_digest_subject": "Guten Morgen. Du hast heute {{count}} Dinge zu tun.",
-    "morning_digest_item": "{{title}}",
-    "streak_milestone": "Super — das sind {{count}} Tage in Folge bei {{title}} 🔥",
-    "overdue_reminder": "{{title}}. Es sind schon {{days}} Tage vergangen.",
-    "eligible_mention": "{{title}} kann diesen {{period}} jederzeit erledigt werden — kein Stress.",
-    "planned_reminder": "Erinnerung: Du hast geplant, heute {{title}} zu erledigen.",
-    "weekly_summary": "Diese Woche hat der Haushalt {{points}} Punkte gesammelt 🎉"
+    "digest": {
+      "greeting": {
+        "morning": "Guten Morgen, {{name}}.",
+        "afternoon": "Guten Tag, {{name}}.",
+        "evening": "Guten Abend, {{name}}."
+      },
+      "title": {
+        "things_today_one": "{{count}} Aufgabe heute",
+        "things_today_other": "{{count}} Aufgaben heute",
+        "single_overdue": "Überfällig: {{task}}"
+      },
+      "body": {
+        "today": "Heute: {{tasks}}.",
+        "overdue": "Überfällig: {{tasks}}.",
+        "eligible": "Fällig in diesem Zeitraum: {{tasks}}.",
+        "and_more": "und {{count}} weitere"
+      }
+    },
+    "test": {
+      "title": "Test von Teko",
+      "message": "Wenn du das siehst, funktioniert dein Benachrichtigungsziel."
+    }
   }
 }

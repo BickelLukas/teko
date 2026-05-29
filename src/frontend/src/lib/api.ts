@@ -14,6 +14,8 @@ import type {
   TaskStreak,
   SyncResult,
   HealthResponse,
+  NotifyService,
+  NotifyServicesResponse,
 } from "@teko/shared";
 import { setOffsetMs } from "./clock.js";
 import { basePath } from "./basePath.js";
@@ -155,6 +157,8 @@ export async function updatePreferences(
     locale: string;
     theme: "light" | "dark" | "system";
     notification_time: string | null;
+    notification_service: string | null;
+    notify_digest_enabled: boolean;
     display_name: string | null;
     week_start_day: 0 | 1;
   }>,
@@ -192,6 +196,30 @@ export async function fetchUsers(): Promise<UserResponse[]> {
 
 export async function triggerUserSync(): Promise<SyncResult> {
   return json(await apiFetch("/api/users/sync", { method: "POST" }));
+}
+
+// ── Notifications ──────────────────────────────────────────────────────────────
+
+export async function fetchNotifyServices(refresh = false): Promise<NotifyService[]> {
+  const data = await json<NotifyServicesResponse>(
+    await apiFetch(`/api/ha/notify-services?refresh=${refresh ? "true" : "false"}`),
+  );
+  return data.services;
+}
+
+export type TestNotificationResult =
+  | { ok: true; sent_to: string }
+  | { ok: false; error: string; message: string };
+
+export async function sendTestNotification(): Promise<TestNotificationResult> {
+  const res = await apiFetch("/api/me/test-notification", { method: "POST" });
+  const body = (await res.json().catch(() => ({}))) as {
+    sent_to?: string;
+    error?: string;
+    message?: string;
+  };
+  if (res.ok) return { ok: true, sent_to: body.sent_to ?? "" };
+  return { ok: false, error: body.error ?? "unknown", message: body.message ?? "" };
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────

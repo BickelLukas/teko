@@ -1,11 +1,13 @@
 import cron from "node-cron";
 import type { Db } from "../db/client.js";
 import { runTick } from "./tick.js";
+import { runDigestTick } from "./digest.js";
 import type { SupervisorClient } from "../ha/supervisor.js";
 import { syncUsers } from "../ha/user-sync.js";
 import { updateSyncState } from "../ha/sync-state.js";
 
 type Logger = {
+  debug?: (obj: object, msg?: string) => void;
   info: (obj: object, msg?: string) => void;
   warn: (obj: object, msg?: string) => void;
   error: (obj: object, msg?: string) => void;
@@ -51,6 +53,16 @@ export function startScheduler(
       const message = err instanceof Error ? err.message : String(err);
       if (logger) logger.error({ err: message }, "scheduler.tick-failed");
       else console.error("Scheduler tick failed:", err);
+    });
+  });
+
+  // Daily digest evaluation, every minute. Internally guarded against a missing
+  // Supervisor token (dev mode), so it is safe to register unconditionally.
+  cron.schedule("* * * * *", () => {
+    void runDigestTick(db, supervisorClient ?? null, undefined, logger).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      if (logger) logger.error({ err: message }, "scheduler.digest-tick-failed");
+      else console.error("Digest tick failed:", err);
     });
   });
 

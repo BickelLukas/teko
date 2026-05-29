@@ -17,17 +17,12 @@ import {
 } from "@/components/ui/select";
 import { fetchMe, updatePreferences, fetchUsers, fetchHealth, triggerUserSync } from "@/lib/api";
 import { parseEnum } from "@/lib/utils";
+import { NotificationsSettings } from "@/components/NotificationsSettings";
 
-function buildFormSchema(timeFormatMsg: string) {
-  return z.object({
-    display_name: z.string().optional(),
-    notification_time: z
-      .string()
-      .regex(/^$|^(?:[01]\d|2[0-3]):[0-5]\d$/, timeFormatMsg)
-      .optional(),
-  });
-}
-type FormValues = z.infer<ReturnType<typeof buildFormSchema>>;
+const FormSchema = z.object({
+  display_name: z.string().optional(),
+});
+type FormValues = z.infer<typeof FormSchema>;
 
 const THEMES = ["light", "dark", "system"] as const;
 type Theme = (typeof THEMES)[number];
@@ -64,7 +59,6 @@ export function SettingsPage() {
     },
   });
 
-  const FormSchema = buildFormSchema(t("common:form.time_format", { ns: "common" }));
   const {
     register,
     handleSubmit,
@@ -76,7 +70,6 @@ export function SettingsPage() {
     if (me) {
       reset({
         display_name: me.display_name ?? "",
-        notification_time: me.notification_time ?? "",
       });
       setLocale(me.locale ?? "en");
       setTheme(parseEnum(me.theme, THEMES, "system"));
@@ -91,7 +84,6 @@ export function SettingsPage() {
         theme,
         week_start_day: weekStartDay,
         display_name: data.display_name ? data.display_name : null,
-        notification_time: data.notification_time ? data.notification_time : null,
       }),
     onSuccess: (updated) => {
       savedRef.current = true;
@@ -237,24 +229,8 @@ export function SettingsPage() {
           {t("settings.notifications_section")}
         </h2>
         <Card>
-          <CardContent className="space-y-4 pt-5">
-            <p className="text-xs text-muted-foreground">{t("settings.notifications_disabled")}</p>
-            <div>
-              <label
-                htmlFor="notification-time"
-                className="mb-1 block text-xs font-medium text-muted-foreground"
-              >
-                {t("settings.digest_time_label")}
-              </label>
-              <Input
-                id="notification-time"
-                placeholder="08:00"
-                disabled
-                className="opacity-50"
-                value={me?.notification_time ?? ""}
-                readOnly
-              />
-            </div>
+          <CardContent className="pt-5">
+            <NotificationsSettings />
           </CardContent>
         </Card>
       </section>

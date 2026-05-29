@@ -164,6 +164,46 @@ describe("POST /api/tasks", () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it("recurring fixed daily + no start_date → due now, eligible", async () => {
+    const before = Date.now();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: {
+        title: "Daily chore",
+        recurrence_rule: "RRULE:FREQ=DAILY",
+        recurrence_mode: "fixed",
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as TaskResponse;
+    expect(body.state).toBe("eligible");
+    expect(body.next_due_at).toBeTruthy();
+    // First occurrence is now, not the next interval.
+    expect(new Date(body.next_due_at!).getTime()).toBeLessThanOrEqual(Date.now());
+    expect(new Date(body.next_due_at!).getTime()).toBeGreaterThanOrEqual(before - 1000);
+  });
+
+  it("recurring after_completion + no start_date → due now, eligible", async () => {
+    const before = Date.now();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: {
+        title: "Water plants",
+        recurrence_rule: "RRULE:FREQ=WEEKLY;INTERVAL=1",
+        recurrence_mode: "after_completion",
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as TaskResponse;
+    expect(body.state).toBe("eligible");
+    expect(body.next_due_at).toBeTruthy();
+    // First occurrence is now, not now + one week.
+    expect(new Date(body.next_due_at!).getTime()).toBeLessThanOrEqual(Date.now());
+    expect(new Date(body.next_due_at!).getTime()).toBeGreaterThanOrEqual(before - 1000);
+  });
+
   it("recurring fixed + future start_date → next_due_at on/after anchor", async () => {
     // Weekly on Mondays. 2099-06-15 is a Monday → next_due_at = that Monday.
     const res = await app.inject({

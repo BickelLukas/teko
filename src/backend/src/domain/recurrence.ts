@@ -11,13 +11,19 @@ function addDaysUTC(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
-// Parse rrule string, overriding dtstart with a fixed early anchor so that
+// Parse an rrule string, anchoring DTSTART at `fallback` when the rule itself
+// carries no DTSTART. Rules that specify their own DTSTART are respected.
+function parseRuleAnchoredAt(ruleStr: string, fallback: Date): RRule {
+  const parsed = RRule.fromString(ruleStr);
+  const dtstart = parsed.origOptions.dtstart ?? fallback;
+  return new RRule({ ...parsed.origOptions, dtstart });
+}
+
+// Parse rrule string, defaulting dtstart to a fixed early anchor so that
 // rule.after() can find occurrences at any point in time regardless of when
 // the task was created.
 function parseRuleWithEarlyDtstart(ruleStr: string): RRule {
-  const parsed = RRule.fromString(ruleStr);
-  const dtstart = parsed.origOptions.dtstart ?? new Date(Date.UTC(2000, 0, 1));
-  return new RRule({ ...parsed.origOptions, dtstart });
+  return parseRuleAnchoredAt(ruleStr, new Date(Date.UTC(2000, 0, 1)));
 }
 
 function computeAfterCompletionNext(rule: RRule, base: Date): Date {
@@ -88,19 +94,29 @@ export function computeNextDueAt(
 ): Date {
   if (!task.recurrence_rule) throw new Error("Task has no recurrence rule");
 
-  const rule = parseRuleWithEarlyDtstart(task.recurrence_rule);
+  const isCreation = lastCompletedAt === null;
 
   if (task.recurrence_mode === "after_completion") {
-    const base = lastCompletedAt ?? now;
-    return computeAfterCompletionNext(rule, base);
+    // On creation the task is due now; the interval only starts counting once
+    // the task has been completed at least once.
+    if (isCreation) return now;
+    return computeAfterCompletionNext(
+      parseRuleWithEarlyDtstart(task.recurrence_rule),
+      lastCompletedAt,
+    );
   }
 
-  // fixed: find next occurrence relative to base date
-  const isCreation = lastCompletedAt === null;
-  const base = isCreation ? now : lastCompletedAt;
-  // inclusive on creation so task is due today if today is a scheduled date
-  const next = rule.after(base, isCreation);
-  return next ?? addDaysUTC(base, 365);
+  // fixed: find the occurrence relative to the base date.
+  if (isCreation) {
+    // Anchor the schedule at creation time so the first occurrence is "now",
+    // unless a calendar constraint (weekday, day-of-month, or an explicit
+    // DTSTART in the rule) pushes it to a later slot.
+    const rule = parseRuleAnchoredAt(task.recurrence_rule, now);
+    return rule.after(now, true) ?? addDaysUTC(now, 365);
+  }
+
+  const rule = parseRuleWithEarlyDtstart(task.recurrence_rule);
+  return rule.after(lastCompletedAt, false) ?? addDaysUTC(lastCompletedAt, 365);
 }
 
 /**

@@ -12,12 +12,27 @@
     "snooze_past": "Snooze time must be in the future."
   },
   "notifications": {
-    "morning_digest_subject": "Good morning. You have {{count}} things today.",
-    "morning_digest_item": "{{title}}",
-    "streak_milestone": "Nice — that's {{count}} days in a row on {{title}} 🔥",
-    "overdue_reminder": "{{title}}. It's been {{days}} days.",
-    "eligible_mention": "{{title}} can be done any time this {{period}} — no rush.",
-    "planned_reminder": "Reminder: you planned to do {{title}} today.",
-    "weekly_summary": "This week the household earned {{points}} points 🎉"
+    "digest": {
+      "greeting": {
+        "morning": "Good morning, {{name}}.",
+        "afternoon": "Good afternoon, {{name}}.",
+        "evening": "Good evening, {{name}}."
+      },
+      "title": {
+        "things_today_one": "{{count}} thing today",
+        "things_today_other": "{{count}} things today",
+        "single_overdue": "Overdue: {{task}}"
+      },
+      "body": {
+        "today": "Today: {{tasks}}.",
+        "overdue": "Overdue: {{tasks}}.",
+        "eligible": "Eligible this period: {{tasks}}.",
+        "and_more": "and {{count}} more"
+      }
+    },
+    "test": {
+      "title": "Test from Teko",
+      "message": "If you see this, your notification target is working."
+    }
   }
 }

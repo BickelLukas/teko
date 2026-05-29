@@ -183,6 +183,17 @@ describe("computeNextDueAt", () => {
       expect(result).toEqual(utc(2024, 1, 1));
     });
 
+    it("snaps to start of day UTC when completed mid-day", () => {
+      // Completed Jan 1 at 14:30 → next due is Jan 8 at 00:00, not 14:30.
+      const task = {
+        recurrence_rule: WEEKLY_7,
+        recurrence_mode: "after_completion" as const,
+        next_due_at: null,
+      };
+      const result = computeNextDueAt(task, utc(2024, 1, 1, 14, 30), utc(2024, 1, 1, 14, 30));
+      expect(result).toEqual(utc(2024, 1, 8));
+    });
+
     it("yearly after completion", () => {
       const task = {
         recurrence_rule: YEARLY,

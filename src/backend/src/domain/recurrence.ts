@@ -29,17 +29,19 @@ function parseRuleWithEarlyDtstart(ruleStr: string): RRule {
 function computeAfterCompletionNext(rule: RRule, base: Date): Date {
   const freq = rule.options.freq;
   const interval = rule.options.interval ?? 1;
+  // Due dates are day-granular: drop the completion's time of day so the next
+  // due lands at the start of the day, regardless of when it was completed.
   switch (freq) {
     case RRule.DAILY:
-      return addDaysUTC(base, interval);
+      return startOfDayUTC(addDaysUTC(base, interval));
     case RRule.WEEKLY:
-      return addDaysUTC(base, interval * 7);
+      return startOfDayUTC(addDaysUTC(base, interval * 7));
     case RRule.MONTHLY:
-      return addMonths(base, interval);
+      return startOfDayUTC(addMonths(base, interval));
     case RRule.YEARLY:
-      return addYears(base, interval);
+      return startOfDayUTC(addYears(base, interval));
     default:
-      return addDaysUTC(base, interval);
+      return startOfDayUTC(addDaysUTC(base, interval));
   }
 }
 

@@ -1,8 +1,7 @@
 {
   "nav": {
     "today": "Today",
-    "chores": "Chores",
-    "all_tasks": "All tasks",
+    "tasks": "Tasks",
     "someday": "Someday",
     "stats": "Stats",
     "settings": "Settings"

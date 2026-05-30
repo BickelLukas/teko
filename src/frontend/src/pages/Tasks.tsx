@@ -36,14 +36,12 @@ function sortTasks(tasks: TaskResponse[]): TaskResponse[] {
   });
 }
 
-export function AllTasksPage() {
+export function TasksPage() {
   const { t } = useTranslation(["pages", "common"]);
   const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilter>("all");
-  const [includeSomeday, setIncludeSomeday] = useState(false);
+  const [recurringOnly, setRecurringOnly] = useState(false);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
-
-  const scope = includeSomeday ? "all" : "active";
 
   const {
     data: tasks = [],
@@ -51,18 +49,21 @@ export function AllTasksPage() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["tasks", assigneeFilter, scope],
-    queryFn: () => fetchTasks(assigneeFilter, scope),
+    queryKey: ["tasks", assigneeFilter, "active"],
+    queryFn: () => fetchTasks(assigneeFilter, "active"),
   });
 
-  const sorted = sortTasks(tasks);
+  const filtered = recurringOnly
+    ? tasks.filter((t: TaskResponse) => t.recurrence_rule !== null)
+    : tasks;
+  const sorted = sortTasks(filtered);
 
   const displayName = me?.display_name ?? me?.name ?? t("common:person.me_short");
 
   return (
     <div className="mx-auto max-w-xl space-y-4 px-4 py-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{t("pages:all_tasks.title")}</h1>
+        <h1 className="text-xl font-semibold">{t("pages:tasks.title")}</h1>
         <div className="flex items-center gap-2">
           <SelectRoot
             value={assigneeFilter}
@@ -87,11 +88,11 @@ export function AllTasksPage() {
       <label className="flex items-center gap-2 text-xs text-muted-foreground">
         <input
           type="checkbox"
-          checked={includeSomeday}
-          onChange={(e) => setIncludeSomeday(e.target.checked)}
+          checked={recurringOnly}
+          onChange={(e) => setRecurringOnly(e.target.checked)}
           className="size-3"
         />
-        {t("pages:all_tasks.include_someday")}
+        {t("pages:tasks.recurring_only")}
       </label>
 
       {isLoading && <TaskListSkeleton />}
@@ -105,20 +106,16 @@ export function AllTasksPage() {
         </div>
       )}
 
-      {!isLoading && !isError && tasks.length === 0 && (
+      {!isLoading && !isError && sorted.length === 0 && (
         <p className="py-8 text-center text-sm text-muted-foreground">
-          {t("pages:all_tasks.no_tasks")}
+          {t("pages:tasks.no_tasks")}
         </p>
       )}
 
       <ul className="space-y-2">
         {sorted.map((task: TaskResponse) => (
           <li key={task.id}>
-            <TaskCard
-              task={task}
-              showAssignee
-              {...(task.is_someday ? { somedayBadge: t("common:someday_badge") } : {})}
-            />
+            <TaskCard task={task} showAssignee />
           </li>
         ))}
       </ul>

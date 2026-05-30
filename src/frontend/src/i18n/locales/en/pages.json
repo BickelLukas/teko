@@ -19,19 +19,10 @@
       "streak": "🔥 {{count}} days on {{title}}"
     }
   },
-  "chores": {
-    "title": "Chores",
-    "no_chores": "No recurring chores found.",
-    "sections": {
-      "overdue": "Overdue",
-      "eligible": "Eligible now",
-      "coming_up": "Coming up"
-    }
-  },
-  "all_tasks": {
-    "title": "All tasks",
+  "tasks": {
+    "title": "Tasks",
     "no_tasks": "No tasks found.",
-    "include_someday": "Include Someday items"
+    "recurring_only": "Recurring only"
   },
   "someday": {
     "title": "Someday",

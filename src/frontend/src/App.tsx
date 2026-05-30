@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { basePath } from "@/lib/basePath";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -10,8 +10,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AddTaskModal } from "@/components/AddTaskModal";
 import { DialogRoot, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TodayPage } from "@/pages/Today";
-import { ChoresPage } from "@/pages/Chores";
-import { AllTasksPage } from "@/pages/AllTasks";
+import { TasksPage } from "@/pages/Tasks";
 import { SettingsPage } from "@/pages/Settings";
 import { SomedayPage } from "@/pages/Someday";
 import { StatsPage } from "@/pages/Stats";
@@ -98,8 +97,7 @@ export function App() {
             <main className="pb-14 sm:pb-0">
               <Routes>
                 <Route path="/" element={<TodayPage />} />
-                <Route path="/chores" element={<ChoresPage />} />
-                <Route path="/tasks" element={<AllTasksPage />} />
+                <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/someday" element={<SomedayPage />} />
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />

@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { RRule } from "rrule";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { describeRecurrenceLocalized } from "@/lib/recurrence";
+import {
+  PRESETS,
+  WEEKDAYS,
+  detectPreset,
+  parseRuleParams,
+  buildRule,
+  validateRaw,
+} from "@/lib/recurrence-form";
+import type { Preset } from "@/lib/recurrence-form";
 import { useLocale } from "@/lib/locale";
 import { parseEnum } from "@/lib/utils";
 
@@ -19,77 +27,6 @@ type Props = {
   /** When true, hides the "None" option (use when a recurrence is required). */
   hideNone?: boolean;
 };
-
-const PRESETS = [
-  "none",
-  "daily",
-  "every-n-days",
-  "weekly",
-  "monthly-date",
-  "every-n-months",
-  "yearly",
-  "custom",
-] as const;
-type Preset = (typeof PRESETS)[number];
-
-const WEEKDAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const;
-
-function detectPreset(rule: string | null): Preset {
-  if (!rule) return "none";
-  try {
-    const r = RRule.fromString(rule);
-    const { freq, interval = 1, byweekday, bymonthday } = r.options;
-    if (freq === RRule.DAILY && interval === 1) return "daily";
-    if (freq === RRule.DAILY && interval > 1) return "every-n-days";
-    if (freq === RRule.WEEKLY) return "weekly";
-    if (freq === RRule.MONTHLY && bymonthday?.length && !byweekday?.length) return "monthly-date";
-    if (freq === RRule.MONTHLY && interval > 1) return "every-n-months";
-    if (freq === RRule.YEARLY) return "yearly";
-    return "custom";
-  } catch {
-    return "custom";
-  }
-}
-
-function buildRule(
-  preset: Preset,
-  nDays: number,
-  nMonths: number,
-  weekdays: string[],
-  monthDay: number,
-  rawRule: string,
-): string | null {
-  switch (preset) {
-    case "none":
-      return null;
-    case "daily":
-      return "RRULE:FREQ=DAILY";
-    case "every-n-days":
-      return `RRULE:FREQ=DAILY;INTERVAL=${nDays}`;
-    case "weekly": {
-      const days = weekdays.length ? weekdays.join(",") : "MO";
-      return `RRULE:FREQ=WEEKLY;BYDAY=${days}`;
-    }
-    case "monthly-date":
-      return `RRULE:FREQ=MONTHLY;BYMONTHDAY=${monthDay}`;
-    case "every-n-months":
-      return `RRULE:FREQ=MONTHLY;INTERVAL=${nMonths}`;
-    case "yearly":
-      return "RRULE:FREQ=YEARLY";
-    case "custom":
-      return rawRule || null;
-  }
-}
-
-function validateRaw(raw: string): string | null {
-  if (!raw) return null;
-  try {
-    RRule.fromString(raw);
-    return null;
-  } catch (e) {
-    return String(e);
-  }
-}
 
 type NumberFieldProps = {
   value: number;
@@ -135,19 +72,20 @@ function NumberField({ value, min, max, className, onCommit }: NumberFieldProps)
 export function RecurrencePicker({ value, onChange, hideNone = false }: Props) {
   const { t } = useTranslation("common");
   const { locale } = useLocale();
+  const [initialParams] = useState(() => parseRuleParams(value.rule));
   const [preset, setPreset] = useState<Preset>(() => detectPreset(value.rule));
   const [mode, setMode] = useState<"fixed" | "after_completion">(value.mode);
-  const [nDays, setNDays] = useState(7);
-  const [nMonths, setNMonths] = useState(3);
-  const [weekdays, setWeekdays] = useState<string[]>(["MO"]);
-  const [monthDay, setMonthDay] = useState(1);
+  const [nDays, setNDays] = useState(initialParams.nDays);
+  const [nMonths, setNMonths] = useState(initialParams.nMonths);
+  const [weekdays, setWeekdays] = useState<string[]>(initialParams.weekdays);
+  const [monthDay, setMonthDay] = useState(initialParams.monthDay);
   const [rawRule, setRawRule] = useState(value.rule ?? "");
   const [rawError, setRawError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [windowDays, setWindowDays] = useState<number>(value.windowDays ?? 0);
 
   useEffect(() => {
-    const rule = buildRule(preset, nDays, nMonths, weekdays, monthDay, rawRule);
+    const rule = buildRule(preset, { nDays, nMonths, weekdays, monthDay }, rawRule);
     if (preset === "custom") {
       const err = rule ? validateRaw(rule) : null;
       setRawError(err);
@@ -156,7 +94,7 @@ export function RecurrencePicker({ value, onChange, hideNone = false }: Props) {
     onChange({ rule, mode, windowDays: preset === "none" ? null : windowDays });
   }, [preset, mode, nDays, nMonths, weekdays, monthDay, rawRule, windowDays]);
 
-  const rule = buildRule(preset, nDays, nMonths, weekdays, monthDay, rawRule);
+  const rule = buildRule(preset, { nDays, nMonths, weekdays, monthDay }, rawRule);
   const desc = rule ? describeRecurrenceLocalized(rule, mode, locale) : null;
 
   function toggleWeekday(day: string) {

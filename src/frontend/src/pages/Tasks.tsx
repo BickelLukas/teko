@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { fetchTasks, fetchMe } from "@/lib/api";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
-import { AddTaskModal } from "@/components/AddTaskModal";
 import { Button } from "@/components/ui/button";
 import {
   SelectRoot,
@@ -81,7 +80,6 @@ export function TasksPage() {
               <SelectItem value="all">{t("common:filters.all")}</SelectItem>
             </SelectContent>
           </SelectRoot>
-          <AddTaskModal />
         </div>
       </div>
 

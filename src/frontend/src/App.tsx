@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-quer
 import { useTranslation } from "react-i18next";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Nav } from "@/components/Nav";
+import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { DevUserSwitcher } from "@/components/DevUserSwitcher";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AddTaskModal } from "@/components/AddTaskModal";
@@ -104,6 +105,7 @@ export function App() {
               </Routes>
             </main>
           </div>
+          <FloatingAddButton />
           <DevUserSwitcher />
         </ThemeProvider>
       </BrowserRouter>

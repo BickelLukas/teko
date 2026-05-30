@@ -110,7 +110,7 @@ export function DevUserSwitcher() {
   }
 
   return (
-    <div className="fixed bottom-18 right-4 z-50 sm:bottom-4">
+    <div className="fixed bottom-18 left-4 z-50 sm:bottom-4">
       <div className="rounded-lg border border-amber-400/50 bg-amber-950/90 px-3 py-2 shadow-lg backdrop-blur-sm">
         <div className="mb-1.5 flex items-center gap-1.5">
           <span className="rounded bg-amber-400/20 px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">

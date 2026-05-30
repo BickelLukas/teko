@@ -5,7 +5,6 @@ import { fetchTasks, fetchMe, fetchTodayStats, fetchMeStats } from "@/lib/api";
 import { sortByDueAt } from "@/lib/utils";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
-import { AddTaskModal } from "@/components/AddTaskModal";
 import { Button } from "@/components/ui/button";
 import { useLocale, formatDateLong } from "@/lib/locale";
 import { getNow } from "@/lib/clock";
@@ -107,12 +106,9 @@ export function TodayPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">{greeting}</h1>
-          <p className="text-sm text-muted-foreground">{formatDateLong(now, locale)}</p>
-        </div>
-        <AddTaskModal />
+      <div>
+        <h1 className="text-xl font-semibold">{greeting}</h1>
+        <p className="text-sm text-muted-foreground">{formatDateLong(now, locale)}</p>
       </div>
 
       {isLoading && <TaskListSkeleton />}

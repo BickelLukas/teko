@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { fetchTasks, fetchMe } from "@/lib/api";
+import { sortByDueAt } from "@/lib/utils";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
 import { AddTaskModal } from "@/components/AddTaskModal";
@@ -37,9 +38,9 @@ export function ChoresPage() {
 
   const chores = allTasks.filter((t: TaskResponse) => t.recurrence_rule !== null);
 
-  const overdue = chores.filter((t) => t.state === "overdue");
-  const eligible = chores.filter((t) => t.state === "eligible");
-  const notYet = chores.filter((t) => t.state === "not_yet");
+  const overdue = sortByDueAt(chores.filter((t) => t.state === "overdue"));
+  const eligible = sortByDueAt(chores.filter((t) => t.state === "eligible"));
+  const notYet = sortByDueAt(chores.filter((t) => t.state === "not_yet"));
 
   const displayName = me?.display_name ?? me?.name ?? t("common:person.me_short");
 

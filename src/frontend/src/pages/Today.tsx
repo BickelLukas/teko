@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { isSameDay, isWithinInterval, addDays, startOfDay } from "date-fns";
 import { fetchTasks, fetchMe, fetchTodayStats, fetchMeStats } from "@/lib/api";
+import { sortByDueAt } from "@/lib/utils";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
 import { AddTaskModal } from "@/components/AddTaskModal";
@@ -44,7 +45,12 @@ function bucketTasks(tasks: TaskResponse[], now: Date): Sections {
     }
   }
 
-  return { overdue, today: todayTasks, eligible, comingUp };
+  return {
+    overdue: sortByDueAt(overdue),
+    today: sortByDueAt(todayTasks),
+    eligible: sortByDueAt(eligible),
+    comingUp: sortByDueAt(comingUp),
+  };
 }
 
 export function TodayPage() {

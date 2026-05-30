@@ -83,9 +83,11 @@
     "archive_confirm_body": "This task will be archived.",
     "archive_confirm_body_with_children": "This task will be archived.",
     "state_badge": {
-      "due": "Due {{time}}",
+      "due_in_days_one": "Due in 1 day",
+      "due_in_days_other": "Due in {{count}} days",
       "ready": "Ready to do",
-      "overdue_by": "Overdue by {{time}}"
+      "overdue_by_days_one": "Overdue by 1 day",
+      "overdue_by_days_other": "Overdue by {{count}} days"
     },
     "milestone": "{{count}}-day streak on {{title}} 🔥"
   },

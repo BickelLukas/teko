@@ -58,13 +58,6 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const assignee = query.success ? (query.data.assignee ?? "mine") : "mine";
     const scope = query.success ? (query.data.scope ?? "active") : "active";
 
-    // A "Someday" item has no recurrence rule and no date set.
-    const isSomedaySql = sql`(
-      ${schema.tasks.recurrence_rule} IS NULL
-      AND ${schema.tasks.next_due_at} IS NULL
-      AND ${schema.tasks.planned_for} IS NULL
-    )`;
-
     const baseConditions: Parameters<typeof and>[0][] = [
       isNull(schema.tasks.archived_at),
       ne(schema.tasks.state, "done"),

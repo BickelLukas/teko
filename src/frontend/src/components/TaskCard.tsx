@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import type React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { addHours, addDays, addWeeks } from "date-fns";
@@ -12,6 +11,7 @@ import {
   IconFlame,
   IconPencil,
   IconArchive,
+  IconBookmark,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { completeTask, snoozeTask, archiveTask } from "@/lib/api";
+import { completeTask, snoozeTask, archiveTask, unscheduleTask } from "@/lib/api";
 import type { TaskResponse } from "@teko/shared";
 import { EditTaskModal } from "@/components/EditTaskModal";
 import { ArchiveConfirmDialog } from "@/components/ArchiveConfirmDialog";
@@ -51,11 +51,12 @@ function fireMilestoneConfetti() {
 type TaskCardProps = {
   task: TaskResponse;
   showAssignee?: boolean;
-  breadcrumb?: React.ReactNode;
   streakLength?: number;
+  /** When provided, renders a small "Someday" badge next to the title. */
+  somedayBadge?: string | undefined;
 };
 
-export function TaskCard({ task, showAssignee, breadcrumb, streakLength = 0 }: TaskCardProps) {
+export function TaskCard({ task, showAssignee, streakLength = 0, somedayBadge }: TaskCardProps) {
   const { t } = useTranslation("common");
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -101,13 +102,24 @@ export function TaskCard({ task, showAssignee, breadcrumb, streakLength = 0 }: T
     mutationFn: () => archiveTask(task.id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
-      void queryClient.invalidateQueries({ queryKey: ["task-tree"] });
       void queryClient.invalidateQueries({ queryKey: ["stats"] });
       void queryClient.invalidateQueries({ queryKey: ["today-stats"] });
       setArchiveOpen(false);
     },
   });
+
+  // "Move to Someday" — only for non-recurring tasks that have a planned date.
+  // Clears planned_for, which moves the task back to the Someday list.
+  const moveToSomedayMutation = useMutation({
+    mutationFn: () => unscheduleTask(task.id),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+
+  const canMoveToSomeday =
+    task.recurrence_rule === null &&
+    task.planned_for !== null &&
+    task.archived_at === null &&
+    task.state !== "done";
 
   const isOverdue = task.state === "overdue";
   const showStreakBadge = streakLength >= 3;
@@ -165,6 +177,12 @@ export function TaskCard({ task, showAssignee, breadcrumb, streakLength = 0 }: T
                         {streakLength}
                       </span>
                     )}
+                    {somedayBadge && (
+                      <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                        <IconBookmark className="size-3" />
+                        {somedayBadge}
+                      </span>
+                    )}
                   </div>
                   {task.description && (
                     <p className="truncate text-xs text-muted-foreground">{task.description}</p>
@@ -173,7 +191,6 @@ export function TaskCard({ task, showAssignee, breadcrumb, streakLength = 0 }: T
                     <p className="text-xs text-muted-foreground/70">{recurrenceSummary}</p>
                   )}
                   <TaskStateBadge task={task} />
-                  {breadcrumb}
                   {showAssignee && (
                     <span className="mt-0.5 ml-1 inline-block text-xs text-muted-foreground/60">
                       {task.assignee_name ?? t("filters.unassigned")}
@@ -238,6 +255,18 @@ export function TaskCard({ task, showAssignee, breadcrumb, streakLength = 0 }: T
                         </DropdownMenuItem>
                       </>
                     )}
+                    {canMoveToSomeday && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          disabled={moveToSomedayMutation.isPending}
+                          onClick={() => moveToSomedayMutation.mutate()}
+                        >
+                          <IconBookmark className="mr-2 size-4" />
+                          {t("actions.move_to_someday")}
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
@@ -261,7 +290,7 @@ export function TaskCard({ task, showAssignee, breadcrumb, streakLength = 0 }: T
         open={archiveOpen}
         onOpenChange={setArchiveOpen}
         title={task.title}
-        hasChildren={task.child_count > 0}
+        hasChildren={false}
         isPending={archiveMutation.isPending}
         onConfirm={() => archiveMutation.mutate()}
       />

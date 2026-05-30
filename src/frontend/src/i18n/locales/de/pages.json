@@ -32,36 +32,15 @@
   "all_tasks": {
     "title": "Alle Aufgaben",
     "no_tasks": "Keine Aufgaben gefunden.",
-    "include_projects": "Projekte einbeziehen"
+    "include_someday": "Irgendwann-Einträge einbeziehen"
   },
-  "projects": {
-    "title": "Projekte",
-    "no_projects_title": "Noch keine Projekte",
-    "no_projects_description": "Mit Projekten lassen sich größere Vorhaben in kleinere Schritte aufteilen.",
-    "new_project": "Neues Projekt",
-    "new_project_title": "Neues Projekt",
-    "project_name_placeholder": "Projektname",
-    "first_task_label": "Erste Aufgabe (optional)",
-    "first_task_placeholder": "z. B. Flüge buchen",
-    "sort": {
-      "activity": "Zuletzt aktiv",
-      "alpha": "Alphabetisch",
-      "progress_desc": "Meiste Fortschritte",
-      "progress_asc": "Wenigste Fortschritte"
-    },
-    "sections": {
-      "active": "Aktiv",
-      "completed": "Abgeschlossen"
-    }
-  },
-  "project_detail": {
-    "not_found": "Projekt nicht gefunden.",
-    "back": "Projekte",
-    "tasks_progress": "{{completed}} von {{total}} Aufgaben erledigt ({{percent}} %)",
-    "tasks_label": "Aufgaben",
-    "add_task": "Aufgabe hinzufügen",
-    "settings_title": "Projekteinstellungen",
-    "auto_complete_label": "Automatisch abschließen, wenn alle Aufgaben erledigt sind"
+  "someday": {
+    "title": "Irgendwann",
+    "add_button": "Zu Irgendwann hinzufügen",
+    "add_title": "Zu Irgendwann hinzufügen",
+    "add_title_placeholder": "Was möchtest du irgendwann tun?",
+    "empty_title": "Noch nichts hier",
+    "empty_description": "Halte Vorhaben, Ideen und Dinge fest, die du irgendwann tun möchtest."
   },
   "stats": {
     "you": "Du",

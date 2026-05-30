@@ -7,7 +7,6 @@ import fs from "fs";
 import type { Db } from "./db/client.js";
 import health from "./routes/health.js";
 import tasks from "./routes/tasks.js";
-import projects from "./routes/projects.js";
 import me from "./routes/me.js";
 import stats from "./routes/stats.js";
 import users from "./routes/users.js";
@@ -93,7 +92,6 @@ export async function buildApp(
   await registerAuth(fastify, config);
   await fastify.register(health);
   await fastify.register(tasks);
-  await fastify.register(projects);
   await fastify.register(me);
   await fastify.register(stats);
   await fastify.register(users);

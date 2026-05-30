@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,7 +8,7 @@ import { z } from "zod";
 import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DateShortcutPicker } from "@/components/DateShortcutPicker";
 import {
   DialogRoot,
   DialogTrigger,
@@ -25,8 +25,16 @@ import {
 } from "@/components/ui/select";
 import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceValue } from "@/components/RecurrencePicker";
-import { createTask, fetchMe, fetchProjects, fetchUsers } from "@/lib/api";
-import { getNow } from "@/lib/clock";
+import { createTask, fetchMe, fetchUsers } from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type TaskType = "someday" | "date" | "recurring";
+
+const TASK_TYPES: TaskType[] = ["someday", "date", "recurring"];
+
+// ── Form schema ───────────────────────────────────────────────────────────────
 
 function buildFormSchema(titleRequired: string) {
   return z.object({
@@ -36,49 +44,44 @@ function buildFormSchema(titleRequired: string) {
 }
 type FormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
+// ── Props ─────────────────────────────────────────────────────────────────────
+
 type AddTaskModalProps = {
-  defaultParentId?: string | null;
+  /** Pre-select a task type when the modal opens. Defaults to "someday". */
+  defaultType?: TaskType;
+  /** Trigger button label override (only shown when uncontrolled). */
+  triggerLabel?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 };
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export function AddTaskModal({
-  defaultParentId,
+  defaultType = "someday",
+  triggerLabel,
   open: controlledOpen,
   onOpenChange,
 }: AddTaskModalProps = {}) {
   const { t } = useTranslation("common");
   const isControlled = controlledOpen !== undefined;
   const queryClient = useQueryClient();
+
   const [internalOpen, setInternalOpen] = useState(false);
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? (v: boolean) => onOpenChange?.(v) : setInternalOpen;
+
+  const [taskType, setTaskType] = useState<TaskType>(defaultType);
   const [assigneeId, setAssigneeId] = useState<string>("__me__");
-  const [parentId, setParentId] = useState<string>(defaultParentId ?? "__none__");
-
-  useEffect(() => {
-    setParentId(defaultParentId ?? "__none__");
-  }, [defaultParentId]);
-
+  const [startDate, setStartDate] = useState<Date | null>(null);
   const [recurrence, setRecurrence] = useState<RecurrenceValue>({
     rule: null,
     mode: "fixed",
     windowDays: null,
   });
-  const [showRecurrence, setShowRecurrence] = useState(false);
-  const [startDate, setStartDate] = useState<Date | null>(null);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
-
-  const { data: users = [] } = useQuery({
-    queryKey: ["users"],
-    queryFn: fetchUsers,
-  });
-
-  const { data: projects = [] } = useQuery({
-    queryKey: ["projects", "all"],
-    queryFn: () => fetchProjects("all"),
-  });
+  const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
 
   const FormSchema = buildFormSchema(t("form.title_required"));
   const {
@@ -90,33 +93,49 @@ export function AddTaskModal({
 
   function resetForm() {
     reset();
+    setTaskType(defaultType);
     setAssigneeId("__me__");
-    setParentId(defaultParentId ?? "__none__");
-    setRecurrence({ rule: null, mode: "fixed", windowDays: null });
-    setShowRecurrence(false);
     setStartDate(null);
+    setRecurrence({ rule: null, mode: "fixed", windowDays: null });
+  }
+
+  function handleTypeChange(type: TaskType) {
+    setTaskType(type);
+    if (type === "someday") {
+      setStartDate(null);
+      setRecurrence({ rule: null, mode: "fixed", windowDays: null });
+    } else if (type === "date") {
+      setRecurrence({ rule: null, mode: "fixed", windowDays: null });
+    } else if (type === "recurring" && recurrence.rule === null) {
+      // Default to daily so the picker starts in a valid state
+      setRecurrence({ rule: "RRULE:FREQ=DAILY", mode: "fixed", windowDays: 0 });
+    }
   }
 
   const createMutation = useMutation({
     mutationFn: (data: FormValues) => {
       const resolvedAssignee =
         assigneeId === "__me__" ? undefined : assigneeId === "__unassigned__" ? null : assigneeId;
-      const resolvedParent = parentId === "__none__" ? undefined : parentId;
+
       return createTask({
         title: data.title,
         description: data.description,
         assignee_id: resolvedAssignee,
-        parent_id: resolvedParent,
-        recurrence_rule: recurrence.rule ?? undefined,
-        recurrence_mode: recurrence.rule ? recurrence.mode : undefined,
-        completion_window_days: recurrence.windowDays ?? undefined,
-        start_date: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+        ...(taskType === "date" && startDate
+          ? { start_date: format(startDate, "yyyy-MM-dd") }
+          : {}),
+        ...(taskType === "recurring"
+          ? {
+              recurrence_rule: recurrence.rule ?? undefined,
+              recurrence_mode: recurrence.rule ? recurrence.mode : undefined,
+              completion_window_days: recurrence.windowDays ?? undefined,
+              ...(startDate ? { start_date: format(startDate, "yyyy-MM-dd") } : {}),
+            }
+          : {}),
       });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
-      void queryClient.invalidateQueries({ queryKey: ["task-tree"] });
       resetForm();
       setOpen(false);
     },
@@ -134,18 +153,21 @@ export function AddTaskModal({
         <DialogTrigger asChild>
           <Button size="sm">
             <IconPlus className="mr-1 size-4" />
-            {t("actions.add_task")}
+            {triggerLabel ?? t("actions.add_task")}
           </Button>
         </DialogTrigger>
       )}
+
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("add_task.title")}</DialogTitle>
         </DialogHeader>
+
         <form
           onSubmit={handleSubmit((data) => createMutation.mutate(data))}
           className="mt-4 space-y-4"
         >
+          {/* ── Title ─────────────────────────────────────────────────────── */}
           <div>
             <Input
               placeholder={t("add_task.title_placeholder")}
@@ -158,8 +180,10 @@ export function AddTaskModal({
             )}
           </div>
 
+          {/* ── Description ───────────────────────────────────────────────── */}
           <Input placeholder={t("add_task.description_placeholder")} {...register("description")} />
 
+          {/* ── Assignee ──────────────────────────────────────────────────── */}
           {users.length > 0 && (
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -180,7 +204,7 @@ export function AddTaskModal({
                     .filter((u) => u.id !== me?.id)
                     .map((u) => (
                       <SelectItem key={u.id} value={u.id}>
-                        {u.name}
+                        {u.display_name ?? u.name}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -188,45 +212,54 @@ export function AddTaskModal({
             </div>
           )}
 
-          {!isControlled && projects.length > 0 && (
+          {/* ── Type selector ─────────────────────────────────────────────── */}
+          <div className="grid grid-cols-3 rounded-lg bg-muted p-1">
+            {TASK_TYPES.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleTypeChange(type)}
+                className={cn(
+                  "rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+                  taskType === type
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t(`add_task.type.${type}`)}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Date (on a date mode) ──────────────────────────────────────── */}
+          {taskType === "date" && (
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                {t("add_task.project_optional")}
+                {t("add_task.when")}
               </label>
-              <SelectRoot value={parentId} onValueChange={setParentId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">{t("add_task.none")}</SelectItem>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </SelectRoot>
+              <DateShortcutPicker value={startDate} onChange={setStartDate} />
+              {startDate === null && (
+                <p className="mt-1 text-xs text-muted-foreground/60">
+                  {t("add_task.no_date_hint")}
+                </p>
+              )}
             </div>
           )}
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              {showRecurrence ? t("add_task.starting") : t("add_task.when")}
-            </label>
-            <DatePicker value={startDate} onChange={setStartDate} min={getNow()} />
-          </div>
+          {/* ── Recurrence (recurring mode) ────────────────────────────────── */}
+          {taskType === "recurring" && (
+            <div className="space-y-3">
+              <RecurrencePicker value={recurrence} onChange={setRecurrence} hideNone />
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  {t("add_task.starting")}
+                </label>
+                <DateShortcutPicker value={startDate} onChange={setStartDate} />
+              </div>
+            </div>
+          )}
 
-          <div>
-            <button
-              type="button"
-              className="mb-2 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-              onClick={() => setShowRecurrence((v) => !v)}
-            >
-              {showRecurrence ? t("add_task.hide_recurrence") : t("add_task.add_recurrence")}
-            </button>
-            {showRecurrence && <RecurrencePicker value={recurrence} onChange={setRecurrence} />}
-          </div>
-
+          {/* ── Actions ───────────────────────────────────────────────────── */}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
               {t("actions.cancel")}

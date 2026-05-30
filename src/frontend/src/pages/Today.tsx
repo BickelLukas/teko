@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { isSameDay, isWithinInterval, addDays, startOfDay } from "date-fns";
-import { useNavigate } from "react-router-dom";
 import { fetchTasks, fetchMe, fetchTodayStats, fetchMeStats } from "@/lib/api";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
@@ -57,24 +56,6 @@ function bucketTasks(tasks: TaskResponse[], now: Date): Sections {
   return { overdue, today: todayTasks, eligible, comingUp };
 }
 
-function ProjectBreadcrumb({ task }: { task: TaskResponse }) {
-  const navigate = useNavigate();
-  if (!task.parent_id || !task.parent_title) return null;
-
-  return (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        navigate(`/projects/${task.parent_id}`);
-      }}
-      className="mt-0.5 block text-left text-xs text-muted-foreground/70 hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      aria-label={task.parent_title}
-    >
-      ↳ {task.parent_title}
-    </button>
-  );
-}
-
 export function TodayPage() {
   const { t } = useTranslation("pages");
   const { locale } = useLocale();
@@ -86,8 +67,8 @@ export function TodayPage() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["tasks", "mine", "leaves"],
-    queryFn: () => fetchTasks("mine", "leaves"),
+    queryKey: ["tasks", "mine", "active"],
+    queryFn: () => fetchTasks("mine", "active"),
   });
 
   const { data: me } = useQuery({
@@ -242,11 +223,7 @@ function Section({
       <ul className="space-y-2">
         {tasks.map((t) => (
           <li key={t.id}>
-            <TaskCard
-              task={t}
-              streakLength={streakByTask.get(t.id) ?? 0}
-              breadcrumb={<ProjectBreadcrumb task={t} />}
-            />
+            <TaskCard task={t} streakLength={streakByTask.get(t.id) ?? 0} />
           </li>
         ))}
       </ul>

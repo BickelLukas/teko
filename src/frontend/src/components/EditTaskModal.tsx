@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { DialogRoot, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   SelectRoot,
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceValue } from "@/components/RecurrencePicker";
-import { updateTask, fetchMe, fetchProjects, fetchUsers } from "@/lib/api";
+import { updateTask, fetchMe, fetchUsers } from "@/lib/api";
 import type { TaskResponse } from "@teko/shared";
 
 function buildFormSchema(titleRequired: string) {
@@ -46,21 +47,14 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
   const queryClient = useQueryClient();
 
   const [assigneeId, setAssigneeId] = useState<string>(task.assignee_id ?? "__unassigned__");
-  const [parentId, setParentId] = useState<string>(task.parent_id ?? "__none__");
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(recurrenceFromTask(task));
   const [showRecurrence, setShowRecurrence] = useState(task.recurrence_rule !== null);
+  const [plannedFor, setPlannedFor] = useState<Date | null>(
+    task.planned_for ? new Date(task.planned_for) : null,
+  );
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
-
-  const { data: users = [] } = useQuery({
-    queryKey: ["users"],
-    queryFn: fetchUsers,
-  });
-
-  const { data: projects = [] } = useQuery({
-    queryKey: ["projects", "all"],
-    queryFn: () => fetchProjects("all"),
-  });
+  const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
 
   const FormSchema = buildFormSchema(t("form.title_required"));
   const {
@@ -77,22 +71,23 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
     if (open) {
       reset({ title: task.title, description: task.description ?? "" });
       setAssigneeId(task.assignee_id ?? "__unassigned__");
-      setParentId(task.parent_id ?? "__none__");
       setRecurrence(recurrenceFromTask(task));
       setShowRecurrence(task.recurrence_rule !== null);
+      setPlannedFor(task.planned_for ? new Date(task.planned_for) : null);
     }
   }, [open, task, reset]);
 
   const saveMutation = useMutation({
     mutationFn: (data: FormValues) => {
       const resolvedAssignee = assigneeId === "__unassigned__" ? null : assigneeId;
-      const resolvedParent = parentId === "__none__" ? null : parentId;
 
       return updateTask(task.id, {
         title: data.title,
         description: data.description ?? null,
         assignee_id: resolvedAssignee,
-        parent_id: resolvedParent,
+        // Only send planned_for when there's no recurrence — for recurring tasks
+        // planned_for is managed via the schedule action, not here.
+        ...(recurrence.rule === null ? { planned_for: plannedFor?.toISOString() ?? null } : {}),
         recurrence_rule: recurrence.rule,
         recurrence_mode: recurrence.rule ? recurrence.mode : null,
         completion_window_days: recurrence.rule ? (recurrence.windowDays ?? null) : null,
@@ -100,8 +95,6 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
-      void queryClient.invalidateQueries({ queryKey: ["task-tree"] });
       onOpenChange(false);
     },
   });
@@ -116,6 +109,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
           onSubmit={handleSubmit((data) => saveMutation.mutate(data))}
           className="mt-4 space-y-4"
         >
+          {/* ── Title ─────────────────────────────────────────────────────── */}
           <div>
             <Input
               placeholder={t("add_task.title_placeholder")}
@@ -128,8 +122,10 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
             )}
           </div>
 
+          {/* ── Description ───────────────────────────────────────────────── */}
           <Input placeholder={t("add_task.description_placeholder")} {...register("description")} />
 
+          {/* ── Assignee ──────────────────────────────────────────────────── */}
           {users.length > 0 && (
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -150,7 +146,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
                     .filter((u) => u.id !== me?.id)
                     .map((u) => (
                       <SelectItem key={u.id} value={u.id}>
-                        {u.name}
+                        {u.display_name ?? u.name}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -158,34 +154,33 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
             </div>
           )}
 
-          {projects.length > 0 && (
+          {/* ── Due date (non-recurring only) ──────────────────────────────── */}
+          {recurrence.rule === null && (
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                {t("add_task.project_optional")}
+                {t("edit_task.scheduled_for")}
               </label>
-              <SelectRoot value={parentId} onValueChange={setParentId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">{t("add_task.none")}</SelectItem>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </SelectRoot>
+              <DatePicker value={plannedFor} onChange={setPlannedFor} />
+              {plannedFor === null && (
+                <p className="mt-1 text-xs text-muted-foreground/60">
+                  {t("add_task.no_date_hint")}
+                </p>
+              )}
             </div>
           )}
 
+          {/* ── Recurrence ────────────────────────────────────────────────── */}
           <div>
             <button
               type="button"
               className="mb-2 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-              onClick={() => setShowRecurrence((v) => !v)}
+              onClick={() => {
+                const next = !showRecurrence;
+                setShowRecurrence(next);
+                if (!next) setRecurrence({ rule: null, mode: "fixed", windowDays: null });
+              }}
             >
-              {showRecurrence ? t("add_task.hide_recurrence") : t("add_task.add_recurrence")}
+              {showRecurrence ? t("edit_task.hide_recurrence") : t("edit_task.add_recurrence")}
             </button>
             {showRecurrence && <RecurrencePicker value={recurrence} onChange={setRecurrence} />}
           </div>
@@ -194,6 +189,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
             <p className="text-xs text-destructive">{t("error.load_failed")}</p>
           )}
 
+          {/* ── Actions ───────────────────────────────────────────────────── */}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
               {t("actions.cancel")}

@@ -91,7 +91,6 @@ export const TaskSchema = z.object({
   title: z.string().min(1),
   description: z.string().nullable(),
   assignee_id: z.string().uuid().nullable(),
-  parent_id: z.string().uuid().nullable(),
   state: TaskStateSchema,
   created_at: z.coerce.date(),
   created_by: z.string().uuid(),
@@ -105,7 +104,6 @@ export const TaskSchema = z.object({
   tags: z.string().nullable(),
   exposed_to_ha: z.boolean(),
   is_household: z.boolean(),
-  auto_complete_when_children_done: z.boolean(),
 });
 export type Task = z.infer<typeof TaskSchema>;
 
@@ -134,7 +132,6 @@ export const CreateTaskBodySchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
-  parent_id: z.string().uuid().nullable().optional(),
   recurrence_rule: z.string().optional(),
   recurrence_mode: RecurrenceModeSchema.optional(),
   completion_window_days: z.number().int().nonnegative().optional(),
@@ -149,8 +146,7 @@ export const UpdateTaskBodySchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
-  parent_id: z.string().uuid().nullable().optional(),
-  auto_complete_when_children_done: z.boolean().optional(),
+  planned_for: z.string().datetime().nullable().optional(),
   recurrence_rule: z.string().nullable().optional(),
   recurrence_mode: RecurrenceModeSchema.nullable().optional(),
   completion_window_days: z.number().int().nonnegative().nullable().optional(),
@@ -174,7 +170,10 @@ export type SnoozeTaskBody = z.infer<typeof SnoozeTaskBodySchema>;
 
 export const GetTasksQuerySchema = z.object({
   assignee: z.enum(["mine", "me", "unassigned", "all"]).or(z.string().uuid()).optional(),
-  scope: z.enum(["leaves", "all", "top_level"]).optional(),
+  // active (default): non-recurring tasks with a date set + all recurring tasks
+  // someday: non-recurring tasks with no date set (planned_for IS NULL AND next_due_at IS NULL)
+  // all: no scope filter (includes someday items)
+  scope: z.enum(["active", "someday", "all"]).optional(),
 });
 export type GetTasksQuery = z.infer<typeof GetTasksQuerySchema>;
 
@@ -208,7 +207,6 @@ export const TaskResponseSchema = TaskSchema.pick({
   title: true,
   description: true,
   assignee_id: true,
-  parent_id: true,
   state: true,
   created_at: true,
   created_by: true,
@@ -219,35 +217,17 @@ export const TaskResponseSchema = TaskSchema.pick({
   completion_window_days: true,
   next_due_at: true,
   planned_for: true,
-  auto_complete_when_children_done: true,
   archived_at: true,
 }).extend({
-  child_count: z.number().int().nonnegative(),
-  parent_title: z.string().nullable(),
   assignee_name: z.string().nullable(),
+  // True when the task is a Someday item: non-recurring, no date set, not archived.
+  // Derived server-side so the frontend doesn't need to re-compute the predicate.
+  is_someday: z.boolean(),
 });
 export type TaskResponse = z.infer<typeof TaskResponseSchema>;
 
 export const TaskListResponseSchema = z.array(TaskResponseSchema);
 export type TaskListResponse = z.infer<typeof TaskListResponseSchema>;
-
-// ── Project response schemas ──────────────────────────────────────────────────
-
-export const ProjectProgressSchema = z.object({
-  totalLeaves: z.number().int().nonnegative(),
-  completedLeaves: z.number().int().nonnegative(),
-  percent: z.number().int().min(0).max(100),
-});
-export type ProjectProgress = z.infer<typeof ProjectProgressSchema>;
-
-export const ProjectResponseSchema = TaskResponseSchema.extend({
-  progress: ProjectProgressSchema,
-  last_activity_at: z.coerce.date().nullable(),
-});
-export type ProjectResponse = z.infer<typeof ProjectResponseSchema>;
-
-export const ProjectListResponseSchema = z.array(ProjectResponseSchema);
-export type ProjectListResponse = z.infer<typeof ProjectListResponseSchema>;
 
 export const TodayStatsSchema = z.object({
   completions_today: z.number().int(),

@@ -32,36 +32,15 @@
   "all_tasks": {
     "title": "All tasks",
     "no_tasks": "No tasks found.",
-    "include_projects": "Include projects"
+    "include_someday": "Include Someday items"
   },
-  "projects": {
-    "title": "Projects",
-    "no_projects_title": "No projects yet",
-    "no_projects_description": "Projects let you break bigger goals into smaller tasks.",
-    "new_project": "New project",
-    "new_project_title": "New project",
-    "project_name_placeholder": "Project name",
-    "first_task_label": "First task (optional)",
-    "first_task_placeholder": "e.g. Book flights",
-    "sort": {
-      "activity": "Recent activity",
-      "alpha": "Alphabetical",
-      "progress_desc": "Most progress",
-      "progress_asc": "Least progress"
-    },
-    "sections": {
-      "active": "Active",
-      "completed": "Completed"
-    }
-  },
-  "project_detail": {
-    "not_found": "Project not found.",
-    "back": "Projects",
-    "tasks_progress": "{{completed}} of {{total}} tasks done ({{percent}}%)",
-    "tasks_label": "Tasks",
-    "add_task": "Add task",
-    "settings_title": "Project settings",
-    "auto_complete_label": "Auto-complete when all tasks are done"
+  "someday": {
+    "title": "Someday",
+    "add_button": "Add to Someday",
+    "add_title": "Add to Someday",
+    "add_title_placeholder": "What do you want to do someday?",
+    "empty_title": "Nothing here yet",
+    "empty_description": "Capture intentions, ideas, and things you want to do eventually."
   },
   "stats": {
     "you": "You",

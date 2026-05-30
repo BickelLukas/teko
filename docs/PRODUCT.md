@@ -15,7 +15,7 @@ Specifically, Teko is built for households where:
 - Everyone has (or could have) a Home Assistant account
 - Someone is already running Home Assistant as a smart-home hub
 - People want to coordinate without nagging each other
-- Chores, projects, and long-term goals currently live scattered across whiteboards, sticky notes, shared notes apps, calendar reminders, and unspoken assumptions
+- Chores, intentions, and long-term goals currently live scattered across whiteboards, sticky notes, shared notes apps, calendar reminders, and unspoken assumptions
 
 Teko is **not** built for:
 
@@ -30,7 +30,7 @@ Teko is **not** built for:
 
 In one paragraph:
 
-> Teko is the central inbox for everything that needs doing in your household. Recurring chores (vacuum every Sunday, take out trash every Tuesday), one-off tasks (book a dentist appointment), small projects (plan the camping trip), and long-term goals (renovate the bathroom) all live in one place. It uses your existing Home Assistant users, sends notifications through HA's mobile apps, exposes entities and events for automations, and shows up as a panel in HA's sidebar. The fun mechanics — streaks, household points — are designed to motivate the individual without creating competition between household members.
+> Teko is the central inbox for everything that needs doing in your household. Recurring chores (vacuum every Sunday, take out trash every Tuesday), active one-off tasks (book a dentist appointment), and a Someday list for intentions without a date yet (renovate the bathroom, fix the squeaky hinge) all live in one place. It uses your existing Home Assistant users, sends notifications through HA's mobile apps, exposes entities and events for automations, and shows up as a panel in HA's sidebar. The fun mechanics — streaks, household points — are designed to motivate the individual without creating competition between household members.
 
 ---
 
@@ -45,11 +45,15 @@ The atomic unit. Everything in Teko is a task. A task has:
 - A **title** (required, short)
 - An optional **description**
 - An optional **assignee** (a household member)
-- An optional **due date**
+- An optional **scheduled date** (`planned_for`; if set, the task is active and appears in Today on that date)
 - An optional **recurrence rule** (if set, the task is a *chore*; if not, it's a one-off)
-- An optional **parent task** (if set, the task is part of a *project*)
 - A **completion history** (every time it was completed, by whom, when)
 - A **state**: open, completed, snoozed, or archived
+
+The **type** of a task is derived from its fields:
+- Recurring rule set → **Chore**
+- No recurring rule, scheduled date set → **Active one-off** (appears in Today)
+- No recurring rule, no scheduled date, not archived → **Someday item** (appears in Someday list)
 
 Tasks may also have tags and a "household" vs "personal" flag for shared vs individual chores.
 
@@ -59,13 +63,15 @@ A task with a recurrence rule. The defining characteristic is that completing it
 
 > *Examples: take out trash, vacuum living room, water plants, change air filter, pay rent.*
 
-### Project
+### Someday
 
-A task with child tasks. Projects are hierarchical and ad-hoc — they don't recur, they don't accumulate streaks, they don't contribute to weekly points. A project is "done" when all its children are done (configurable).
+A flat list of intentions and ideas that don't have a date yet. Someday items never appear in Today and never trigger notifications — the whole point is that they're out of mind until you go looking.
 
-> *Examples: plan summer holiday, renovate kitchen, prepare for guests this weekend, learn to make sourdough.*
+> *Examples: renovate the basement, fix the squeaky hinge in the office, plant a vegetable garden, learn to make sourdough.*
 
-Projects can nest: a "renovate kitchen" project might contain sub-projects for "choose tiles" and "find contractor," each with their own to-dos.
+Items can be vague or specific. If you later decide to plan something concrete, you add several precise items and archive the vague one. The system does not model this as a state transition; it's just editing the list.
+
+**Activating a Someday item** ("scheduling" it) means setting a date — the item leaves Someday and appears in the normal task flow on that date. Clearing the date moves it back. No new state, no new entity — just a date field.
 
 ### Recurrence
 
@@ -147,29 +153,30 @@ These are the user experiences Teko is built to deliver. They drive the prioriti
 9. **As a household member, I can assign a chore to a specific person, or leave it unassigned** so whoever picks it up gets credit.
 10. **As a household member, I can rotate a chore between household members** so we take turns.
 
-### Projects
+### Someday
 
-11. **As a household member, I can create a project for something larger** (plan our summer holiday) and break it into sub-tasks.
-12. **As a household member, I can see project progress as a tree** — what's done, what's open, what's blocked.
-13. **As a household member, I can convert a one-off task into a project** when I realize it's bigger than I thought, without losing it.
+11. **As a household member, I can quickly capture an intention** ("renovate the basement") without choosing a date, so it's out of my head but not cluttering Today.
+12. **As a household member, I can browse my Someday list deliberately** — it's a destination I visit when I have space to think, not a source of daily pressure.
+13. **As a household member, I can schedule a Someday item for a specific date** when I decide to act on it — it moves into the normal task flow on that date.
+14. **As a household member, I can move a scheduled one-off task back to Someday** if the timing isn't right, without losing the task.
 
 ### Awareness
 
-14. **As a household member, I can see what the household achieved this week** — a single shared number, framed as our collective progress.
-15. **As a household member, I can glance at my personal stats** — my streaks, my completed tasks this week, my upcoming load — without comparing to anyone.
-16. **As a household member, I can see other people's stats if I deliberately look for them** — to celebrate, not to judge — but never by default.
+15. **As a household member, I can see what the household achieved this week** — a single shared number, framed as our collective progress.
+16. **As a household member, I can glance at my personal stats** — my streaks, my completed tasks this week, my upcoming load — without comparing to anyone.
+17. **As a household member, I can see other people's stats if I deliberately look for them** — to celebrate, not to judge — but never by default.
 
 ### Home Assistant integration
 
-17. **As an HA user, when a task becomes overdue, I want HA to be able to react** — flash a light, send a TTS reminder, show it on a dashboard.
-18. **As an HA user, when a physical event happens, I want HA to create a task in Teko** — washing machine finishes → "hang up laundry" appears.
-19. **As an HA user, I can tap an NFC tag or press a dashboard button to mark a chore done** through HA, with Teko updating instantly.
-20. **As an HA user, I want my mobile push notifications from Teko to come through the HA companion app** — same notification surface I'm already using.
+18. **As an HA user, when a task becomes overdue, I want HA to be able to react** — flash a light, send a TTS reminder, show it on a dashboard.
+19. **As an HA user, when a physical event happens, I want HA to create a task in Teko** — washing machine finishes → "hang up laundry" appears.
+20. **As an HA user, I can tap an NFC tag or press a dashboard button to mark a chore done** through HA, with Teko updating instantly.
+21. **As an HA user, I want my mobile push notifications from Teko to come through the HA companion app** — same notification surface I'm already using.
 
 ### Coexistence
 
-21. **As a household member, I never have to manage a separate Teko account** — if I'm in HA, I'm in Teko.
-22. **As a household member, I see Teko's UI in the language I set in HA** — English or German for now.
+22. **As a household member, I never have to manage a separate Teko account** — if I'm in HA, I'm in Teko.
+23. **As a household member, I see Teko's UI in the language I set in HA** — English or German for now.
 
 ---
 
@@ -206,14 +213,15 @@ Recurring tasks, organized for browsing and management.
   - *Planned*: "Planned for [date]" (committed accent)
   - *Overdue*: "Overdue by X days" (alert)
 
-### Projects
+### Someday
 
-Hierarchical view of all projects.
+Flat list of dateless intentions.
 
-- Tree of projects and sub-tasks
-- Progress bar per project (X of Y children done)
-- "+ New project" button
-- Drag to reorder (later versions)
+- Filter: assignee
+- Sorted: newest first by default
+- "+ Add to Someday" button (minimal form: title, description, assignee — no date, no recurrence)
+- Per-item actions: Edit (title/description/assignee), Schedule (opens date picker; item moves to active), Archive
+- Visually calm — no urgency cues, no overdue colours, no progress bars
 
 ### Stats
 
@@ -235,14 +243,12 @@ Modal or full-screen depending on device.
 
 - Title, description
 - Assignee (single-select dropdown of household members + "anyone")
-- Due date (optional)
+- Scheduled date (optional; sets planned_for)
 - Recurrence (the three-tier picker — simple presets, fixed-vs-after-completion toggle, advanced RRULE mode)
-- Project / parent task (optional)
 - Tags
 - Points (defaults to 1)
 - "Expose to Home Assistant" toggle (off by default)
 - Activity / history at the bottom (all past completions)
-- Recurrence (the three-tier picker — simple presets, fixed-vs-after-completion toggle, advanced RRULE mode)
 - Completion window (how long the chore stays eligible after becoming due; defaults inferred from cadence)
 
 ---
@@ -311,7 +317,7 @@ What Teko deliberately is not. These exist to prevent scope creep and to make va
 
 7. **A meal planner.** Adjacent, tempting, out of scope. Possible future integration via the same `todo.` mechanism, but not a built-in feature.
 
-8. **Subtasks beyond projects.** Tasks don't have checklists inside them. If something has sub-items, it's a project. One mechanism, used consistently.
+8. **Hierarchical projects with structured planning.** Teko does not model parent/child task relationships, project progress trees, or auto-completion cascades. The Someday list is deliberately flat. If you want to break a big intention into concrete steps, add several tasks and archive the vague one — the system does not model this transition. See ADR-0006.
 
 9. **Real-time multi-user editing.** Tasks are owned by the household; concurrent edits are rare and resolved last-write-wins. No CRDTs, no operational transforms.
 
@@ -349,7 +355,7 @@ Additional languages can be added later through community contributions. No lang
 Detailed phasing lives in [`ARCHITECTURE.md`](ARCHITECTURE.md). Product-level milestones:
 
 - **v0.1** — Core: tasks, chores with recurrence, single-household, HA integration with entities and services, daily digest notifications, basic stats. English and German.
-- **v0.2** — Projects, streaks, household points, stats page, actionable notifications.
+- **v0.2** — Someday list, streaks, household points, stats page, actionable notifications.
 - **v0.3** — Polish: rotation between users, snooze flows, dashboard widgets, opt-in per-task entities.
 - **v0.4+** — Community-driven: additional languages, automation recipes, calendar integration patterns, voice assistant flows.
 

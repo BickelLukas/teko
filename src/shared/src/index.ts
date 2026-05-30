@@ -8,4 +8,3 @@ export type HealthResponse = {
 };
 
 export * from "./schemas";
-export * from "./project";

@@ -5,7 +5,7 @@ import {
   IconRepeat,
   IconList,
   IconSettings,
-  IconStack2,
+  IconBookmark,
   IconChartBar,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ export function Nav() {
     { to: "/", label: t("nav.today"), icon: IconHome, end: true },
     { to: "/chores", label: t("nav.chores"), icon: IconRepeat, end: false },
     { to: "/tasks", label: t("nav.all_tasks"), icon: IconList, end: false },
-    { to: "/projects", label: t("nav.projects"), icon: IconStack2, end: false },
+    { to: "/someday", label: t("nav.someday"), icon: IconBookmark, end: false },
     { to: "/stats", label: t("nav.stats"), icon: IconChartBar, end: false },
     { to: "/settings", label: t("nav.settings"), icon: IconSettings, end: false },
   ];

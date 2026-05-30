@@ -17,10 +17,21 @@ export function buildAssigneeNameMap(db: Db, assigneeIds: string[]): Map<string,
   return new Map(rows.map((r) => [r.id, r.display_name ?? r.name]));
 }
 
+/** A Someday item: non-recurring, no date set, not archived, not done. */
+function computeIsSomeday(t: typeof schema.tasks.$inferSelect): boolean {
+  return (
+    t.recurrence_rule === null &&
+    t.next_due_at === null &&
+    t.planned_for === null &&
+    t.archived_at === null &&
+    t.state !== "done"
+  );
+}
+
 export function taskToResponse(
   t: typeof schema.tasks.$inferSelect,
   now: Date,
-  opts: { childCount?: number; parentTitle?: string | null; assigneeName?: string | null } = {},
+  opts: { assigneeName?: string | null } = {},
 ) {
   return {
     id: t.id,
@@ -28,8 +39,6 @@ export function taskToResponse(
     description: t.description,
     assignee_id: t.assignee_id,
     assignee_name: opts.assigneeName ?? null,
-    parent_id: t.parent_id,
-    parent_title: opts.parentTitle ?? null,
     state: computeTaskState(t, now),
     created_at: t.created_at,
     created_by: t.created_by,
@@ -40,8 +49,7 @@ export function taskToResponse(
     completion_window_days: t.completion_window_days,
     next_due_at: t.next_due_at,
     planned_for: t.planned_for,
-    auto_complete_when_children_done: t.auto_complete_when_children_done,
-    child_count: opts.childCount ?? 0,
     archived_at: t.archived_at,
+    is_someday: computeIsSomeday(t),
   };
 }

@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
+    "db:generate:auto": "node scripts/generate-migration.cjs",
     "seed": "tsx --env-file=../../.env src/seed.ts"
   },
   "dependencies": {

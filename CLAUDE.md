@@ -56,7 +56,7 @@ If you're considering reaching for something not on this list, pause and check w
 
 - Use Drizzle's typed query builder for everything.
 - The `sql` template tag is allowed for queries the builder can't express cleanly. **Never** concatenate strings into SQL.
-- Migrations are append-only and committed. Never edit a migration after it's been merged.
+- Migrations are append-only and committed. Never edit a migration after it's been merged. To generate one, follow `src/backend/drizzle/README.md` — in a non-interactive shell use `yarn workspace @teko/backend db:generate:auto`, then review the SQL by hand.
 - Soft-delete patterns where appropriate (users, tasks). Don't hard-delete data that history references.
 
 ### Dates and times

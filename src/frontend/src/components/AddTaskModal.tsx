@@ -107,8 +107,10 @@ export function AddTaskModal({
       setRecurrence({ rule: null, mode: "fixed", windowDays: null });
     } else if (type === "date") {
       setRecurrence({ rule: null, mode: "fixed", windowDays: null });
+    } else if (type === "recurring" && recurrence.rule === null) {
+      // Default to daily so the picker starts in a valid state
+      setRecurrence({ rule: "RRULE:FREQ=DAILY", mode: "fixed", windowDays: 0 });
     }
-    // "recurring": keep existing date and recurrence state
   }
 
   const createMutation = useMutation({
@@ -251,7 +253,7 @@ export function AddTaskModal({
           {/* ── Recurrence (recurring mode) ────────────────────────────────── */}
           {taskType === "recurring" && (
             <div className="space-y-3">
-              <RecurrencePicker value={recurrence} onChange={setRecurrence} />
+              <RecurrencePicker value={recurrence} onChange={setRecurrence} hideNone />
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   {t("add_task.starting")}

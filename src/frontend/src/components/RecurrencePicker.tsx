@@ -16,6 +16,8 @@ export type RecurrenceValue = {
 type Props = {
   value: RecurrenceValue;
   onChange: (v: RecurrenceValue) => void;
+  /** When true, hides the "None" option (use when a recurrence is required). */
+  hideNone?: boolean;
 };
 
 const PRESETS = [
@@ -130,7 +132,7 @@ function NumberField({ value, min, max, className, onCommit }: NumberFieldProps)
   );
 }
 
-export function RecurrencePicker({ value, onChange }: Props) {
+export function RecurrencePicker({ value, onChange, hideNone = false }: Props) {
   const { t } = useTranslation("common");
   const { locale } = useLocale();
   const [preset, setPreset] = useState<Preset>(() => detectPreset(value.rule));
@@ -176,7 +178,7 @@ export function RecurrencePicker({ value, onChange }: Props) {
           value={preset}
           onChange={(e) => setPreset(parseEnum(e.target.value, PRESETS, "none"))}
         >
-          <option value="none">{t("recurrence.none")}</option>
+          {!hideNone && <option value="none">{t("recurrence.none")}</option>}
           <option value="daily">{t("recurrence.daily")}</option>
           <option value="every-n-days">{t("recurrence.every_n_days")}</option>
           <option value="weekly">{t("recurrence.weekly")}</option>

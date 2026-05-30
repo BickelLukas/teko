@@ -244,9 +244,7 @@ describe("filterEveningTasks", () => {
 
   it("excludes not_yet tasks", () => {
     // due Jun 30, window 0 → not_yet
-    const tasks = [
-      taskRow({ title: "not yet", due_at: "2026-06-30", completion_window_days: 0 }),
-    ];
+    const tasks = [taskRow({ title: "not yet", due_at: "2026-06-30", completion_window_days: 0 })];
     const result = filterEveningTasks(tasks, NOW, tz);
     expect(result).toEqual([]);
   });

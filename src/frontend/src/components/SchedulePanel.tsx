@@ -24,7 +24,9 @@ export function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: ()
       <p className="mb-2 text-xs font-medium text-muted-foreground">{t("schedule_panel.title")}</p>
       <DateShortcutPicker
         value={null}
-        onChange={(date) => { if (date) rescheduleMutation.mutate(date); }}
+        onChange={(date) => {
+          if (date) rescheduleMutation.mutate(date);
+        }}
         disabled={rescheduleMutation.isPending}
       />
       <Button size="xs" variant="ghost" className="mt-2" onClick={onDone}>

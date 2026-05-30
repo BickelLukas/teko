@@ -348,17 +348,35 @@ describe("computeTaskState", () => {
 
   describe("date-string boundary behavior", () => {
     it("task due_at Nov 22 is 'eligible' when today = Nov 22", () => {
-      const t = { archived_at: null, state: "eligible" as const, recurrence_rule: null, due_at: "2025-11-22", completion_window_days: 0 };
+      const t = {
+        archived_at: null,
+        state: "eligible" as const,
+        recurrence_rule: null,
+        due_at: "2025-11-22",
+        completion_window_days: 0,
+      };
       expect(computeTaskState(t, "2025-11-22")).toBe("eligible");
     });
 
     it("task due_at Nov 22 is 'overdue' when today = Nov 23", () => {
-      const t = { archived_at: null, state: "overdue" as const, recurrence_rule: null, due_at: "2025-11-22", completion_window_days: 0 };
+      const t = {
+        archived_at: null,
+        state: "overdue" as const,
+        recurrence_rule: null,
+        due_at: "2025-11-22",
+        completion_window_days: 0,
+      };
       expect(computeTaskState(t, "2025-11-23")).toBe("overdue");
     });
 
     it("task due_at Nov 22 is 'not_yet' when today = Nov 21 (zero window)", () => {
-      const t = { archived_at: null, state: "not_yet" as const, recurrence_rule: null, due_at: "2025-11-22", completion_window_days: 0 };
+      const t = {
+        archived_at: null,
+        state: "not_yet" as const,
+        recurrence_rule: null,
+        due_at: "2025-11-22",
+        completion_window_days: 0,
+      };
       expect(computeTaskState(t, "2025-11-21")).toBe("not_yet");
     });
   });

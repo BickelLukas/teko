@@ -3,12 +3,20 @@ import { addMonths, addYears } from "date-fns";
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-function startOfDayUTC(date: Date): Date {
+/** Converts a Date to a UTC date string "YYYY-MM-DD". */
+function toDateString(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/** UTC midnight of the given date (used as rrule anchor or for day arithmetic). */
+function utcMidnight(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
-function addDaysUTC(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+/** Add `days` days to a YYYY-MM-DD string, returning a new YYYY-MM-DD string. */
+function addDaysToString(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number) as [number, number, number];
+  return toDateString(new Date(Date.UTC(y, m - 1, d + days)));
 }
 
 // Parse an rrule string, anchoring DTSTART at `fallback` when the rule itself
@@ -26,31 +34,33 @@ function parseRuleWithEarlyDtstart(ruleStr: string): RRule {
   return parseRuleAnchoredAt(ruleStr, new Date(Date.UTC(2000, 0, 1)));
 }
 
-function computeAfterCompletionNext(rule: RRule, base: Date): Date {
+function computeAfterCompletionNext(rule: RRule, base: Date): string {
   const freq = rule.options.freq;
   const interval = rule.options.interval ?? 1;
-  // Due dates are day-granular: drop the completion's time of day so the next
-  // due lands at the start of the day, regardless of when it was completed.
+  // Snap to UTC midnight before adding so the next due date is day-aligned
+  // regardless of when the completion happened.
+  const snap = utcMidnight(base);
   switch (freq) {
     case RRule.DAILY:
-      return startOfDayUTC(addDaysUTC(base, interval));
+      return toDateString(new Date(snap.getTime() + interval * 86400000));
     case RRule.WEEKLY:
-      return startOfDayUTC(addDaysUTC(base, interval * 7));
+      return toDateString(new Date(snap.getTime() + interval * 7 * 86400000));
     case RRule.MONTHLY:
-      return startOfDayUTC(addMonths(base, interval));
+      return toDateString(addMonths(snap, interval));
     case RRule.YEARLY:
-      return startOfDayUTC(addYears(base, interval));
+      return toDateString(addYears(snap, interval));
     default:
-      return startOfDayUTC(addDaysUTC(base, interval));
+      return toDateString(new Date(snap.getTime() + interval * 86400000));
   }
 }
 
 /**
  * Inclusive lower bound of the eligibility window.
- * The task becomes visible/eligible this many days before due_at.
+ * Returns the YYYY-MM-DD string `windowDays` days before `dueAt`.
  */
-export function computeEligibleStart(dueAt: Date, windowDays: number): Date {
-  return addDaysUTC(startOfDayUTC(dueAt), -windowDays);
+export function computeEligibleStart(dueAt: string, windowDays: number): string {
+  if (windowDays === 0) return dueAt;
+  return addDaysToString(dueAt, -windowDays);
 }
 
 // ── Domain types ──────────────────────────────────────────────────────────────
@@ -60,32 +70,32 @@ export type ComputedTaskState = "not_yet" | "eligible" | "overdue" | "done" | "a
 type TaskForNextDue = {
   recurrence_rule: string | null;
   recurrence_mode: "fixed" | "after_completion" | null;
-  due_at: Date | null;
+  due_at: string | null;
 };
 
 type TaskForState = {
   archived_at: Date | null;
   state: "not_yet" | "eligible" | "overdue" | "done";
   recurrence_rule: string | null;
-  due_at: Date | null;
+  due_at: string | null;
   completion_window_days: number | null;
 };
 
 type TaskForWindow = {
-  due_at: Date | null;
+  due_at: string | null;
 };
 
 // ── Pure domain functions ─────────────────────────────────────────────────────
 
 /**
- * Returns the next due_at for a recurring task.
+ * Returns the next due_at for a recurring task as a YYYY-MM-DD string.
  * Pass null for lastCompletedAt on creation (first scheduling).
  */
 export function computeNextDueAt(
   task: TaskForNextDue,
   lastCompletedAt: Date | null,
   now: Date,
-): Date {
+): string {
   if (!task.recurrence_rule) throw new Error("Task has no recurrence rule");
 
   const isCreation = lastCompletedAt === null;
@@ -93,7 +103,7 @@ export function computeNextDueAt(
   if (task.recurrence_mode === "after_completion") {
     // On creation the task is due today; the interval only starts counting
     // once the task has been completed at least once.
-    if (isCreation) return startOfDayUTC(now);
+    if (isCreation) return toDateString(now);
     return computeAfterCompletionNext(
       parseRuleWithEarlyDtstart(task.recurrence_rule),
       lastCompletedAt,
@@ -102,61 +112,58 @@ export function computeNextDueAt(
 
   // fixed: find the occurrence relative to the base date.
   if (isCreation) {
-    // Anchor the schedule at the creation day (start of day UTC) so the first
+    // Anchor the schedule at the creation day (UTC midnight) so the first
     // occurrence is today, unless a calendar constraint (weekday, day-of-month,
     // or an explicit DTSTART in the rule) pushes it to a later slot.
-    const start = startOfDayUTC(now);
+    const start = utcMidnight(now);
     const rule = parseRuleAnchoredAt(task.recurrence_rule, start);
-    return rule.after(start, true) ?? addDaysUTC(start, 365);
+    return toDateString(rule.after(start, true) ?? new Date(start.getTime() + 365 * 86400000));
   }
 
   const rule = parseRuleWithEarlyDtstart(task.recurrence_rule);
-  return rule.after(lastCompletedAt, false) ?? addDaysUTC(lastCompletedAt, 365);
+  return toDateString(
+    rule.after(lastCompletedAt, false) ??
+      new Date(utcMidnight(lastCompletedAt).getTime() + 365 * 86400000),
+  );
 }
 
 /**
- * Derives the current task state from timestamps.
- * The returned value may be "archived" even though the DB schema stores
- * archived state via the archived_at column rather than the state column.
+ * Derives the current task state from the task's due_at date string and today's
+ * local date string (YYYY-MM-DD). ISO 8601 date strings compare correctly
+ * lexicographically so no Date objects are needed.
  *
- * State rules (see ADR-0007):
- *   not_yet:  now < due_at − completion_window_days
- *   eligible: due_at − completion_window_days ≤ now < start-of-day(due_at) + 1 day
- *   overdue:  now ≥ start-of-day(due_at) + 1 day
- *
- * Due dates are day-granular (stored at midnight UTC). A task remains eligible
- * for the entire due day; it only becomes overdue the day after due_at.
+ * State rules (see ADR-0007, ADR-0009):
+ *   not_yet:  today < due_at − completion_window_days
+ *   eligible: due_at − window ≤ today ≤ due_at
+ *   overdue:  today > due_at
  */
-export function computeTaskState(task: TaskForState, now: Date): ComputedTaskState {
+export function computeTaskState(task: TaskForState, today: string): ComputedTaskState {
   if (task.archived_at !== null) return "archived";
 
   // one-off task that was completed
   if (task.state === "done" && task.recurrence_rule === null) return "done";
 
-  const nowMs = now.getTime();
-
   // no due date: Someday or recurring with no due yet — treat as eligible
   if (task.due_at === null) return "eligible";
 
   const windowDays = task.completion_window_days ?? 0;
-  const eligibleStartMs = computeEligibleStart(task.due_at, windowDays).getTime();
-  // Overdue begins the day after due_at (task is eligible for the whole due day)
-  const overdueSinceMs = addDaysUTC(startOfDayUTC(task.due_at), 1).getTime();
+  const eligibleStart = computeEligibleStart(task.due_at, windowDays);
 
-  if (nowMs < eligibleStartMs) return "not_yet";
-  if (nowMs >= overdueSinceMs) return "overdue";
+  if (today < eligibleStart) return "not_yet";
+  if (today > task.due_at) return "overdue";
   return "eligible";
 }
 
 /**
- * Returns true if completedAt is on-time: before the start of the day after due_at.
- * This mirrors the day-granular due model — completing anytime on the due day is on-time.
- * Early completion (before the eligibility window opens) is also on-time.
- * Tasks with no due_at are always on-time.
+ * Returns true if completedAt is on-time: before UTC midnight of the day after
+ * due_at. Completing anytime on the due day (UTC) is on-time. Tasks with no
+ * due_at are always on-time.
  */
 export function isOnTime(task: TaskForWindow, completedAt: Date): boolean {
   if (task.due_at === null) return true;
-  const overdueSince = addDaysUTC(startOfDayUTC(task.due_at), 1);
+  // Overdue begins at UTC midnight of the day after due_at.
+  const dueMidnightUTC = new Date(task.due_at + "T00:00:00Z");
+  const overdueSince = new Date(dueMidnightUTC.getTime() + 86400000);
   return completedAt.getTime() < overdueSince.getTime();
 }
 

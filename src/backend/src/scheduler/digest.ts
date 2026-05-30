@@ -73,7 +73,7 @@ export function categorizeUserTasks(
   const newlyEligible: DigestTaskInfo[] = [];
 
   for (const task of tasks) {
-    const state = computeTaskState(task, now);
+    const state = computeTaskState(task, today);
     if (state === "archived" || state === "done" || state === "not_yet") continue;
 
     if (state === "overdue") {
@@ -84,18 +84,15 @@ export function categorizeUserTasks(
     if (state === "eligible" && task.due_at !== null) {
       const windowDays = task.completion_window_days ?? 0;
 
-      if (localDateKey(task.due_at, timeZone) === today) {
+      if (task.due_at === today) {
         // Due today
         dueToday.push({ title: task.title });
         continue;
       }
 
       // Became eligible today (window opened today but due later)
-      const eligibleStartKey = localDateKey(
-        computeEligibleStart(task.due_at, windowDays),
-        timeZone,
-      );
-      if (eligibleStartKey === today && windowDays > 0) {
+      const eligibleStart = computeEligibleStart(task.due_at, windowDays);
+      if (eligibleStart === today && windowDays > 0) {
         newlyEligible.push({ title: task.title });
       }
     }

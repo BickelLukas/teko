@@ -22,6 +22,11 @@ import { computeStreakUpdate, awardPoints, detectStreakMilestone } from "../doma
 import { taskToResponse, buildAssigneeNameMap, buildTaskTagsMap } from "./taskResponseHelper.js";
 import "../types.js";
 
+/** UTC date string "YYYY-MM-DD" of a given instant. Used as "today" for state computation. */
+function todayString(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 function normalizeRrule(ruleStr: string, dtstart: Date): string {
   const parsed = RRule.fromString(ruleStr);
   return new RRule({ ...parsed.origOptions, dtstart }).toString();
@@ -132,6 +137,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     }
 
     const now = getNow();
+    const today = todayString(now);
     const assigneeIds = [
       ...new Set(filteredRows.filter((r) => r.assignee_id).map((r) => r.assignee_id!)),
     ];
@@ -140,7 +146,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const tagsMap = buildTaskTagsMap(db, taskIds);
 
     return filteredRows.map((t) =>
-      taskToResponse(t, now, {
+      taskToResponse(t, today, {
         assigneeName: t.assignee_id ? (assigneeNames.get(t.assignee_id) ?? null) : null,
         tags: tagsMap.get(t.id) ?? [],
       }),
@@ -167,30 +173,26 @@ const tasks: FastifyPluginAsync = async (fastify) => {
 
     const id = randomUUID();
     const now = getNow();
+    const today = todayString(now);
 
-    // Parse optional start date anchor (noon UTC to avoid DST edge cases)
-    let anchor: Date | null = null;
-    if (start_date) {
-      anchor = new Date(`${start_date}T12:00:00Z`);
-      const todayNoon = new Date(`${now.toISOString().split("T")[0]}T12:00:00Z`);
-      if (anchor < todayNoon) {
-        return reply.code(400).send({ error: "start_date cannot be in the past" });
-      }
+    // Validate optional start_date (already YYYY-MM-DD via Zod regex)
+    if (start_date && start_date < today) {
+      return reply.code(400).send({ error: "start_date cannot be in the past" });
     }
 
-    let dueAt: Date | null = null;
+    let dueAt: string | null = null;
     let windowDays: number | null = completion_window_days ?? null;
     let normalizedRule: string | null = recurrence_rule ?? null;
     let initialState: "eligible" | "not_yet" = "eligible";
 
     if (recurrence_rule && recurrence_mode) {
-      // First occurrence is "now" (or the chosen start date) for both modes,
-      // unless a calendar constraint in the rule pushes it to a later slot.
-      const effectiveNow = anchor ?? now;
+      // Use start_date as the anchor if provided, otherwise today.
+      const anchorStr = start_date ?? today;
+      const anchorDate = new Date(`${anchorStr}T00:00:00Z`);
       const taskForDue = { recurrence_rule, recurrence_mode, due_at: null };
-      dueAt = computeNextDueAt(taskForDue, null, effectiveNow);
+      dueAt = computeNextDueAt(taskForDue, null, anchorDate);
 
-      normalizedRule = normalizeRrule(recurrence_rule, dueAt);
+      normalizedRule = normalizeRrule(recurrence_rule, new Date(`${dueAt}T00:00:00Z`));
       if (windowDays === null) {
         windowDays = suggestCompletionWindow(recurrence_rule);
       }
@@ -202,12 +204,12 @@ const tasks: FastifyPluginAsync = async (fastify) => {
           due_at: dueAt,
           completion_window_days: windowDays,
         },
-        now,
+        today,
       );
       initialState = computed === "not_yet" ? "not_yet" : "eligible";
-    } else if (anchor !== null) {
-      // One-off task with a start date: set it as the due date.
-      dueAt = anchor;
+    } else if (start_date) {
+      // One-off task with a start date: use it directly as the due date.
+      dueAt = start_date;
       const computed = computeTaskState(
         {
           archived_at: null,
@@ -216,7 +218,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
           due_at: dueAt,
           completion_window_days: null,
         },
-        now,
+        today,
       );
       initialState = computed === "not_yet" ? "not_yet" : "eligible";
     }
@@ -246,7 +248,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const assigneeNames = buildAssigneeNameMap(db, task.assignee_id ? [task.assignee_id] : []);
     const tagsForNew = buildTaskTagsMap(db, [task.id]);
     return reply.code(201).send(
-      taskToResponse(task, getNow(), {
+      taskToResponse(task, todayString(getNow()), {
         assigneeName: task.assignee_id ? (assigneeNames.get(task.assignee_id) ?? null) : null,
         tags: tagsForNew.get(task.id) ?? [],
       }),
@@ -273,17 +275,18 @@ const tasks: FastifyPluginAsync = async (fastify) => {
 
     if ("due_at" in body.data) {
       const now = getNow();
+      const today = todayString(now);
       if (body.data.due_at === null) {
         updates.due_at = null;
         if (task.state !== "done") {
-          const recomputed = computeTaskState({ ...task, due_at: null }, now);
+          const recomputed = computeTaskState({ ...task, due_at: null }, today);
           updates.state =
             recomputed === "archived" || recomputed === "done" ? task.state : recomputed;
         }
       } else if (body.data.due_at) {
-        updates.due_at = new Date(body.data.due_at);
+        updates.due_at = body.data.due_at;
         if (task.state !== "done") {
-          const recomputed = computeTaskState({ ...task, due_at: updates.due_at }, now);
+          const recomputed = computeTaskState({ ...task, due_at: updates.due_at }, today);
           updates.state =
             recomputed === "archived" || recomputed === "done" ? task.state : recomputed;
         }
@@ -308,6 +311,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         if (task.state !== "done") updates.state = "eligible";
       } else {
         const now = getNow();
+        const today = todayString(now);
         const lastCompletion = db
           .select({ completed_at: schema.completions.completed_at })
           .from(schema.completions)
@@ -323,7 +327,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
           anchor,
           now,
         );
-        const normalizedRule = normalizeRrule(newRule, nextDueAt ?? now);
+        const normalizedRule = normalizeRrule(newRule, new Date(`${nextDueAt}T00:00:00Z`));
 
         const windowDays: number | null = windowChanged
           ? (body.data.completion_window_days ?? null)
@@ -337,7 +341,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
             due_at: nextDueAt,
             completion_window_days: windowDays,
           },
-          now,
+          today,
         );
 
         updates.recurrence_rule = normalizedRule;
@@ -359,7 +363,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       );
       const tagsNoOp = buildTaskTagsMap(db, [task.id]);
       return reply.code(200).send(
-        taskToResponse(task, getNow(), {
+        taskToResponse(task, todayString(getNow()), {
           assigneeName: task.assignee_id ? (assigneeNamesNoOp.get(task.assignee_id) ?? null) : null,
           tags: tagsNoOp.get(task.id) ?? [],
         }),
@@ -377,7 +381,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     );
     const tagsUpdated = buildTaskTagsMap(db, [updated.id]);
     return reply.code(200).send(
-      taskToResponse(updated, getNow(), {
+      taskToResponse(updated, todayString(getNow()), {
         assigneeName: updated.assignee_id
           ? (assigneeNamesUpdated.get(updated.assignee_id) ?? null)
           : null,
@@ -398,20 +402,18 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (task.archived_at !== null) return reply.code(409).send({ error: "Task is archived" });
 
     const now = getNow();
-    const currentState = computeTaskState(task, now);
+    const today = todayString(now);
+    const currentState = computeTaskState(task, today);
     if (currentState === "not_yet") {
       return reply.code(409).send({ error: "Task is not yet due — reschedule it first" });
     }
     const wasOnTime = isOnTime(task, now);
     const isRecurring = task.recurrence_rule !== null && task.recurrence_mode !== null;
     const pointsAwarded = awardPoints(task);
-    const cycleDueAt = task.due_at;
+    const cycleDueAt = task.due_at; // string | null
 
     // Reserve the cycle with a conditional update. Guards against two concurrent
     // completes both passing the state read above and double-cycling the task.
-    // For one-off: claim by flipping state to "done" only if not already done.
-    // For recurring: claim by replacing due_at only if it still matches
-    // the value we read (a parallel completer would have already advanced it).
     const reserved = isRecurring
       ? (() => {
           const nextDueAt = computeNextDueAt(task, now, now);
@@ -422,7 +424,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
             due_at: nextDueAt,
             completion_window_days: task.completion_window_days,
           };
-          const computed = computeTaskState(nextStateInput, now);
+          const computed = computeTaskState(nextStateInput, today);
           const nextState =
             computed === "archived" || computed === "done" ? ("not_yet" as const) : computed;
 
@@ -531,7 +533,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
 
     return reply.code(200).send({
       task: updatedTask
-        ? taskToResponse(updatedTask, getNow(), {
+        ? taskToResponse(updatedTask, todayString(getNow()), {
             assigneeName: updatedTask.assignee_id
               ? (completeAssigneeNames.get(updatedTask.assignee_id) ?? null)
               : null,
@@ -580,8 +582,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
   });
 
   // ── POST /api/tasks/:id/reschedule ──────────────────────────────────────────
-  // Sets due_at to any date (earlier or later) or clears it (moves task to Someday).
-  // Works for all non-archived tasks regardless of recurrence.
+  // Sets due_at to any YYYY-MM-DD date or clears it (moves task to Someday).
 
   fastify.post("/api/tasks/:id/reschedule", async (request, reply) => {
     const params = TaskIdParamsSchema.safeParse(request.params);
@@ -595,9 +596,10 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (task.archived_at !== null) return reply.code(409).send({ error: "Task is archived" });
 
     const now = getNow();
-    const newDueAt = body.data.due_at !== null ? new Date(body.data.due_at) : null;
+    const today = todayString(now);
+    const newDueAt = body.data.due_at; // string | null
 
-    const newState = computeTaskState({ ...task, due_at: newDueAt }, now);
+    const newState = computeTaskState({ ...task, due_at: newDueAt }, today);
     const state = newState === "archived" || newState === "done" ? ("eligible" as const) : newState;
 
     db.update(schema.tasks)

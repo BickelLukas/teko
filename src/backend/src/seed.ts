@@ -5,7 +5,7 @@ import { inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
-import { addDays, subDays, startOfMonth, addMonths, startOfDay } from "date-fns";
+import { addDays, subDays, startOfMonth, addMonths, startOfDay, format } from "date-fns";
 
 const config = loadConfig();
 
@@ -105,6 +105,7 @@ console.log("Created users: Alice (dev-alice), Bob (dev-bob), Charlie (dev-charl
 
 const now = new Date();
 const today = startOfDay(now);
+const fmt = (d: Date) => format(d, "yyyy-MM-dd");
 
 // Recurring chores
 
@@ -120,7 +121,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
     recurrence_mode: "after_completion",
     completion_window_days: 2,
-    due_at: today,
+    due_at: fmt(today),
     points: 1,
   })
   .run();
@@ -141,7 +142,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=MONTHLY;BYMONTHDAY=1",
     recurrence_mode: "fixed",
     completion_window_days: 3,
-    due_at: rentDue,
+    due_at: fmt(rentDue),
     points: 2,
   })
   .run();
@@ -161,7 +162,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=MONTHLY;INTERVAL=6",
     recurrence_mode: "after_completion",
     completion_window_days: 14,
-    due_at: bushesDue,
+    due_at: fmt(bushesDue),
     points: 3,
   })
   .run();
@@ -178,7 +179,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
     recurrence_mode: "after_completion",
     completion_window_days: 2,
-    due_at: subDays(today, 3),
+    due_at: fmt(subDays(today, 3)),
     points: 1,
   })
   .run();
@@ -195,7 +196,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=WEEKLY;INTERVAL=4",
     recurrence_mode: "after_completion",
     completion_window_days: 5,
-    due_at: subDays(today, 1),
+    due_at: fmt(subDays(today, 1)),
     points: 1,
   })
   .run();
@@ -212,7 +213,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
     recurrence_mode: "after_completion",
     completion_window_days: 1,
-    due_at: today,
+    due_at: fmt(today),
     points: 1,
   })
   .run();
@@ -229,7 +230,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
     recurrence_mode: "after_completion",
     completion_window_days: 2,
-    due_at: addDays(today, 2),
+    due_at: fmt(addDays(today, 2)),
     points: 1,
   })
   .run();
@@ -245,7 +246,7 @@ db.insert(schema.tasks)
     assignee_id: aliceId,
     created_by: aliceId,
     state: "overdue",
-    due_at: subDays(today, 2),
+    due_at: fmt(subDays(today, 2)),
     points: null,
   })
   .run();
@@ -259,7 +260,7 @@ db.insert(schema.tasks)
     assignee_id: bobId,
     created_by: bobId,
     state: "eligible",
-    due_at: today,
+    due_at: fmt(today),
     points: null,
   })
   .run();
@@ -273,7 +274,7 @@ db.insert(schema.tasks)
     assignee_id: charlieId,
     created_by: charlieId,
     state: "not_yet",
-    due_at: addDays(today, 5),
+    due_at: fmt(addDays(today, 5)),
     points: null,
   })
   .run();
@@ -287,7 +288,7 @@ db.insert(schema.tasks)
     assignee_id: null,
     created_by: aliceId,
     state: "eligible",
-    due_at: subDays(today, 1),
+    due_at: fmt(subDays(today, 1)),
     points: 1,
   })
   .run();

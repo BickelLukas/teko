@@ -5,7 +5,6 @@ import type * as schema from "../db/schema.js";
 type TaskRow = typeof schema.tasks.$inferSelect;
 
 const NOW = new Date("2026-05-29T08:00:00Z");
-const day = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
 function task(overrides: Partial<TaskRow>): TaskRow {
   return {
@@ -23,7 +22,6 @@ function task(overrides: Partial<TaskRow>): TaskRow {
     due_at: null,
     points: null,
     exposed_to_ha: false,
-    is_household: false,
     ...overrides,
   };
 }
@@ -46,9 +44,9 @@ describe("categorizeUserTasks", () => {
   const tz = "UTC";
 
   it("buckets an overdue task", () => {
-    // due May 27, window 0, now May 29 → overdue
+    // due May 27, window 0, today May 29 → overdue
     const result = categorizeUserTasks(
-      [task({ title: "vacuum", due_at: day("2026-05-27"), completion_window_days: 0 })],
+      [task({ title: "vacuum", due_at: "2026-05-27", completion_window_days: 0 })],
       NOW,
       tz,
     );
@@ -58,9 +56,9 @@ describe("categorizeUserTasks", () => {
   });
 
   it("a strict due-today chore (window 0) is due today", () => {
-    // due May 29, window 0, now May 29 → eligible → dueToday
+    // due May 29, window 0, today May 29 → eligible → dueToday
     const result = categorizeUserTasks(
-      [task({ title: "trash", due_at: day("2026-05-29"), completion_window_days: 0 })],
+      [task({ title: "trash", due_at: "2026-05-29", completion_window_days: 0 })],
       NOW,
       tz,
     );
@@ -70,7 +68,7 @@ describe("categorizeUserTasks", () => {
   it("a chore whose eligibility window opens today is a soft mention", () => {
     // due Jun 12, window 14 → eligible_start = May 29 = today → newlyEligible
     const result = categorizeUserTasks(
-      [task({ title: "bushes", due_at: day("2026-06-12"), completion_window_days: 14 })],
+      [task({ title: "bushes", due_at: "2026-06-12", completion_window_days: 14 })],
       NOW,
       tz,
     );
@@ -81,7 +79,7 @@ describe("categorizeUserTasks", () => {
   it("a chore that became eligible earlier is not re-mentioned", () => {
     // due Jun 10, window 14 → eligible_start = May 27 ≠ today → skipped (eligible but not surfaced)
     const result = categorizeUserTasks(
-      [task({ title: "filter", due_at: day("2026-06-10"), completion_window_days: 14 })],
+      [task({ title: "filter", due_at: "2026-06-10", completion_window_days: 14 })],
       NOW,
       tz,
     );
@@ -95,7 +93,7 @@ describe("categorizeUserTasks", () => {
     // done: no due date, state=done, recurrence_rule=null → done
     const result = categorizeUserTasks(
       [
-        task({ title: "future", due_at: day("2026-06-30"), completion_window_days: 0 }),
+        task({ title: "future", due_at: "2026-06-30", completion_window_days: 0 }),
         task({ title: "done", state: "done", due_at: null }),
       ],
       NOW,
@@ -104,5 +102,15 @@ describe("categorizeUserTasks", () => {
     expect(result.overdue).toEqual([]);
     expect(result.dueToday).toEqual([]);
     expect(result.newlyEligible).toEqual([]);
+  });
+
+  it("timezone: task due today in Berlin is in dueToday for Berlin timezone", () => {
+    // Berlin time = UTC+2 on May 29 → localDateKey = "2026-05-29" for both UTC and Berlin
+    const result = categorizeUserTasks(
+      [task({ title: "berlin task", due_at: "2026-05-29", completion_window_days: 0 })],
+      NOW,
+      "Europe/Berlin",
+    );
+    expect(result.dueToday.map((t) => t.title)).toEqual(["berlin task"]);
   });
 });

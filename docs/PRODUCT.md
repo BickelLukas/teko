@@ -81,6 +81,14 @@ Defines when a chore is due. Two modes:
 - **After completion** — the chore is due N days after it was last done. *"Vacuum every 7 days from when I last vacuumed."*
 
 Internally stored as iCal RRULE strings for full flexibility. Exposed to users through a three-tier UI: simple presets, the fixed-vs-after-completion toggle, and an advanced mode for custom RRULEs.
+### Task Dates
+
+Task dates (`due_at`) are **date-only** — stored as `YYYY-MM-DD` strings with no time component and no timezone. "Due November 22nd" means November 22nd on everyone's calendar, regardless of where they are.
+
+"Today" is always the user's local browser date on the frontend. The household timezone setting governs **notification scheduling only** (when to fire morning digests and evening reminders), not task date interpretation.
+
+Completion timestamps (`completed_at`) remain UTC datetimes — they record when something happened, which is a moment in time.
+
 ### Completion Window
 
 How long a chore stays eligible to be completed before it's considered overdue. A completion window acknowledges that not every chore needs to happen on a precise date — trimming the bushes every 6 months can happen any weekend within a month-long window.

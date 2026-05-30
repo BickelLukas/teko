@@ -61,8 +61,11 @@ If you're considering reaching for something not on this list, pause and check w
 
 ### Dates and times
 
+- **Task date fields (`due_at`, `cycle_due_at`) are `YYYY-MM-DD` strings.** Not datetimes. Use `date-fns` `parseISO`/`format` helpers at display boundaries; never store or pass as `Date` objects.
+- **"Today" in task-date comparisons:** frontend uses `format(new Date(), 'yyyy-MM-dd')` (local date); backend routes use `getNow().toISOString().slice(0, 10)` (UTC date); scheduler uses `localDateKey(now, tz)` (household timezone). The household timezone governs notification scheduling **only**.
+- **Completion timestamps (`completed_at`, `completed_at`) remain UTC datetimes.** They record moments, not dates.
 - **Use `date-fns` for all date math.** Never use native `Date` arithmetic (`+`, `-`, comparisons with `getTime()` for math).
-- **All timestamps stored in UTC.** Convert for display only.
+- **All moment-in-time timestamps stored in UTC.** Convert for display only.
 - **Recurrence math goes through `rrule.js`.** Don't roll your own.
 
 ### React / frontend

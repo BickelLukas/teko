@@ -25,6 +25,20 @@ const TEST_CONFIG = {
   userSyncIntervalMinutes: 30,
 };
 
+// ── Date helpers ──────────────────────────────────────────────────────────────
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+function daysFromNow(n: number): string {
+  return new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+}
+function daysAgo(n: number): string {
+  return new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+}
+
+// ── Test DB ───────────────────────────────────────────────────────────────────
+
 function buildTestDb(): { db: Db; userId: string } {
   const sqlite = new Database(":memory:");
   sqlite.pragma("foreign_keys = ON");
@@ -142,7 +156,7 @@ describe("POST /api/tasks", () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it("one-off + future start_date → due_at set, eligible or not_yet", async () => {
+  it("one-off + future start_date → due_at = that date string", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/tasks",
@@ -151,8 +165,7 @@ describe("POST /api/tasks", () => {
     expect(res.statusCode).toBe(201);
     const body = res.json() as TaskResponse;
     expect(["eligible", "not_yet"]).toContain(body.state);
-    expect(body.due_at).toBeTruthy();
-    expect(new Date(body.due_at!).toISOString()).toContain("2099-06-15");
+    expect(body.due_at).toBe("2099-06-15");
   });
 
   it("one-off + past start_date → 400", async () => {
@@ -164,7 +177,7 @@ describe("POST /api/tasks", () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it("recurring fixed daily + no start_date → due today, eligible", async () => {
+  it("recurring fixed daily + no start_date → due_at = today, eligible", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/tasks",
@@ -177,13 +190,10 @@ describe("POST /api/tasks", () => {
     expect(res.statusCode).toBe(201);
     const body = res.json() as TaskResponse;
     expect(body.state).toBe("eligible");
-    expect(body.due_at).toBeTruthy();
-    // First occurrence is today (start of day UTC), not the next interval.
-    expect(new Date(body.due_at!).getTime()).toBeLessThanOrEqual(Date.now());
-    expect(new Date(body.due_at!).toISOString()).toMatch(/T00:00:00\.000Z$/);
+    expect(body.due_at).toBe(todayStr());
   });
 
-  it("recurring after_completion + no start_date → due today, eligible", async () => {
+  it("recurring after_completion + no start_date → due_at = today, eligible", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/tasks",
@@ -196,10 +206,7 @@ describe("POST /api/tasks", () => {
     expect(res.statusCode).toBe(201);
     const body = res.json() as TaskResponse;
     expect(body.state).toBe("eligible");
-    expect(body.due_at).toBeTruthy();
-    // First occurrence is today (start of day UTC), not now + one week.
-    expect(new Date(body.due_at!).getTime()).toBeLessThanOrEqual(Date.now());
-    expect(new Date(body.due_at!).toISOString()).toMatch(/T00:00:00\.000Z$/);
+    expect(body.due_at).toBe(todayStr());
   });
 
   it("recurring fixed + future start_date → due_at on/after anchor", async () => {
@@ -217,10 +224,9 @@ describe("POST /api/tasks", () => {
     expect(res.statusCode).toBe(201);
     const body = res.json() as TaskResponse;
     expect(body.due_at).toBeTruthy();
-    // due_at is day-aligned (start of day UTC) and on or after the anchor day.
-    const due = new Date(body.due_at!);
-    expect(due.getTime()).toBeGreaterThanOrEqual(new Date("2099-06-15T00:00:00Z").getTime());
-    expect(due.toISOString()).toMatch(/T00:00:00\.000Z$/);
+    // due_at is a date string on or after the anchor.
+    expect(body.due_at! >= "2099-06-15").toBe(true);
+    expect(body.due_at).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("recurring after_completion + future start_date → due_at = anchor", async () => {
@@ -236,9 +242,8 @@ describe("POST /api/tasks", () => {
     });
     expect(res.statusCode).toBe(201);
     const body = res.json() as TaskResponse;
-    expect(body.due_at).toBeTruthy();
     // after_completion + anchor: first due = anchor itself (not anchor + interval)
-    expect(new Date(body.due_at!).toISOString()).toContain("2099-06-15");
+    expect(body.due_at).toBe("2099-06-15");
   });
 });
 
@@ -335,7 +340,7 @@ describe("POST /api/tasks/:id/complete", () => {
         recurrence_rule: "RRULE:FREQ=WEEKLY;INTERVAL=1",
         recurrence_mode: "after_completion",
         completion_window_days: 1,
-        due_at: new Date(), // due now
+        due_at: todayStr(),
       })
       .run();
 
@@ -351,8 +356,9 @@ describe("POST /api/tasks/:id/complete", () => {
     // Should NOT be marked "done" — it should cycle
     const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();
     expect(task?.state).not.toBe("done");
-    // due_at should be roughly a week from now
-    expect(task?.due_at?.getTime()).toBeGreaterThan(Date.now());
+    // due_at should be a future date string (7 days from now)
+    expect(task?.due_at).toBeTruthy();
+    expect(task!.due_at! > todayStr()).toBe(true);
 
     // Completion row exists
     const completion = db
@@ -379,9 +385,8 @@ describe("POST /api/tasks/:id/reschedule", () => {
     await app.close();
   });
 
-  it("pull earlier: task due next week → reschedule to tomorrow → not_yet or eligible", async () => {
+  it("pull earlier: task due next week → reschedule to tomorrow", async () => {
     const taskId = randomUUID();
-    const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     db.insert(schema.tasks)
       .values({
         id: taskId,
@@ -392,20 +397,20 @@ describe("POST /api/tasks/:id/reschedule", () => {
         recurrence_rule: "RRULE:FREQ=MONTHLY;INTERVAL=6",
         recurrence_mode: "fixed",
         completion_window_days: 0,
-        due_at: nextWeek,
+        due_at: daysFromNow(7),
       })
       .run();
 
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const tomorrowStr = daysFromNow(1);
     const res = await app.inject({
       method: "POST",
       url: `/api/tasks/${taskId}/reschedule`,
-      payload: { due_at: tomorrow.toISOString() },
+      payload: { due_at: tomorrowStr },
     });
     expect(res.statusCode).toBe(204);
 
     const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();
-    expect(task?.due_at?.getTime()).toBeCloseTo(tomorrow.getTime(), -3);
+    expect(task?.due_at).toBe(tomorrowStr);
     expect(["not_yet", "eligible"]).toContain(task?.state);
   });
 
@@ -421,20 +426,20 @@ describe("POST /api/tasks/:id/reschedule", () => {
         recurrence_rule: "RRULE:FREQ=WEEKLY;INTERVAL=1",
         recurrence_mode: "after_completion",
         completion_window_days: 0,
-        due_at: new Date(),
+        due_at: todayStr(),
       })
       .run();
 
-    const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const nextWeekStr = daysFromNow(7);
     const res = await app.inject({
       method: "POST",
       url: `/api/tasks/${taskId}/reschedule`,
-      payload: { due_at: nextWeek.toISOString() },
+      payload: { due_at: nextWeekStr },
     });
     expect(res.statusCode).toBe(204);
 
     const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();
-    expect(task?.due_at?.getTime()).toBeCloseTo(nextWeek.getTime(), -3);
+    expect(task?.due_at).toBe(nextWeekStr);
     expect(task?.state).toBe("not_yet");
   });
 
@@ -447,7 +452,7 @@ describe("POST /api/tasks/:id/reschedule", () => {
         assignee_id: userId,
         created_by: userId,
         state: "eligible",
-        due_at: new Date(),
+        due_at: todayStr(),
       })
       .run();
 
@@ -467,11 +472,24 @@ describe("POST /api/tasks/:id/reschedule", () => {
     expect(somedayBody.some((t) => t.id === taskId)).toBe(true);
   });
 
+  it("returns 400 for invalid due_at format (datetime not accepted)", async () => {
+    const taskId = randomUUID();
+    db.insert(schema.tasks)
+      .values({ id: taskId, title: "X", created_by: userId, state: "eligible" })
+      .run();
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/tasks/${taskId}/reschedule`,
+      payload: { due_at: new Date().toISOString() }, // datetime rejected
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it("returns 404 for non-existent task", async () => {
     const res = await app.inject({
       method: "POST",
       url: `/api/tasks/${randomUUID()}/reschedule`,
-      payload: { due_at: new Date().toISOString() },
+      payload: { due_at: daysFromNow(1) },
     });
     expect(res.statusCode).toBe(404);
   });
@@ -491,7 +509,7 @@ describe("POST /api/tasks/:id/reschedule", () => {
     const res = await app.inject({
       method: "POST",
       url: `/api/tasks/${taskId}/reschedule`,
-      payload: { due_at: new Date().toISOString() },
+      payload: { due_at: daysFromNow(1) },
     });
     expect(res.statusCode).toBe(409);
   });
@@ -543,6 +561,7 @@ describe("PATCH /api/tasks/:id", () => {
     const body = res.json() as TaskResponse;
     expect(body.recurrence_rule).toBeTruthy();
     expect(body.due_at).toBeTruthy();
+    expect(body.due_at).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(body.completion_window_days).toBeGreaterThan(0);
     expect(["eligible", "not_yet"]).toContain(body.state);
   });
@@ -552,7 +571,7 @@ describe("PATCH /api/tasks/:id", () => {
       recurrence_rule: "RRULE:FREQ=DAILY",
       recurrence_mode: "fixed",
       completion_window_days: 1,
-      due_at: new Date(),
+      due_at: todayStr(),
     });
     const res = await app.inject({
       method: "PATCH",
@@ -569,12 +588,12 @@ describe("PATCH /api/tasks/:id", () => {
   });
 
   it("updates only completion_window_days without changing due_at", async () => {
-    const due = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const dueStr = daysFromNow(7);
     const id = insertTask({
       recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=MO",
       recurrence_mode: "fixed",
       completion_window_days: 1,
-      due_at: due,
+      due_at: dueStr,
     });
     const res = await app.inject({
       method: "PATCH",
@@ -584,8 +603,17 @@ describe("PATCH /api/tasks/:id", () => {
     expect(res.statusCode).toBe(200);
     const body = res.json() as TaskResponse;
     expect(body.completion_window_days).toBe(3);
-    // due_at should be unchanged
-    expect(new Date(body.due_at!).getTime()).toBeCloseTo(due.getTime(), -3);
+    expect(body.due_at).toBe(dueStr);
+  });
+
+  it("returns 400 when due_at is a datetime (not YYYY-MM-DD)", async () => {
+    const id = insertTask();
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/tasks/${id}`,
+      payload: { due_at: new Date().toISOString() },
+    });
+    expect(res.statusCode).toBe(400);
   });
 
   it("returns 404 for unknown task", async () => {
@@ -623,7 +651,6 @@ describe("Someday scope", () => {
   });
 
   function insertSomedayTask(title: string) {
-    // A Someday item: no recurrence, no dates
     const id = randomUUID();
     db.insert(schema.tasks).values({ id, title, created_by: userId, state: "eligible" }).run();
     return id;
@@ -636,7 +663,6 @@ describe("Someday scope", () => {
     expect(somedayRes.statusCode).toBe(200);
     const somedayBody = somedayRes.json() as TaskListResponse;
     expect(somedayBody.some((t) => t.id === id)).toBe(true);
-    // is_someday flag should be true
     const item = somedayBody.find((t) => t.id === id);
     expect(item?.is_someday).toBe(true);
 
@@ -649,11 +675,11 @@ describe("Someday scope", () => {
   it("rescheduling a Someday item to a date moves it to scope=active", async () => {
     const id = insertSomedayTask("Fix squeaky hinge");
 
-    const dueAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    const dueStr = daysFromNow(2);
     const res = await app.inject({
       method: "POST",
       url: `/api/tasks/${id}/reschedule`,
-      payload: { due_at: dueAt.toISOString() },
+      payload: { due_at: dueStr },
     });
     expect(res.statusCode).toBe(204);
 
@@ -665,7 +691,7 @@ describe("Someday scope", () => {
     const activeBody = activeRes.json() as TaskListResponse;
     const found = activeBody.find((t) => t.id === id);
     expect(found).toBeTruthy();
-    expect(found?.due_at).toBeTruthy();
+    expect(found?.due_at).toBe(dueStr);
     expect(found?.is_someday).toBe(false);
   });
 
@@ -677,7 +703,7 @@ describe("Someday scope", () => {
         title: "Book dentist",
         created_by: userId,
         state: "not_yet",
-        due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        due_at: daysFromNow(7),
       })
       .run();
 
@@ -737,7 +763,7 @@ describe("POST /api/_dev/tick", () => {
   });
 
   it("returns updated count", async () => {
-    // Insert a not_yet task whose due date is in the past
+    // Insert a not_yet task whose due date is in the past (yesterday)
     const taskId = randomUUID();
     db.insert(schema.tasks)
       .values({
@@ -749,7 +775,7 @@ describe("POST /api/_dev/tick", () => {
         recurrence_rule: "RRULE:FREQ=DAILY",
         recurrence_mode: "fixed",
         completion_window_days: 0,
-        due_at: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
+        due_at: daysAgo(1),
       })
       .run();
 
@@ -759,6 +785,6 @@ describe("POST /api/_dev/tick", () => {
     expect(body.updated).toBe(1);
 
     const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, taskId)).get();
-    expect(task?.state).toBe("eligible");
+    expect(task?.state).toBe("overdue");
   });
 });

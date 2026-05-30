@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, isToday, isTomorrow } from "date-fns";
+import { differenceInCalendarDays, isToday, isTomorrow, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
 import type { TaskResponse } from "@teko/shared";
 import { useLocale, formatDateMedium } from "@/lib/locale";
@@ -8,7 +8,7 @@ export function TaskStateBadge({ task }: { task: TaskResponse }) {
   const { t } = useTranslation("common");
   const { locale } = useLocale();
   const now = getNow();
-  const dueAt = task.due_at ? new Date(task.due_at) : null;
+  const dueAt = task.due_at ? parseISO(task.due_at) : null;
 
   if (task.state === "not_yet" && dueAt) {
     const days = Math.max(1, differenceInCalendarDays(dueAt, now));

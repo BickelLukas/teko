@@ -149,9 +149,9 @@ describe("POST /api/_dev/clock", () => {
   });
 
   it("advance past a task's due date transitions it to eligible via tick", async () => {
-    const futureMs = 2 * 3_600_000; // 2h from now
+    // Task due tomorrow (window 0) → not_yet now. Advance 26h → crosses midnight → eligible.
     const taskId = randomUUID();
-    const nextDueAt = new Date(Date.now() + futureMs);
+    const tomorrowStr = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
     db.insert(schema.tasks)
       .values({
@@ -162,15 +162,15 @@ describe("POST /api/_dev/clock", () => {
         state: "not_yet",
         recurrence_rule: "RRULE:FREQ=DAILY",
         recurrence_mode: "fixed",
-        completion_window_days: 1,
-        due_at: nextDueAt,
+        completion_window_days: 0,
+        due_at: tomorrowStr,
       })
       .run();
 
     const res = await app.inject({
       method: "POST",
       url: "/api/_dev/clock",
-      payload: { action: "advance", ms: futureMs + 60_000 }, // push past due
+      payload: { action: "advance", ms: 26 * 3_600_000 }, // advance 26h past tomorrow
     });
     expect(res.statusCode).toBe(200);
     const body = res.json() as { ticked: number };

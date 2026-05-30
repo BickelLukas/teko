@@ -65,7 +65,7 @@ function addTask(
   userId: string,
   title: string,
   opts: {
-    dueAt?: Date;
+    dueAt?: string;
     state?: "not_yet" | "eligible" | "overdue" | "done";
     windowDays?: number;
     assigneeId?: string | null;
@@ -80,7 +80,7 @@ function addTask(
       assignee_id: opts.assigneeId !== undefined ? opts.assigneeId : userId,
       created_by: userId,
       state: opts.state ?? "eligible",
-      due_at: opts.dueAt ?? new Date("2026-05-29T00:00:00Z"),
+      due_at: opts.dueAt ?? "2026-05-29",
       completion_window_days: opts.windowDays ?? 0,
       archived_at: opts.archivedAt ?? null,
       recurrence_rule: opts.recurrenceRule ?? null,
@@ -111,7 +111,7 @@ describe("runEveningReminderTick", () => {
     const userId = addUser(db);
     // overdue task: due May 27, window 0, now May 29 → overdue
     addTask(db, userId, "take out trash", {
-      dueAt: new Date("2026-05-27T00:00:00Z"),
+      dueAt: "2026-05-27",
       state: "overdue",
     });
 
@@ -186,7 +186,6 @@ describe("runEveningReminderTick", () => {
 
 describe("filterEveningTasks", () => {
   const tz = "UTC";
-  const day = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
   function taskRow(
     overrides: Partial<typeof schema.tasks.$inferSelect>,
@@ -206,13 +205,12 @@ describe("filterEveningTasks", () => {
       due_at: null,
       points: null,
       exposed_to_ha: false,
-      is_household: false,
       ...overrides,
     };
   }
 
   it("includes overdue tasks", () => {
-    const tasks = [taskRow({ title: "overdue task", state: "overdue", due_at: day("2026-05-27") })];
+    const tasks = [taskRow({ title: "overdue task", state: "overdue", due_at: "2026-05-27" })];
     const result = filterEveningTasks(tasks, NOW, tz);
     expect(result.map((t) => t.title)).toEqual(["overdue task"]);
   });
@@ -222,7 +220,7 @@ describe("filterEveningTasks", () => {
       taskRow({
         title: "due today",
         state: "eligible",
-        due_at: day("2026-05-29"),
+        due_at: "2026-05-29",
         completion_window_days: 0,
       }),
     ];
@@ -236,7 +234,7 @@ describe("filterEveningTasks", () => {
       taskRow({
         title: "future eligible",
         state: "eligible",
-        due_at: day("2026-06-12"),
+        due_at: "2026-06-12",
         completion_window_days: 14,
       }),
     ];
@@ -247,7 +245,7 @@ describe("filterEveningTasks", () => {
   it("excludes not_yet tasks", () => {
     // due Jun 30, window 0 → not_yet
     const tasks = [
-      taskRow({ title: "not yet", due_at: day("2026-06-30"), completion_window_days: 0 }),
+      taskRow({ title: "not yet", due_at: "2026-06-30", completion_window_days: 0 }),
     ];
     const result = filterEveningTasks(tasks, NOW, tz);
     expect(result).toEqual([]);
@@ -270,7 +268,7 @@ describe("filterEveningTasks", () => {
       taskRow({
         title: "archived",
         state: "overdue",
-        due_at: day("2026-05-27"),
+        due_at: "2026-05-27",
         archived_at: NOW,
       }),
     ];
@@ -278,32 +276,31 @@ describe("filterEveningTasks", () => {
     expect(result).toEqual([]);
   });
 
-  it("timezone: due_at evaluated against household timezone, not UTC", () => {
-    // 2026-05-29 23:00 UTC = 2026-05-30 01:00 Europe/Berlin (CEST)
-    // In Berlin, the task is due tomorrow — should NOT be in today's reminder.
-    const berlinNow = new Date("2026-05-29T19:00:00Z"); // 21:00 Berlin
+  it("timezone: task due tomorrow in Berlin is NOT in today's reminder", () => {
+    // 2026-05-29 19:00 UTC = 2026-05-29 21:00 Europe/Berlin
+    // Task due "2026-05-30" — today in Berlin is "2026-05-29" → not included
+    const berlinNow = new Date("2026-05-29T19:00:00Z");
     const tasks = [
       taskRow({
         title: "tomorrow in berlin",
         state: "eligible",
-        due_at: new Date("2026-05-30T00:00:00Z"), // 2026-05-30 in UTC = 2026-05-30 in Berlin too
+        due_at: "2026-05-30",
         completion_window_days: 0,
       }),
     ];
-    // Due 2026-05-30, today in Berlin is 2026-05-29 → not included
     const result = filterEveningTasks(tasks, berlinNow, "Europe/Berlin");
     expect(result).toEqual([]);
   });
 
   it("timezone: task due today in household timezone is included", () => {
     // 2026-05-29 19:00 UTC = 2026-05-29 21:00 Europe/Berlin
-    // Task due_at = 2026-05-29 UTC = May 29 in Berlin too → included
+    // Task due "2026-05-29" — today in Berlin is "2026-05-29" → included
     const berlinNow = new Date("2026-05-29T19:00:00Z");
     const tasks = [
       taskRow({
         title: "due today berlin",
         state: "eligible",
-        due_at: new Date("2026-05-29T00:00:00Z"),
+        due_at: "2026-05-29",
         completion_window_days: 0,
       }),
     ];

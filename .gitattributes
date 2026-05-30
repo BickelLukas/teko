@@ -1,0 +1,21 @@
+# Normalize to LF in repo; checkout EOL is platform-native
+* text=auto
+
+# Explicitly binary — never diff or convert
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.db binary
+*.sqlite binary
+
+# Windows scripts keep CRLF on Windows checkout
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf

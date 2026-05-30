@@ -21,6 +21,7 @@ export async function runTick(
   now: Date = getNow(),
   logger: Logger = fallbackLogger,
 ): Promise<number> {
+  const today = now.toISOString().slice(0, 10);
   const tasks = db
     .select()
     .from(schema.tasks)
@@ -38,7 +39,7 @@ export async function runTick(
 
   for (const task of tasks) {
     try {
-      const computed = computeTaskState(task, now);
+      const computed = computeTaskState(task, today);
 
       // archived derived from archived_at; done = one-off completion — neither stored as state
       if (computed === "archived" || computed === "done") continue;

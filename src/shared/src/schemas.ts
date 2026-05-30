@@ -31,6 +31,8 @@ export const UserSchema = z.object({
   notification_time: z.string().nullable(),
   notification_service: z.string().nullable(),
   notify_digest_enabled: z.boolean(),
+  notify_evening_reminder_enabled: z.boolean(),
+  evening_reminder_time: z.string().nullable(),
   is_admin: z.boolean(),
   is_active: z.boolean(),
   week_start_day: z.union([z.literal(0), z.literal(1)]),
@@ -48,6 +50,8 @@ export const UserResponseSchema = UserSchema.pick({
   notification_time: true,
   notification_service: true,
   notify_digest_enabled: true,
+  notify_evening_reminder_enabled: true,
+  evening_reminder_time: true,
   is_admin: true,
   is_active: true,
   week_start_day: true,
@@ -62,6 +66,8 @@ export const UpdatePreferencesBodySchema = z.object({
     .union([z.string().regex(NOTIFY_SERVICE_REGEX, "Invalid notify service id"), z.null()])
     .optional(),
   notify_digest_enabled: z.boolean().optional(),
+  notify_evening_reminder_enabled: z.boolean().optional(),
+  evening_reminder_time: z.string().nullable().optional(),
   display_name: z.string().nullable().optional(),
   week_start_day: z.union([z.literal(0), z.literal(1)]).optional(),
 });

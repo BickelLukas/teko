@@ -140,6 +140,8 @@ export async function updatePreferences(
     notification_time: string | null;
     notification_service: string | null;
     notify_digest_enabled: boolean;
+    notify_evening_reminder_enabled: boolean;
+    evening_reminder_time: string | null;
     display_name: string | null;
     week_start_day: 0 | 1;
   }>,

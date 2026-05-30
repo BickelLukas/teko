@@ -265,6 +265,48 @@ Notifications are the most consequential UI surface — they reach users when th
 - **Quiet by default.** No emoji clutter. Occasional emoji for celebration.
 - **The product is invisible.** Notifications don't say "Teko reminds you..." — they just remind you.
 
+### Notification types
+
+#### Daily morning digest
+
+The planning frame. Tells you what's on your plate for the day: overdue tasks, tasks due today, and anything whose eligibility window opened today (a soft mention, not pressure). Fires once per day at the user's chosen time (default 08:00).
+
+Enabled by default. Frame: looking ahead.
+
+**English sample:**
+> *"Good morning, Alice. Overdue: pay rent. Today: take out trash, water plants."*
+
+**German sample:**
+> *"Guten Morgen, Alice. Überfällig: Miete zahlen. Heute: Müll rausbringen, Pflanzen gießen."*
+
+#### Evening reminder
+
+The runway frame. A same-day nudge for tasks that are overdue or due today and still incomplete. Catches the case where you saw the morning digest, intended to act, got busy, and forgot. Fires once per day at the user's chosen time (default 19:00).
+
+On by default. Only surfaces tasks whose deadline is today or already past — not tasks that are eligible but have a future deadline. Silent when everything is already done.
+
+**English samples:**
+
+With one open item:
+> *"1 thing still open"*
+> *"Still open: take out trash."*
+
+With several open items (mix of overdue and due-today):
+> *"3 things still open"*
+> *"Still open: pay rent, take out trash, water plants."*
+
+With more than 5 open items:
+> *"8 things still open"*
+> *"Still open: pay rent, take out trash, water plants, clean the kitchen, vacuum, and 3 more."*
+
+**German samples:**
+
+> *"1 Aufgabe noch offen"*
+> *"Noch offen: Müll rausbringen."*
+
+> *"3 Aufgaben noch offen"*
+> *"Noch offen: Miete zahlen, Müll rausbringen, Pflanzen gießen."*
+
 ### Examples
 
 **✅ Good**
@@ -276,6 +318,7 @@ Notifications are the most consequential UI surface — they reach users when th
 - *"You haven't done the plants in 9 days. Snooze or mark done?"*
 - *"The bushes can be trimmed this month — no rush."* (eligible state, gentle)
 - *"Reminder: you planned to trim the bushes today."* (planned date)
+- *"3 things still open"* (evening reminder: overdue + due-today tasks still incomplete)
 
 **❌ Bad**
 
@@ -284,15 +327,18 @@ Notifications are the most consequential UI surface — they reach users when th
 - *"You're behind on your chores."* (judgmental)
 - *"3 new tekos available!"* (treating the name as vocabulary)
 - *"You have new notifications."* (vague)
+- *"Good evening, Alice. You still have 3 tasks open."* (greeting in the evening reminder is unnecessarily formal for a nudge)
 
 ### Default notification rhythm
 
-- **One daily morning digest** per user, at the user's chosen time (default 8:00)
+- **One daily morning digest** per user, at the user's chosen time (default 08:00). Includes overdue, due-today, and newly-eligible tasks. Enabled by default.
+- **One evening reminder** per user, at the user's chosen time (default 19:00). Includes only overdue and due-today incomplete tasks. Enabled by default.
 - **Actionable push** when a high-priority chore becomes overdue during waking hours (configurable per chore, off by default)
 - **Streak milestone** push at 7, 30, 100, 365 consecutive completions
 - **Weekly household summary** Sunday evening (default off, opt-in)
-- **Eligible-state mention** included in the morning digest on the day a chore becomes eligible — single soft mention, not repeated
-- **Planned-date reminder** in the morning digest on the day the user scheduled
+
+**Morning digest vs. evening reminder:**
+The morning digest is a planning frame — it includes newly-eligible tasks (where the window just opened) so you can decide when to act. The evening reminder is a runway frame — it only surfaces tasks where the deadline is today or already past, so the framing is "act now or fall behind." Eligible tasks with a future deadline never appear in the evening reminder: they still have window flexibility and surfacing them would undermine the calm-by-default window design.
 
 Everything else is silence. Users who want more aggressive nudges can build them in HA automations using Teko's events.
 

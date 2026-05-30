@@ -20,6 +20,14 @@ export const users = sqliteTable("users", {
   // Local calendar date (YYYY-MM-DD, household timezone) the most recent digest
   // was considered for this user. Drives idempotency for the daily digest job.
   last_digest_sent_date: text("last_digest_sent_date"),
+  notify_evening_reminder_enabled: integer("notify_evening_reminder_enabled", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  // HH:MM time for the evening reminder. Null = use default of "19:00".
+  evening_reminder_time: text("evening_reminder_time"),
+  // Local calendar date (YYYY-MM-DD, household timezone) the most recent evening
+  // reminder was considered for this user. Drives idempotency for the job.
+  last_evening_reminder_sent_date: text("last_evening_reminder_sent_date"),
   // Reserved. Always false in v0.x. See ADR-0005.
   is_admin: integer("is_admin", { mode: "boolean" }).notNull().default(false),
   is_active: integer("is_active", { mode: "boolean" }).notNull().default(true),

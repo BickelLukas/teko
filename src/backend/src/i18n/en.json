@@ -29,6 +29,14 @@
         "and_more": "and {{count}} more"
       }
     },
+    "evening_reminder": {
+      "title": {
+        "single": "1 thing still open",
+        "multiple": "{{count}} things still open"
+      },
+      "body": "Still open: {{tasks}}.",
+      "and_more": "and {{count}} more"
+    },
     "test": {
       "title": "Test from Teko",
       "message": "If you see this, your notification target is working."

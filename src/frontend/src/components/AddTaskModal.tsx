@@ -166,25 +166,6 @@ export function AddTaskModal({
           onSubmit={handleSubmit((data) => createMutation.mutate(data))}
           className="mt-4 space-y-4"
         >
-          {/* ── Type selector ─────────────────────────────────────────────── */}
-          <div className="grid grid-cols-3 rounded-lg bg-muted p-1">
-            {TASK_TYPES.map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => handleTypeChange(type)}
-                className={cn(
-                  "rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
-                  taskType === type
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {t(`add_task.type.${type}`)}
-              </button>
-            ))}
-          </div>
-
           {/* ── Title ─────────────────────────────────────────────────────── */}
           <div>
             <Input
@@ -232,6 +213,25 @@ export function AddTaskModal({
               </SelectRoot>
             </div>
           )}
+
+          {/* ── Type selector ─────────────────────────────────────────────── */}
+          <div className="grid grid-cols-3 rounded-lg bg-muted p-1">
+            {TASK_TYPES.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleTypeChange(type)}
+                className={cn(
+                  "rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+                  taskType === type
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t(`add_task.type.${type}`)}
+              </button>
+            ))}
+          </div>
 
           {/* ── Date (on a date mode) ──────────────────────────────────────── */}
           {taskType === "date" && (

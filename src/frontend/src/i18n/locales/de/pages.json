@@ -19,19 +19,10 @@
       "streak": "🔥 {{count}} Tage bei {{title}}"
     }
   },
-  "chores": {
+  "tasks": {
     "title": "Aufgaben",
-    "no_chores": "Keine wiederkehrenden Aufgaben gefunden.",
-    "sections": {
-      "overdue": "Überfällig",
-      "eligible": "Jetzt fällig",
-      "coming_up": "Demnächst"
-    }
-  },
-  "all_tasks": {
-    "title": "Alle Aufgaben",
     "no_tasks": "Keine Aufgaben gefunden.",
-    "include_someday": "Irgendwann-Einträge einbeziehen"
+    "recurring_only": "Nur wiederkehrende"
   },
   "someday": {
     "title": "Irgendwann",

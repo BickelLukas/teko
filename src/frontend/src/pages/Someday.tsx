@@ -2,9 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { IconPencil, IconCalendar, IconArchive, IconDots } from "@tabler/icons-react";
-import { IconPlus } from "@tabler/icons-react";
 import { fetchTasks, fetchMe, archiveTask } from "@/lib/api";
-import { AddTaskModal } from "@/components/AddTaskModal";
 import { EditTaskModal } from "@/components/EditTaskModal";
 import { ReschedulePanel } from "@/components/ReschedulePanel";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
@@ -124,7 +122,6 @@ function SomedayCard({ task }: { task: TaskResponse }) {
 export function SomedayPage() {
   const { t } = useTranslation(["pages", "common"]);
   const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilter>("mine");
-  const [addOpen, setAddOpen] = useState(false);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
 
@@ -167,11 +164,6 @@ export function SomedayPage() {
               <SelectItem value="all">{t("common:filters.all")}</SelectItem>
             </SelectContent>
           </SelectRoot>
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <IconPlus className="mr-1 size-4" />
-            {t("pages:someday.add_button")}
-          </Button>
-          <AddTaskModal defaultType="someday" open={addOpen} onOpenChange={setAddOpen} />
         </div>
       </div>
 

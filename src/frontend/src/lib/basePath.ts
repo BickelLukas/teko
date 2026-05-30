@@ -3,7 +3,7 @@
 // `<base href="./">` in index.html causes document.baseURI to resolve to the
 // directory of the document, regardless of which SPA route the server sent
 // index.html for. So new URL('.', document.baseURI) always gives us the real
-// mount point, even on hard-reload at /prefix/chores.
+// mount point, even on hard-reload at /prefix/tasks.
 //
 // In dev (Vite) and plain localhost:3000, this returns ''.
 // Under HA ingress at /api/hassio_ingress/<token>/, this returns that prefix.

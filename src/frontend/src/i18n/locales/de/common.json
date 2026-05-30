@@ -1,8 +1,7 @@
 {
   "nav": {
     "today": "Heute",
-    "chores": "Aufgaben",
-    "all_tasks": "Alle Aufgaben",
+    "tasks": "Aufgaben",
     "someday": "Irgendwann",
     "stats": "Statistik",
     "settings": "Einstellungen"

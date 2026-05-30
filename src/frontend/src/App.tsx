@@ -5,13 +5,13 @@ import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-quer
 import { useTranslation } from "react-i18next";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Nav } from "@/components/Nav";
+import { FloatingAddButton } from "@/components/FloatingAddButton";
 import { DevUserSwitcher } from "@/components/DevUserSwitcher";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AddTaskModal } from "@/components/AddTaskModal";
 import { DialogRoot, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TodayPage } from "@/pages/Today";
-import { ChoresPage } from "@/pages/Chores";
-import { AllTasksPage } from "@/pages/AllTasks";
+import { TasksPage } from "@/pages/Tasks";
 import { SettingsPage } from "@/pages/Settings";
 import { SomedayPage } from "@/pages/Someday";
 import { StatsPage } from "@/pages/Stats";
@@ -98,14 +98,14 @@ export function App() {
             <main className="pb-14 sm:pb-0">
               <Routes>
                 <Route path="/" element={<TodayPage />} />
-                <Route path="/chores" element={<ChoresPage />} />
-                <Route path="/tasks" element={<AllTasksPage />} />
+                <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/someday" element={<SomedayPage />} />
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>
             </main>
           </div>
+          <FloatingAddButton />
           <DevUserSwitcher />
         </ThemeProvider>
       </BrowserRouter>

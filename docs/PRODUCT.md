@@ -186,8 +186,6 @@ A first sketch of the screens Teko needs. Visual design happens in code; this is
 
 ### Today
 
-### Today
-
 The default landing screen. Opinionated and minimal.
 
 - A greeting with the user's name
@@ -199,19 +197,15 @@ The default landing screen. Opinionated and minimal.
 
 The visual distinction between *Today* and *Eligible* is important: Today items use stronger visual weight (the user should act on these); Eligible items use lighter weight (the user is aware, but not pushed).
 
-### Chores
+### Tasks
 
-Recurring tasks, organized for browsing and management.
+All active tasks (due_at IS NOT NULL, not archived), organized for browsing and management.
 
-- Filter: assignee, tag, status (active/paused)
-- Sort: next due, last done, alphabetical
-- Each chore shows: title, assignee, next due, current streak, recurrence summary
-- Tap to edit; long-press / context menu for snooze, reassign, pause, delete
-- Each chore shows its current state with appropriate visual treatment:
-  - *Not yet*: "Next due in X days" (muted)
-  - *Eligible*: "Eligible — do anytime this [period]" (soft accent)
-  - *Planned*: "Planned for [date]" (committed accent)
-  - *Overdue*: "Overdue by X days" (alert)
+- Filter: assignee; toggle for "Recurring only" (shows only tasks with a recurrence rule)
+- State-styled cards: overdue (alert), eligible (soft accent), not yet (muted), done
+- Sort: overdue → eligible → not yet → done; within state, by due_at ascending
+- A "+ Add task" button is always available
+- Someday items are not shown here; they live in the Someday tab
 
 ### Someday
 

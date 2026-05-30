@@ -1,13 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import {
-  IconHome,
-  IconRepeat,
-  IconList,
-  IconSettings,
-  IconBookmark,
-  IconChartBar,
-} from "@tabler/icons-react";
+import { IconHome, IconList, IconSettings, IconBookmark, IconChartBar } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 export function Nav() {
@@ -15,8 +8,7 @@ export function Nav() {
 
   const links = [
     { to: "/", label: t("nav.today"), icon: IconHome, end: true },
-    { to: "/chores", label: t("nav.chores"), icon: IconRepeat, end: false },
-    { to: "/tasks", label: t("nav.all_tasks"), icon: IconList, end: false },
+    { to: "/tasks", label: t("nav.tasks"), icon: IconList, end: false },
     { to: "/someday", label: t("nav.someday"), icon: IconBookmark, end: false },
     { to: "/stats", label: t("nav.stats"), icon: IconChartBar, end: false },
     { to: "/settings", label: t("nav.settings"), icon: IconSettings, end: false },

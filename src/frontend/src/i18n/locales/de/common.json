@@ -57,6 +57,7 @@
   },
   "schedule_panel": {
     "title": "Einplanen für:",
+    "today": "Heute",
     "tomorrow": "Morgen",
     "in_3_days": "In 3 Tagen",
     "next_week": "Nächste Woche"

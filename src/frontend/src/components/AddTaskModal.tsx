@@ -8,7 +8,7 @@ import { z } from "zod";
 import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DateShortcutPicker } from "@/components/DateShortcutPicker";
 import {
   DialogRoot,
   DialogTrigger,
@@ -26,7 +26,6 @@ import {
 import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceValue } from "@/components/RecurrencePicker";
 import { createTask, fetchMe, fetchUsers } from "@/lib/api";
-import { getNow } from "@/lib/clock";
 import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -241,7 +240,7 @@ export function AddTaskModal({
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
                 {t("add_task.when")}
               </label>
-              <DatePicker value={startDate} onChange={setStartDate} min={getNow()} />
+              <DateShortcutPicker value={startDate} onChange={setStartDate} />
               {startDate === null && (
                 <p className="mt-1 text-xs text-muted-foreground/60">
                   {t("add_task.no_date_hint")}
@@ -258,7 +257,7 @@ export function AddTaskModal({
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   {t("add_task.starting")}
                 </label>
-                <DatePicker value={startDate} onChange={setStartDate} min={getNow()} />
+                <DateShortcutPicker value={startDate} onChange={setStartDate} />
               </div>
             </div>
           )}

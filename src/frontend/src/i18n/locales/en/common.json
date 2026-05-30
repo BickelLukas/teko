@@ -57,6 +57,7 @@
   },
   "schedule_panel": {
     "title": "Schedule for:",
+    "today": "Today",
     "tomorrow": "Tomorrow",
     "in_3_days": "In 3 days",
     "next_week": "Next week"

@@ -12,7 +12,7 @@ export function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: ()
   const queryClient = useQueryClient();
 
   const rescheduleMutation = useMutation({
-    mutationFn: (date: Date | null) => rescheduleTask(task.id, date),
+    mutationFn: (date: string | null) => rescheduleTask(task.id, date),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
       onDone();
@@ -25,8 +25,7 @@ export function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: ()
       <DateShortcutPicker
         value={null}
         onChange={(date) => {
-          if (date)
-            rescheduleMutation.mutate(new Date(date.toISOString().split("T")[0] + "T12:00:00Z"));
+          if (date) rescheduleMutation.mutate(date);
         }}
         disabled={rescheduleMutation.isPending}
       />

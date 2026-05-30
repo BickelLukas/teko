@@ -51,7 +51,7 @@ function computeIsSomeday(t: typeof schema.tasks.$inferSelect): boolean {
 
 export function taskToResponse(
   t: typeof schema.tasks.$inferSelect,
-  now: Date,
+  today: string,
   opts: { assigneeName?: string | null; tags?: TagResponse[] } = {},
 ) {
   return {
@@ -60,7 +60,7 @@ export function taskToResponse(
     description: t.description,
     assignee_id: t.assignee_id,
     assignee_name: opts.assigneeName ?? null,
-    state: computeTaskState(t, now),
+    state: computeTaskState(t, today),
     created_at: t.created_at,
     created_by: t.created_by,
     points: t.points,

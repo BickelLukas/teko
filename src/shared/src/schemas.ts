@@ -164,10 +164,12 @@ export const TaskSchema = z.object({
   recurrence_rule: z.string().nullable(),
   recurrence_mode: RecurrenceModeSchema.nullable(),
   completion_window_days: z.number().int().nullable(),
-  due_at: z.coerce.date().nullable(),
+  due_at: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "due_at must be YYYY-MM-DD")
+    .nullable(),
   points: z.number().int().nullable(),
   exposed_to_ha: z.boolean(),
-  is_household: z.boolean(),
 });
 export type Task = z.infer<typeof TaskSchema>;
 
@@ -180,7 +182,10 @@ export const CompletionSchema = z.object({
   completed_at: z.coerce.date(),
   was_on_time: z.boolean().nullable(),
   points_awarded: z.number().int().nullable(),
-  cycle_due_at: z.coerce.date().nullable(),
+  cycle_due_at: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "cycle_due_at must be YYYY-MM-DD")
+    .nullable(),
   notes: z.string().nullable(),
 });
 export type Completion = z.infer<typeof CompletionSchema>;
@@ -210,7 +215,11 @@ export const UpdateTaskBodySchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
-  due_at: z.string().datetime().nullable().optional(),
+  due_at: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "due_at must be YYYY-MM-DD")
+    .nullable()
+    .optional(),
   recurrence_rule: z.string().nullable().optional(),
   recurrence_mode: RecurrenceModeSchema.nullable().optional(),
   completion_window_days: z.number().int().nonnegative().nullable().optional(),
@@ -223,7 +232,10 @@ export const CompleteTaskParamsSchema = z.object({
 export type CompleteTaskParams = z.infer<typeof CompleteTaskParamsSchema>;
 
 export const RescheduleTaskBodySchema = z.object({
-  due_at: z.string().datetime({ message: "due_at must be an ISO datetime" }).nullable(),
+  due_at: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "due_at must be YYYY-MM-DD")
+    .nullable(),
 });
 export type RescheduleTaskBody = z.infer<typeof RescheduleTaskBodySchema>;
 

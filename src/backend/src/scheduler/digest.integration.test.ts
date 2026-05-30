@@ -60,7 +60,7 @@ function addUser(db: Db, overrides: Partial<typeof schema.users.$inferInsert> = 
   return id;
 }
 
-function addDueTask(db: Db, userId: string, title: string, dueAt: Date): void {
+function addDueTask(db: Db, userId: string, title: string, dueAt: string): void {
   db.insert(schema.tasks)
     .values({
       id: randomUUID(),
@@ -95,7 +95,7 @@ describe("runDigestTick", () => {
 
   it("sends a digest to an eligible user at their time and records the date", async () => {
     const userId = addUser(db);
-    addDueTask(db, userId, "take out trash", new Date("2026-05-29T00:00:00Z"));
+    addDueTask(db, userId, "take out trash", "2026-05-29");
 
     await runDigestTick(db, fakeClient({ sent }), NOW);
 
@@ -110,7 +110,7 @@ describe("runDigestTick", () => {
 
   it("does not send twice the same day (restart idempotency)", async () => {
     const userId = addUser(db);
-    addDueTask(db, userId, "take out trash", new Date("2026-05-29T00:00:00Z"));
+    addDueTask(db, userId, "take out trash", "2026-05-29");
 
     await runDigestTick(db, fakeClient({ sent }), NOW);
     // Simulate a restart at 08:00:30 — same minute, same day.
@@ -130,7 +130,7 @@ describe("runDigestTick", () => {
 
   it("skips users whose time does not match the current minute", async () => {
     const userId = addUser(db, { notification_time: "09:00" });
-    addDueTask(db, userId, "take out trash", new Date("2026-05-29T00:00:00Z"));
+    addDueTask(db, userId, "take out trash", "2026-05-29");
 
     await runDigestTick(db, fakeClient({ sent }), NOW);
 
@@ -141,7 +141,7 @@ describe("runDigestTick", () => {
 
   it("leaves the date unset on send failure so it retries tomorrow", async () => {
     const userId = addUser(db);
-    addDueTask(db, userId, "take out trash", new Date("2026-05-29T00:00:00Z"));
+    addDueTask(db, userId, "take out trash", "2026-05-29");
 
     await runDigestTick(
       db,
@@ -157,8 +157,8 @@ describe("runDigestTick", () => {
   it("skips users with notifications disabled or no target", async () => {
     const a = addUser(db, { notify_digest_enabled: false });
     const b = addUser(db, { notification_service: null });
-    addDueTask(db, a, "task a", new Date("2026-05-29T00:00:00Z"));
-    addDueTask(db, b, "task b", new Date("2026-05-29T00:00:00Z"));
+    addDueTask(db, a, "task a", "2026-05-29");
+    addDueTask(db, b, "task b", "2026-05-29");
 
     await runDigestTick(db, fakeClient({ sent }), NOW);
 

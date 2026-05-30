@@ -56,13 +56,16 @@ If you're considering reaching for something not on this list, pause and check w
 
 - Use Drizzle's typed query builder for everything.
 - The `sql` template tag is allowed for queries the builder can't express cleanly. **Never** concatenate strings into SQL.
-- Migrations are append-only and committed. Never edit a migration after it's been merged.
+- Migrations are append-only and committed. Never edit a migration after it's been merged. To generate one, follow `src/backend/drizzle/README.md` — in a non-interactive shell use `yarn workspace @teko/backend db:generate:auto`, then review the SQL by hand.
 - Soft-delete patterns where appropriate (users, tasks). Don't hard-delete data that history references.
 
 ### Dates and times
 
+- **Task date fields (`due_at`, `cycle_due_at`) are `YYYY-MM-DD` strings.** Not datetimes. Use `date-fns` `parseISO`/`format` helpers at display boundaries; never store or pass as `Date` objects.
+- **"Today" in task-date comparisons:** frontend uses `format(new Date(), 'yyyy-MM-dd')` (local date); backend routes use `getNow().toISOString().slice(0, 10)` (UTC date); scheduler uses `localDateKey(now, tz)` (household timezone). The household timezone governs notification scheduling **only**.
+- **Completion timestamps (`completed_at`, `completed_at`) remain UTC datetimes.** They record moments, not dates.
 - **Use `date-fns` for all date math.** Never use native `Date` arithmetic (`+`, `-`, comparisons with `getTime()` for math).
-- **All timestamps stored in UTC.** Convert for display only.
+- **All moment-in-time timestamps stored in UTC.** Convert for display only.
 - **Recurrence math goes through `rrule.js`.** Don't roll your own.
 
 ### React / frontend

@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { format } from "date-fns";
 import { z } from "zod";
 import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
@@ -75,7 +74,7 @@ export function AddTaskModal({
 
   const [taskType, setTaskType] = useState<TaskType>(defaultType);
   const [assigneeId, setAssigneeId] = useState<string>("__me__");
-  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [startDate, setStartDate] = useState<string | null>(null);
   const [windowDays, setWindowDays] = useState<number>(0);
   const [recurrence, setRecurrence] = useState<RecurrenceValue>({
     rule: null,
@@ -129,7 +128,7 @@ export function AddTaskModal({
         assignee_id: resolvedAssignee,
         ...(taskType === "date" && startDate
           ? {
-              start_date: format(startDate, "yyyy-MM-dd"),
+              start_date: startDate,
               completion_window_days: windowDays > 0 ? windowDays : undefined,
             }
           : {}),
@@ -138,7 +137,7 @@ export function AddTaskModal({
               recurrence_rule: recurrence.rule ?? undefined,
               recurrence_mode: recurrence.rule ? recurrence.mode : undefined,
               completion_window_days: recurrence.windowDays ?? undefined,
-              ...(startDate ? { start_date: format(startDate, "yyyy-MM-dd") } : {}),
+              ...(startDate ? { start_date: startDate } : {}),
             }
           : {}),
       });

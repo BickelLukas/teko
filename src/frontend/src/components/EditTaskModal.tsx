@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { format, parseISO } from "date-fns";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
   const [assigneeId, setAssigneeId] = useState<string>(task.assignee_id ?? "__unassigned__");
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(recurrenceFromTask(task));
   const [showRecurrence, setShowRecurrence] = useState(task.recurrence_rule !== null);
-  const [dueAt, setDueAt] = useState<Date | null>(task.due_at ? new Date(task.due_at) : null);
+  const [dueAt, setDueAt] = useState<string | null>(task.due_at ?? null);
   const [windowDays, setWindowDays] = useState<number>(task.completion_window_days ?? 0);
   const [selectedTags, setSelectedTags] = useState<TagResponse[]>(task.tags);
 
@@ -74,7 +75,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
       setAssigneeId(task.assignee_id ?? "__unassigned__");
       setRecurrence(recurrenceFromTask(task));
       setShowRecurrence(task.recurrence_rule !== null);
-      setDueAt(task.due_at ? new Date(task.due_at) : null);
+      setDueAt(task.due_at ?? null);
       setWindowDays(task.completion_window_days ?? 0);
       setSelectedTags(task.tags);
     }
@@ -88,7 +89,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
         title: data.title,
         description: data.description ?? null,
         assignee_id: resolvedAssignee,
-        due_at: recurrence.rule === null ? (dueAt?.toISOString() ?? null) : undefined,
+        due_at: recurrence.rule === null ? (dueAt ?? null) : undefined,
         completion_window_days:
           recurrence.rule === null
             ? dueAt !== null
@@ -171,7 +172,10 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   {t("edit_task.scheduled_for")}
                 </label>
-                <DatePicker value={dueAt} onChange={setDueAt} />
+                <DatePicker
+                  value={dueAt ? parseISO(dueAt) : null}
+                  onChange={(d) => setDueAt(d ? format(d, "yyyy-MM-dd") : null)}
+                />
                 {dueAt === null && (
                   <p className="mt-1 text-xs text-muted-foreground/60">
                     {t("add_task.no_date_hint")}

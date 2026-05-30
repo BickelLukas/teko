@@ -108,13 +108,13 @@ export async function completeTask(id: string): Promise<CompleteTaskResult> {
   return json(await apiFetch(`/api/tasks/${id}/complete`, { method: "POST" }));
 }
 
-/** Sets due_at to a new date, or null to move the task to Someday. */
-export async function rescheduleTask(id: string, dueAt: Date | null): Promise<void> {
+/** Sets due_at to a YYYY-MM-DD date string, or null to move the task to Someday. */
+export async function rescheduleTask(id: string, dueAt: string | null): Promise<void> {
   await throwIfNotOk(
     await apiFetch(`/api/tasks/${id}/reschedule`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ due_at: dueAt ? dueAt.toISOString() : null }),
+      body: JSON.stringify({ due_at: dueAt }),
     }),
   );
 }

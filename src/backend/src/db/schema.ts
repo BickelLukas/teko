@@ -59,10 +59,9 @@ export const tasks = sqliteTable("tasks", {
     enum: ["fixed", "after_completion"],
   }),
   completion_window_days: integer("completion_window_days"),
-  due_at: integer("due_at", { mode: "timestamp_ms" }),
+  due_at: text("due_at"),
   points: integer("points"),
   exposed_to_ha: integer("exposed_to_ha", { mode: "boolean" }).notNull().default(false),
-  is_household: integer("is_household", { mode: "boolean" }).notNull().default(false),
 });
 
 export const streaks = sqliteTable(
@@ -93,7 +92,7 @@ export const completions = sqliteTable("completions", {
   completed_at: integer("completed_at", { mode: "timestamp_ms" }).notNull(),
   was_on_time: integer("was_on_time", { mode: "boolean" }),
   points_awarded: integer("points_awarded"),
-  cycle_due_at: integer("cycle_due_at", { mode: "timestamp_ms" }),
+  cycle_due_at: text("cycle_due_at"),
   notes: text("notes"),
 });
 

@@ -36,7 +36,7 @@ export function filterEveningTasks(
   const result: EveningReminderTask[] = [];
 
   for (const task of tasks) {
-    const state = computeTaskState(task, now);
+    const state = computeTaskState(task, today);
     if (state === "archived" || state === "done" || state === "not_yet") continue;
 
     if (state === "overdue") {
@@ -48,7 +48,7 @@ export function filterEveningTasks(
       // Include only when the deadline is today. Eligible tasks with future
       // due_at still have window flexibility — surfacing them defeats the
       // calm-by-default window design.
-      if (localDateKey(task.due_at, timeZone) === today) {
+      if (task.due_at === today) {
         result.push({ title: task.title });
       }
     }

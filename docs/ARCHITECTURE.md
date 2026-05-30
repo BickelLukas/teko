@@ -138,8 +138,10 @@ The recurrence logic is the most subtle piece of domain code. Principles to pres
 
 - **Two modes, one engine.** Fixed schedule and after-completion are toggled per task, not implemented as separate code paths.
 - **Same library, both runtimes.** `rrule.js` runs on backend (computing due dates) and frontend (describing rules to humans). No second implementation to drift.
-- **State is derived, then cached.** A task's `not_yet | eligible | planned | overdue` state is computed from timestamps; the cached value is recomputed by the scheduler tick and on every state-mutating action.
+- **Task dates are date-only strings.** `due_at` and `cycle_due_at` are stored as `YYYY-MM-DD` strings. The recurrence engine produces date strings, not datetimes. `computeNextDueAt` returns a `string`; `computeTaskState` takes `today: string` and compares lexicographically. No timezone math in date logic; see ADR-0009.
+- **State is derived, then cached.** A task's `not_yet | eligible | overdue` state is computed from the date string; the cached value is recomputed by the scheduler tick and on every state-mutating action.
 - **Completion windows are first-class.** A zero-width window is the strict "due today" behaviour; non-zero windows are the calm default for infrequent chores. See `PRODUCT.md` for the user-facing model.
+- **Completion timestamps stay UTC datetimes.** `completions.completed_at` records when something happened — a moment in time — and is not affected by the date-only change.
 
 Implementation lives in the backend's domain module and is heavily unit-tested. Tests are the spec.
 

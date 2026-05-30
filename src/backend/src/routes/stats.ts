@@ -106,7 +106,7 @@ const stats: FastifyPluginAsync = async (fastify) => {
       .map((s) => {
         const task = taskMap.get(s.task_id);
         if (!task) return null;
-        const state = computeTaskState(task, now);
+        const state = computeTaskState(task, now.toISOString().slice(0, 10));
         const normalizedState =
           state === "archived" || state === "done" ? ("eligible" as const) : state;
         const { at_risk } = isStreakActive(s.current_length, normalizedState);

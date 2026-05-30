@@ -45,15 +45,15 @@ The atomic unit. Everything in Teko is a task. A task has:
 - A **title** (required, short)
 - An optional **description**
 - An optional **assignee** (a household member)
-- An optional **scheduled date** (`planned_for`; if set, the task is active and appears in Today on that date)
+- An optional **due date** (`due_at`; if set, the task is active and surfaces in Today around the due date)
 - An optional **recurrence rule** (if set, the task is a *chore*; if not, it's a one-off)
 - A **completion history** (every time it was completed, by whom, when)
-- A **state**: open, completed, snoozed, or archived
+- A **state**: not_yet, eligible, overdue, done, or archived (see ADR-0007)
 
 The **type** of a task is derived from its fields:
 - Recurring rule set → **Chore**
-- No recurring rule, scheduled date set → **Active one-off** (appears in Today)
-- No recurring rule, no scheduled date, not archived → **Someday item** (appears in Someday list)
+- No recurring rule, due_at set → **Active one-off** (appears in Today)
+- No recurring rule, no due_at, not archived → **Someday item** (appears in Someday list)
 
 Tasks may also have tags and a "household" vs "personal" flag for shared vs individual chores.
 
@@ -143,13 +143,13 @@ These are the user experiences Teko is built to deliver. They drive the prioriti
 2. **As a household member, I want to quickly add a new task without filling out a long form** — title, maybe assignee, done.
 3. **As a household member, I can mark a chore done from a push notification without opening the app.**
 4. **As a household member, I can see my current streaks on the chores I care about** — they're a quiet pat on the back, not a competition.
-5. **As a household member, I can snooze a chore that's due today** because life happens, without breaking my streak.
+5. **As a household member, I can reschedule a chore** — move the due date earlier or later — because life happens, without breaking my streak.
 
 ### Recurring chores
 
 6. **As a household member, I can set up a chore that recurs on a fixed schedule** (rent on the 1st) or based on when it was last done (vacuum every 7 days).
-7. **As a household member, I can set how long I have to complete a chore once it becomes due**, so infrequent chores don't pressure me to do them on a specific day.
-8. **As a household member, I can schedule an eligible chore for a specific date** within its window — "I'll trim the bushes next Saturday" — and get reminded then.
+7. **As a household member, I can set how many days before the due date a chore becomes visible**, so infrequent chores appear in my feed with enough lead time.
+8. **As a household member, I can reschedule a chore to any date** — earlier or later — "I'll trim the bushes next Saturday instead."
 9. **As a household member, I can assign a chore to a specific person, or leave it unassigned** so whoever picks it up gets credit.
 10. **As a household member, I can rotate a chore between household members** so we take turns.
 

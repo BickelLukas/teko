@@ -164,6 +164,7 @@ Scripts are defined in the root `package.json` and individual workspace
 Key entry points to know:
 - `yarn dev` — local development (backend + frontend)
 - `yarn test` — run all tests
+- `yarn lint` — run linter
 - `yarn build` — production build
 
 For anything else, check `package.json`.

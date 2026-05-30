@@ -39,7 +39,6 @@ export function ChoresPage() {
 
   const overdue = chores.filter((t) => t.state === "overdue");
   const eligible = chores.filter((t) => t.state === "eligible");
-  const planned = chores.filter((t) => t.state === "planned");
   const notYet = chores.filter((t) => t.state === "not_yet");
 
   const displayName = me?.display_name ?? me?.name ?? t("common:person.me_short");
@@ -95,9 +94,6 @@ export function ChoresPage() {
       )}
       {eligible.length > 0 && (
         <ChoreSection title={t("pages:chores.sections.eligible")} tasks={eligible} />
-      )}
-      {planned.length > 0 && (
-        <ChoreSection title={t("pages:chores.sections.planned")} tasks={planned} />
       )}
       {notYet.length > 0 && (
         <ChoreSection title={t("pages:chores.sections.coming_up")} tasks={notYet} muted />

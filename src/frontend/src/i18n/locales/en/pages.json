@@ -25,7 +25,6 @@
     "sections": {
       "overdue": "Overdue",
       "eligible": "Eligible now",
-      "planned": "Planned",
       "coming_up": "Coming up"
     }
   },

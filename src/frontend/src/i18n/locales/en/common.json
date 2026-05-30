@@ -9,8 +9,7 @@
   },
   "actions": {
     "mark_done": "Mark done",
-    "snooze": "Snooze",
-    "schedule": "Schedule",
+    "reschedule": "Reschedule",
     "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving…",
@@ -26,7 +25,6 @@
   "states": {
     "overdue": "Overdue",
     "eligible": "Eligible",
-    "planned": "Planned",
     "not_yet": "Not yet",
     "done": "Done"
   },
@@ -50,13 +48,12 @@
     "you": "you",
     "me_short": "Me"
   },
-  "snooze_options": {
-    "one_hour": "1 hour",
-    "tomorrow": "Until tomorrow",
-    "next_week": "Until next week"
+  "reschedule_panel": {
+    "title": "Reschedule:",
+    "no_date": "No date (Someday)"
   },
   "schedule_panel": {
-    "title": "Schedule for:",
+    "title": "Reschedule:",
     "today": "Today",
     "tomorrow": "Tomorrow",
     "in_3_days": "In 3 days",
@@ -87,10 +84,7 @@
     "archive_confirm_body_with_children": "This task will be archived.",
     "state_badge": {
       "due": "Due {{time}}",
-      "do_until": "Do any time until {{date}}",
       "ready": "Ready to do",
-      "planned_for": "Planned for {{date}}",
-      "plan_passed": "(plan date passed)",
       "overdue_by": "Overdue by {{time}}"
     },
     "milestone": "{{count}}-day streak on {{title}} 🔥"
@@ -144,7 +138,7 @@
     "after_completion_title": "After completion",
     "after_completion_description": "Due N days/months after it was last completed",
     "after_completion_desc": "Every {{unit}} after last completion",
-    "window_label": "Completion window — how long do you have once it's due?",
+    "window_label": "Lead time — how many days in advance should this appear?",
     "window_days": "days",
     "window_zero_hint": "(due on the day only)"
   },

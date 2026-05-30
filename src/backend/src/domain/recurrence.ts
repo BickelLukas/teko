@@ -46,47 +46,39 @@ function computeAfterCompletionNext(rule: RRule, base: Date): Date {
 }
 
 /**
- * Exclusive upper bound of the completion window.
- * A completion timestamped before this value is on time; at or after is overdue.
+ * Inclusive lower bound of the eligibility window.
+ * The task becomes visible/eligible this many days before due_at.
  */
-export function computeWindowEnd(nextDueAt: Date, windowDays: number): Date {
-  return addDaysUTC(startOfDayUTC(nextDueAt), windowDays + 1);
+export function computeEligibleStart(dueAt: Date, windowDays: number): Date {
+  return addDaysUTC(startOfDayUTC(dueAt), -windowDays);
 }
 
 // ── Domain types ──────────────────────────────────────────────────────────────
 
-export type ComputedTaskState =
-  | "not_yet"
-  | "eligible"
-  | "planned"
-  | "overdue"
-  | "done"
-  | "archived";
+export type ComputedTaskState = "not_yet" | "eligible" | "overdue" | "done" | "archived";
 
 type TaskForNextDue = {
   recurrence_rule: string | null;
   recurrence_mode: "fixed" | "after_completion" | null;
-  next_due_at: Date | null;
+  due_at: Date | null;
 };
 
 type TaskForState = {
   archived_at: Date | null;
-  state: "not_yet" | "eligible" | "planned" | "overdue" | "done";
+  state: "not_yet" | "eligible" | "overdue" | "done";
   recurrence_rule: string | null;
-  next_due_at: Date | null;
+  due_at: Date | null;
   completion_window_days: number | null;
-  planned_for: Date | null;
 };
 
 type TaskForWindow = {
-  next_due_at: Date | null;
-  completion_window_days: number | null;
+  due_at: Date | null;
 };
 
 // ── Pure domain functions ─────────────────────────────────────────────────────
 
 /**
- * Returns the next next_due_at for a recurring task.
+ * Returns the next due_at for a recurring task.
  * Pass null for lastCompletedAt on creation (first scheduling).
  */
 export function computeNextDueAt(
@@ -126,6 +118,14 @@ export function computeNextDueAt(
  * Derives the current task state from timestamps.
  * The returned value may be "archived" even though the DB schema stores
  * archived state via the archived_at column rather than the state column.
+ *
+ * State rules (see ADR-0007):
+ *   not_yet:  now < due_at − completion_window_days
+ *   eligible: due_at − completion_window_days ≤ now < start-of-day(due_at) + 1 day
+ *   overdue:  now ≥ start-of-day(due_at) + 1 day
+ *
+ * Due dates are day-granular (stored at midnight UTC). A task remains eligible
+ * for the entire due day; it only becomes overdue the day after due_at.
  */
 export function computeTaskState(task: TaskForState, now: Date): ComputedTaskState {
   if (task.archived_at !== null) return "archived";
@@ -135,40 +135,29 @@ export function computeTaskState(task: TaskForState, now: Date): ComputedTaskSta
 
   const nowMs = now.getTime();
 
-  // no due date: one-off task, may still have a planned_for date
-  if (task.next_due_at === null) {
-    if (task.planned_for !== null && task.planned_for.getTime() >= nowMs) return "planned";
-    return "eligible";
-  }
-
-  const nextDueMs = task.next_due_at.getTime();
-
-  if (nowMs < nextDueMs) return "not_yet";
+  // no due date: Someday or recurring with no due yet — treat as eligible
+  if (task.due_at === null) return "eligible";
 
   const windowDays = task.completion_window_days ?? 0;
-  const windowEndMs = computeWindowEnd(task.next_due_at, windowDays).getTime();
+  const eligibleStartMs = computeEligibleStart(task.due_at, windowDays).getTime();
+  // Overdue begins the day after due_at (task is eligible for the whole due day)
+  const overdueSinceMs = addDaysUTC(startOfDayUTC(task.due_at), 1).getTime();
 
-  if (nowMs >= windowEndMs) return "overdue";
-
-  // within window — check if a future planned date is set
-  if (task.planned_for !== null && task.planned_for.getTime() >= nowMs) return "planned";
-
+  if (nowMs < eligibleStartMs) return "not_yet";
+  if (nowMs >= overdueSinceMs) return "overdue";
   return "eligible";
 }
 
 /**
- * Returns true if completedAt is within the task's completion window.
- * Early completion (before next_due_at) is treated as on-time: paying rent
- * a day early or finishing a snoozed chore ahead of plan should not reset
- * the streak.
+ * Returns true if completedAt is on-time: before the start of the day after due_at.
+ * This mirrors the day-granular due model — completing anytime on the due day is on-time.
+ * Early completion (before the eligibility window opens) is also on-time.
+ * Tasks with no due_at are always on-time.
  */
-export function isWithinCompletionWindow(task: TaskForWindow, completedAt: Date): boolean {
-  if (task.next_due_at === null) return true;
-
-  const completedMs = completedAt.getTime();
-  const windowDays = task.completion_window_days ?? 0;
-
-  return completedMs < computeWindowEnd(task.next_due_at, windowDays).getTime();
+export function isOnTime(task: TaskForWindow, completedAt: Date): boolean {
+  if (task.due_at === null) return true;
+  const overdueSince = addDaysUTC(startOfDayUTC(task.due_at), 1);
+  return completedAt.getTime() < overdueSince.getTime();
 }
 
 /**
@@ -208,7 +197,9 @@ export function describeRecurrence(ruleStr: string, mode: "fixed" | "after_compl
 }
 
 /**
- * Suggests a default completion window (in days) based on the recurrence cadence.
+ * Suggests a default completion window (lead days before due) based on the
+ * recurrence cadence. Longer cadences get more lead time so the task surfaces
+ * in the user's feed well before the deadline.
  */
 export function suggestCompletionWindow(ruleStr: string): number {
   const rule = parseRuleWithEarlyDtstart(ruleStr);

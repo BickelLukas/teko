@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   computeNextDueAt,
   computeTaskState,
-  isWithinCompletionWindow,
+  isOnTime,
   suggestCompletionWindow,
   describeRecurrence,
 } from "./recurrence.js";
@@ -27,7 +27,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: MONTHLY_1ST,
         recurrence_mode: "fixed" as const,
-        next_due_at: utc(2024, 2, 1),
+        due_at: utc(2024, 2, 1),
       };
       const result = computeNextDueAt(task, utc(2024, 2, 15), utc(2024, 2, 15));
       expect(result).toEqual(utc(2024, 3, 1));
@@ -37,7 +37,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: MONTHLY_1ST,
         recurrence_mode: "fixed" as const,
-        next_due_at: utc(2024, 2, 1),
+        due_at: utc(2024, 2, 1),
       };
       const result = computeNextDueAt(task, utc(2024, 2, 1), utc(2024, 2, 1));
       expect(result).toEqual(utc(2024, 3, 1));
@@ -47,7 +47,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: MONTHLY_1ST,
         recurrence_mode: "fixed" as const,
-        next_due_at: null,
+        due_at: null,
       };
       const result = computeNextDueAt(task, null, utc(2024, 2, 5));
       expect(result).toEqual(utc(2024, 3, 1));
@@ -57,7 +57,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: MONTHLY_1ST,
         recurrence_mode: "fixed" as const,
-        next_due_at: null,
+        due_at: null,
       };
       const result = computeNextDueAt(task, null, utc(2024, 3, 1));
       expect(result).toEqual(utc(2024, 3, 1));
@@ -69,7 +69,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: WEEKLY_7,
         recurrence_mode: "fixed" as const,
-        next_due_at: utc(2024, 1, 8),
+        due_at: utc(2024, 1, 8),
       };
       const result = computeNextDueAt(task, utc(2024, 1, 8), utc(2024, 1, 8));
       expect(result).toEqual(utc(2024, 1, 15));
@@ -82,7 +82,7 @@ describe("computeNextDueAt", () => {
         const task = {
           recurrence_rule: "RRULE:FREQ=DAILY",
           recurrence_mode: "fixed" as const,
-          next_due_at: null,
+          due_at: null,
         };
         const result = computeNextDueAt(task, null, utc(2024, 5, 15, 14, 30));
         expect(result).toEqual(utc(2024, 5, 15));
@@ -92,7 +92,7 @@ describe("computeNextDueAt", () => {
         const task = {
           recurrence_rule: "RRULE:FREQ=DAILY;INTERVAL=3",
           recurrence_mode: "fixed" as const,
-          next_due_at: null,
+          due_at: null,
         };
         const result = computeNextDueAt(task, null, utc(2024, 5, 15, 9, 0));
         expect(result).toEqual(utc(2024, 5, 15));
@@ -102,7 +102,7 @@ describe("computeNextDueAt", () => {
         const task = {
           recurrence_rule: "RRULE:FREQ=YEARLY",
           recurrence_mode: "fixed" as const,
-          next_due_at: null,
+          due_at: null,
         };
         const result = computeNextDueAt(task, null, utc(2024, 5, 15, 9, 0));
         expect(result).toEqual(utc(2024, 5, 15));
@@ -113,7 +113,7 @@ describe("computeNextDueAt", () => {
         const task = {
           recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=MO",
           recurrence_mode: "fixed" as const,
-          next_due_at: null,
+          due_at: null,
         };
         const result = computeNextDueAt(task, null, utc(2024, 5, 14, 14, 0));
         expect(result).toEqual(utc(2024, 5, 20));
@@ -124,7 +124,7 @@ describe("computeNextDueAt", () => {
         const task = {
           recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=MO",
           recurrence_mode: "fixed" as const,
-          next_due_at: null,
+          due_at: null,
         };
         const result = computeNextDueAt(task, null, utc(2024, 5, 20, 14, 0));
         expect(result).toEqual(utc(2024, 5, 20));
@@ -137,7 +137,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: WEEKLY_7,
         recurrence_mode: "after_completion" as const,
-        next_due_at: utc(2024, 1, 1),
+        due_at: utc(2024, 1, 1),
       };
       const result = computeNextDueAt(task, utc(2024, 1, 1), utc(2024, 1, 1));
       expect(result).toEqual(utc(2024, 1, 8));
@@ -147,7 +147,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: MONTHLY_6,
         recurrence_mode: "after_completion" as const,
-        next_due_at: utc(2024, 4, 1),
+        due_at: utc(2024, 4, 1),
       };
       const result = computeNextDueAt(task, utc(2024, 10, 15), utc(2024, 10, 15));
       expect(result).toEqual(utc(2025, 4, 15));
@@ -157,7 +157,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: "RRULE:FREQ=MONTHLY;INTERVAL=1",
         recurrence_mode: "after_completion" as const,
-        next_due_at: null,
+        due_at: null,
       };
       const result = computeNextDueAt(task, utc(2025, 1, 31), utc(2025, 1, 31));
       expect(result).toEqual(utc(2025, 2, 28));
@@ -167,7 +167,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: "RRULE:FREQ=MONTHLY;INTERVAL=1",
         recurrence_mode: "after_completion" as const,
-        next_due_at: null,
+        due_at: null,
       };
       const result = computeNextDueAt(task, utc(2024, 1, 31), utc(2024, 1, 31));
       expect(result).toEqual(utc(2024, 2, 29));
@@ -177,7 +177,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: WEEKLY_7,
         recurrence_mode: "after_completion" as const,
-        next_due_at: null,
+        due_at: null,
       };
       const result = computeNextDueAt(task, null, utc(2024, 1, 1));
       expect(result).toEqual(utc(2024, 1, 1));
@@ -188,7 +188,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: WEEKLY_7,
         recurrence_mode: "after_completion" as const,
-        next_due_at: null,
+        due_at: null,
       };
       const result = computeNextDueAt(task, utc(2024, 1, 1, 14, 30), utc(2024, 1, 1, 14, 30));
       expect(result).toEqual(utc(2024, 1, 8));
@@ -198,7 +198,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: YEARLY,
         recurrence_mode: "after_completion" as const,
-        next_due_at: null,
+        due_at: null,
       };
       const result = computeNextDueAt(task, utc(2024, 3, 15), utc(2024, 3, 15));
       expect(result).toEqual(utc(2025, 3, 15));
@@ -213,7 +213,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: WEEKLY_7,
         recurrence_mode: "fixed" as const,
-        next_due_at: null,
+        due_at: null,
       };
       const result = computeNextDueAt(task, null, utc(2024, 2, 11));
       expect(result).toEqual(utc(2024, 2, 12));
@@ -223,7 +223,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: WEEKLY_7,
         recurrence_mode: "fixed" as const,
-        next_due_at: null,
+        due_at: null,
       };
       const result = computeNextDueAt(task, null, utc(2024, 2, 12));
       expect(result).toEqual(utc(2024, 2, 12));
@@ -233,7 +233,7 @@ describe("computeNextDueAt", () => {
       const task = {
         recurrence_rule: MONTHLY_1ST,
         recurrence_mode: "fixed" as const,
-        next_due_at: null,
+        due_at: null,
       };
       const result = computeNextDueAt(task, null, utc(2024, 3, 15));
       expect(result).toEqual(utc(2024, 4, 1));
@@ -241,57 +241,55 @@ describe("computeNextDueAt", () => {
   });
 
   it("throws when no recurrence_rule", () => {
-    const task = { recurrence_rule: null, recurrence_mode: "fixed" as const, next_due_at: null };
+    const task = { recurrence_rule: null, recurrence_mode: "fixed" as const, due_at: null };
     expect(() => computeNextDueAt(task, null, new Date())).toThrow();
   });
 });
 
 // ── computeTaskState ──────────────────────────────────────────────────────────
+//
+// New semantics (ADR-0007): completion_window_days = lead days BEFORE due_at.
+//   not_yet:  now < due_at - window
+//   eligible: due_at - window ≤ now ≤ due_at
+//   overdue:  now > due_at
 
 describe("computeTaskState", () => {
-  // trim-bushes scenario: due Oct 1, window = 30 days
+  // trim-bushes scenario: due Oct 1, window = 30 days lead
+  //   → eligible from Sep 1 through Oct 1
+  //   → not_yet before Sep 1
+  //   → overdue after Oct 1
   const bushTask = {
     archived_at: null,
     state: "not_yet" as const,
     recurrence_rule: MONTHLY_6,
-    next_due_at: utc(2024, 10, 1),
+    due_at: utc(2024, 10, 1),
     completion_window_days: 30,
-    planned_for: null,
   };
 
-  it("before due → not_yet", () => {
-    expect(computeTaskState(bushTask, utc(2024, 9, 30, 23, 59, 59))).toBe("not_yet");
+  it("before eligible window → not_yet", () => {
+    // Aug 31 is before Sep 1 (the start of the 30-day lead window)
+    expect(computeTaskState(bushTask, utc(2024, 8, 31, 23, 59, 59))).toBe("not_yet");
   });
 
-  it("on due date → eligible", () => {
-    expect(computeTaskState(bushTask, utc(2024, 10, 1, 0, 0, 0))).toBe("eligible");
+  it("first day of eligible window (Sep 1) → eligible", () => {
+    expect(computeTaskState(bushTask, utc(2024, 9, 1, 0, 0, 0))).toBe("eligible");
   });
 
-  it("mid-window → eligible", () => {
-    expect(computeTaskState(bushTask, utc(2024, 10, 15))).toBe("eligible");
+  it("mid-window (Sep 15) → eligible", () => {
+    expect(computeTaskState(bushTask, utc(2024, 9, 15))).toBe("eligible");
   });
 
-  it("last day of window (Oct 31) → eligible", () => {
-    expect(computeTaskState(bushTask, utc(2024, 10, 31, 23, 59, 59))).toBe("eligible");
+  it("on due date (Oct 1) → eligible", () => {
+    expect(computeTaskState(bushTask, utc(2024, 10, 1, 23, 59, 59))).toBe("eligible");
   });
 
-  it("day after window end (Nov 1) → overdue", () => {
-    expect(computeTaskState(bushTask, utc(2024, 11, 1, 0, 0, 0))).toBe("overdue");
-  });
-
-  it("planned future date → planned", () => {
-    const task = { ...bushTask, planned_for: utc(2024, 10, 20) };
-    expect(computeTaskState(task, utc(2024, 10, 10))).toBe("planned");
-  });
-
-  it("planned date in past → eligible (not planned)", () => {
-    const task = { ...bushTask, planned_for: utc(2024, 10, 20) };
-    expect(computeTaskState(task, utc(2024, 10, 21))).toBe("eligible");
+  it("day after due date (Oct 2) → overdue", () => {
+    expect(computeTaskState(bushTask, utc(2024, 10, 2, 0, 0, 0))).toBe("overdue");
   });
 
   it("archived → archived", () => {
     const task = { ...bushTask, archived_at: utc(2024, 9, 1) };
-    expect(computeTaskState(task, utc(2024, 10, 15))).toBe("archived");
+    expect(computeTaskState(task, utc(2024, 9, 15))).toBe("archived");
   });
 
   it("one-off done → done", () => {
@@ -299,57 +297,63 @@ describe("computeTaskState", () => {
       archived_at: null,
       state: "done" as const,
       recurrence_rule: null,
-      next_due_at: null,
+      due_at: null,
       completion_window_days: null,
-      planned_for: null,
     };
     expect(computeTaskState(task, new Date())).toBe("done");
   });
 
-  it("no due date → eligible (unscheduled one-off)", () => {
+  it("no due date → eligible (Someday item)", () => {
     const task = {
       archived_at: null,
       state: "eligible" as const,
       recurrence_rule: null,
-      next_due_at: null,
+      due_at: null,
       completion_window_days: null,
-      planned_for: null,
     };
     expect(computeTaskState(task, new Date())).toBe("eligible");
   });
 
-  it("one-off with future planned_for → planned", () => {
+  it("one-off with future due_at → not_yet (zero window)", () => {
     const task = {
       archived_at: null,
-      state: "planned" as const,
+      state: "not_yet" as const,
       recurrence_rule: null,
-      next_due_at: null,
-      completion_window_days: null,
-      planned_for: utc(2099, 6, 15, 12),
+      due_at: utc(2099, 6, 15),
+      completion_window_days: 0,
     };
-    expect(computeTaskState(task, utc(2024, 1, 1))).toBe("planned");
+    expect(computeTaskState(task, utc(2024, 1, 1))).toBe("not_yet");
   });
 
-  it("one-off with past planned_for → eligible", () => {
+  it("one-off due today → eligible", () => {
     const task = {
       archived_at: null,
-      state: "planned" as const,
+      state: "eligible" as const,
       recurrence_rule: null,
-      next_due_at: null,
-      completion_window_days: null,
-      planned_for: utc(2020, 1, 1, 12),
+      due_at: utc(2024, 1, 1),
+      completion_window_days: 0,
     };
-    expect(computeTaskState(task, utc(2024, 1, 1))).toBe("eligible");
+    expect(computeTaskState(task, utc(2024, 1, 1, 10))).toBe("eligible");
   });
 
-  describe("zero-width window", () => {
+  it("one-off past due date → overdue", () => {
+    const task = {
+      archived_at: null,
+      state: "overdue" as const,
+      recurrence_rule: null,
+      due_at: utc(2024, 1, 1),
+      completion_window_days: 0,
+    };
+    expect(computeTaskState(task, utc(2024, 1, 2))).toBe("overdue");
+  });
+
+  describe("zero-width window (due on the day only)", () => {
     const strictTask = {
       archived_at: null,
       state: "not_yet" as const,
       recurrence_rule: DAILY,
-      next_due_at: utc(2024, 5, 15),
+      due_at: utc(2024, 5, 15),
       completion_window_days: 0,
-      planned_for: null,
     };
 
     it("on due date → eligible", () => {
@@ -362,54 +366,41 @@ describe("computeTaskState", () => {
   });
 });
 
-// ── isWithinCompletionWindow ──────────────────────────────────────────────────
+// ── isOnTime ──────────────────────────────────────────────────────────────────
+//
+// On-time = completed at or before due_at. Lead window does not affect on-time.
 
-describe("isWithinCompletionWindow", () => {
+describe("isOnTime", () => {
   const dueOct1 = utc(2024, 10, 1);
 
-  it("window=0: completed on due date → true", () => {
-    const task = { next_due_at: dueOct1, completion_window_days: 0 };
-    expect(isWithinCompletionWindow(task, utc(2024, 10, 1, 12, 0, 0))).toBe(true);
+  it("completed on due date → true", () => {
+    const task = { due_at: dueOct1 };
+    expect(isOnTime(task, utc(2024, 10, 1, 12, 0, 0))).toBe(true);
   });
 
-  it("window=0: completed end of due day → true", () => {
-    const task = { next_due_at: dueOct1, completion_window_days: 0 };
-    expect(isWithinCompletionWindow(task, utc(2024, 10, 1, 23, 59, 59))).toBe(true);
+  it("completed end of due day → true", () => {
+    const task = { due_at: dueOct1 };
+    expect(isOnTime(task, utc(2024, 10, 1, 23, 59, 59))).toBe(true);
   });
 
-  it("window=0: completed next day → false", () => {
-    const task = { next_due_at: dueOct1, completion_window_days: 0 };
-    expect(isWithinCompletionWindow(task, utc(2024, 10, 2, 0, 0, 0))).toBe(false);
+  it("completed next day → false (overdue)", () => {
+    const task = { due_at: dueOct1 };
+    expect(isOnTime(task, utc(2024, 10, 2, 0, 0, 0))).toBe(false);
   });
 
-  it("window=30: completed on due date → true", () => {
-    const task = { next_due_at: dueOct1, completion_window_days: 30 };
-    expect(isWithinCompletionWindow(task, utc(2024, 10, 1))).toBe(true);
-  });
-
-  it("window=30: completed day 30 → true (last day)", () => {
-    const task = { next_due_at: dueOct1, completion_window_days: 30 };
-    expect(isWithinCompletionWindow(task, utc(2024, 10, 31, 23, 59, 59))).toBe(true);
-  });
-
-  it("window=30: completed Nov 1 → false (past window)", () => {
-    const task = { next_due_at: dueOct1, completion_window_days: 30 };
-    expect(isWithinCompletionWindow(task, utc(2024, 11, 1, 0, 0, 0))).toBe(false);
+  it("completed early (before due date) → true", () => {
+    const task = { due_at: dueOct1 };
+    expect(isOnTime(task, utc(2024, 9, 15))).toBe(true);
   });
 
   it("no due date → always on time", () => {
-    const task = { next_due_at: null, completion_window_days: null };
-    expect(isWithinCompletionWindow(task, new Date())).toBe(true);
+    const task = { due_at: null };
+    expect(isOnTime(task, new Date())).toBe(true);
   });
 
-  it("completed before due date → true (early completion is on time)", () => {
-    const task = { next_due_at: dueOct1, completion_window_days: 30 };
-    expect(isWithinCompletionWindow(task, utc(2024, 9, 30))).toBe(true);
-  });
-
-  it("snoozed task completed early → true", () => {
-    const task = { next_due_at: utc(2024, 12, 1), completion_window_days: 0 };
-    expect(isWithinCompletionWindow(task, utc(2024, 10, 15))).toBe(true);
+  it("completed exactly at due timestamp → true", () => {
+    const task = { due_at: dueOct1 };
+    expect(isOnTime(task, dueOct1)).toBe(true);
   });
 });
 

@@ -8,8 +8,7 @@
     "cycle_detected": "A task cannot be its own ancestor.",
     "already_completed": "This task is already completed.",
     "already_archived": "This task is already archived.",
-    "not_archivable": "Active tasks with open children cannot be archived.",
-    "snooze_past": "Snooze time must be in the future."
+    "not_archivable": "Active tasks with open children cannot be archived."
   },
   "notifications": {
     "digest": {

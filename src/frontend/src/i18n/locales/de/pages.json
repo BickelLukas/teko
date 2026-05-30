@@ -25,7 +25,6 @@
     "sections": {
       "overdue": "Überfällig",
       "eligible": "Jetzt fällig",
-      "planned": "Geplant",
       "coming_up": "Demnächst"
     }
   },

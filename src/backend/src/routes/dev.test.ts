@@ -163,7 +163,7 @@ describe("POST /api/_dev/clock", () => {
         recurrence_rule: "RRULE:FREQ=DAILY",
         recurrence_mode: "fixed",
         completion_window_days: 1,
-        next_due_at: nextDueAt,
+        due_at: nextDueAt,
       })
       .run();
 

@@ -20,8 +20,7 @@ function task(overrides: Partial<TaskRow>): TaskRow {
     recurrence_rule: null,
     recurrence_mode: null,
     completion_window_days: null,
-    next_due_at: null,
-    planned_for: null,
+    due_at: null,
     points: null,
     tags: null,
     exposed_to_ha: false,
@@ -48,8 +47,9 @@ describe("categorizeUserTasks", () => {
   const tz = "UTC";
 
   it("buckets an overdue task", () => {
+    // due May 27, window 0, now May 29 → overdue
     const result = categorizeUserTasks(
-      [task({ title: "vacuum", next_due_at: day("2026-05-27"), completion_window_days: 0 })],
+      [task({ title: "vacuum", due_at: day("2026-05-27"), completion_window_days: 0 })],
       NOW,
       tz,
     );
@@ -59,17 +59,19 @@ describe("categorizeUserTasks", () => {
   });
 
   it("a strict due-today chore (window 0) is due today", () => {
+    // due May 29, window 0, now May 29 → eligible → dueToday
     const result = categorizeUserTasks(
-      [task({ title: "trash", next_due_at: day("2026-05-29"), completion_window_days: 0 })],
+      [task({ title: "trash", due_at: day("2026-05-29"), completion_window_days: 0 })],
       NOW,
       tz,
     );
     expect(result.dueToday.map((t) => t.title)).toEqual(["trash"]);
   });
 
-  it("a chore that becomes eligible today with a window is a soft mention", () => {
+  it("a chore whose eligibility window opens today is a soft mention", () => {
+    // due Jun 12, window 14 → eligible_start = May 29 = today → newlyEligible
     const result = categorizeUserTasks(
-      [task({ title: "bushes", next_due_at: day("2026-05-29"), completion_window_days: 14 })],
+      [task({ title: "bushes", due_at: day("2026-06-12"), completion_window_days: 14 })],
       NOW,
       tz,
     );
@@ -77,9 +79,10 @@ describe("categorizeUserTasks", () => {
     expect(result.dueToday).toEqual([]);
   });
 
-  it("a chore that became eligible earlier is not repeated", () => {
+  it("a chore that became eligible earlier is not re-mentioned", () => {
+    // due Jun 10, window 14 → eligible_start = May 27 ≠ today → skipped (eligible but not surfaced)
     const result = categorizeUserTasks(
-      [task({ title: "filter", next_due_at: day("2026-05-27"), completion_window_days: 14 })],
+      [task({ title: "filter", due_at: day("2026-06-10"), completion_window_days: 14 })],
       NOW,
       tz,
     );
@@ -88,27 +91,13 @@ describe("categorizeUserTasks", () => {
     expect(result.overdue).toEqual([]);
   });
 
-  it("a task planned for today is due today even if the planned moment passed", () => {
-    const result = categorizeUserTasks(
-      [
-        task({
-          title: "dentist",
-          next_due_at: day("2026-05-20"),
-          completion_window_days: 30,
-          planned_for: new Date("2026-05-29T06:00:00Z"),
-        }),
-      ],
-      NOW,
-      tz,
-    );
-    expect(result.dueToday.map((t) => t.title)).toEqual(["dentist"]);
-  });
-
   it("ignores not-yet and done tasks", () => {
+    // not_yet: due Jun 30, window 0 → eligible_start = Jun 30 > May 29 → not_yet
+    // done: no due date, state=done, recurrence_rule=null → done
     const result = categorizeUserTasks(
       [
-        task({ title: "future", next_due_at: day("2026-06-10"), completion_window_days: 0 }),
-        task({ title: "done", state: "done", next_due_at: null }),
+        task({ title: "future", due_at: day("2026-06-30"), completion_window_days: 0 }),
+        task({ title: "done", state: "done", due_at: null }),
       ],
       NOW,
       tz,

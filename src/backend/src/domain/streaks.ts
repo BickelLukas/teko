@@ -67,7 +67,7 @@ type StreakStatus = { active: boolean; at_risk: boolean };
 
 export function isStreakActive(
   currentLength: number,
-  taskState: "not_yet" | "eligible" | "planned" | "overdue" | "done" | "archived",
+  taskState: "not_yet" | "eligible" | "overdue" | "done" | "archived",
 ): StreakStatus {
   if (currentLength === 0) return { active: false, at_risk: false };
   return { active: true, at_risk: taskState === "overdue" };

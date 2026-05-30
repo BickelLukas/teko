@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // ── Domain types ─────────────────────────────────────────────────────────────
 
-export const TaskStateSchema = z.enum(["not_yet", "eligible", "planned", "overdue", "done"]);
+export const TaskStateSchema = z.enum(["not_yet", "eligible", "overdue", "done"]);
 export type TaskState = z.infer<typeof TaskStateSchema>;
 
 export const RecurrenceModeSchema = z.enum(["fixed", "after_completion"]);
@@ -98,8 +98,7 @@ export const TaskSchema = z.object({
   recurrence_rule: z.string().nullable(),
   recurrence_mode: RecurrenceModeSchema.nullable(),
   completion_window_days: z.number().int().nullable(),
-  next_due_at: z.coerce.date().nullable(),
-  planned_for: z.coerce.date().nullable(),
+  due_at: z.coerce.date().nullable(),
   points: z.number().int().nullable(),
   tags: z.string().nullable(),
   exposed_to_ha: z.boolean(),
@@ -146,7 +145,7 @@ export const UpdateTaskBodySchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
-  planned_for: z.string().datetime().nullable().optional(),
+  due_at: z.string().datetime().nullable().optional(),
   recurrence_rule: z.string().nullable().optional(),
   recurrence_mode: RecurrenceModeSchema.nullable().optional(),
   completion_window_days: z.number().int().nonnegative().nullable().optional(),
@@ -158,20 +157,15 @@ export const CompleteTaskParamsSchema = z.object({
 });
 export type CompleteTaskParams = z.infer<typeof CompleteTaskParamsSchema>;
 
-export const ScheduleTaskBodySchema = z.object({
-  planned_for: z.string().datetime({ message: "planned_for must be an ISO datetime" }),
+export const RescheduleTaskBodySchema = z.object({
+  due_at: z.string().datetime({ message: "due_at must be an ISO datetime" }).nullable(),
 });
-export type ScheduleTaskBody = z.infer<typeof ScheduleTaskBodySchema>;
-
-export const SnoozeTaskBodySchema = z.object({
-  until: z.string().datetime({ message: "until must be an ISO datetime" }),
-});
-export type SnoozeTaskBody = z.infer<typeof SnoozeTaskBodySchema>;
+export type RescheduleTaskBody = z.infer<typeof RescheduleTaskBodySchema>;
 
 export const GetTasksQuerySchema = z.object({
   assignee: z.enum(["mine", "me", "unassigned", "all"]).or(z.string().uuid()).optional(),
-  // active (default): non-recurring tasks with a date set + all recurring tasks
-  // someday: non-recurring tasks with no date set (planned_for IS NULL AND next_due_at IS NULL)
+  // active (default): tasks with a recurrence rule or a due_at set
+  // someday: non-recurring tasks with no due_at (recurrence_rule IS NULL AND due_at IS NULL)
   // all: no scope filter (includes someday items)
   scope: z.enum(["active", "someday", "all"]).optional(),
 });
@@ -215,8 +209,7 @@ export const TaskResponseSchema = TaskSchema.pick({
   recurrence_rule: true,
   recurrence_mode: true,
   completion_window_days: true,
-  next_due_at: true,
-  planned_for: true,
+  due_at: true,
   archived_at: true,
 }).extend({
   assignee_name: z.string().nullable(),

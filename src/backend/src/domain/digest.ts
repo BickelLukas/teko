@@ -14,7 +14,7 @@ export type DigestData = {
   // Tasks genuinely due today: strict due-today chores, due-today one-offs, and
   // anything the user planned for today.
   dueToday: DigestTaskInfo[];
-  // Chores that became eligible today and have a grace window — a soft mention,
+  // Tasks whose eligibility window opened today — a soft mention,
   // not pressure. Excludes anything already in dueToday.
   newlyEligible: DigestTaskInfo[];
 };

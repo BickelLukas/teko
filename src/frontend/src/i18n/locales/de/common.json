@@ -9,8 +9,7 @@
   },
   "actions": {
     "mark_done": "Erledigt",
-    "snooze": "Zurückstellen",
-    "schedule": "Einplanen",
+    "reschedule": "Verschieben",
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Wird gespeichert…",
@@ -26,7 +25,6 @@
   "states": {
     "overdue": "Überfällig",
     "eligible": "Fällig",
-    "planned": "Geplant",
     "not_yet": "Noch nicht",
     "done": "Erledigt"
   },
@@ -50,13 +48,12 @@
     "you": "du",
     "me_short": "Ich"
   },
-  "snooze_options": {
-    "one_hour": "1 Stunde",
-    "tomorrow": "Bis morgen",
-    "next_week": "Bis nächste Woche"
+  "reschedule_panel": {
+    "title": "Verschieben auf:",
+    "no_date": "Kein Datum (Irgendwann)"
   },
   "schedule_panel": {
-    "title": "Einplanen für:",
+    "title": "Verschieben auf:",
     "today": "Heute",
     "tomorrow": "Morgen",
     "in_3_days": "In 3 Tagen",
@@ -87,10 +84,7 @@
     "archive_confirm_body_with_children": "Diese Aufgabe wird archiviert.",
     "state_badge": {
       "due": "Fällig {{time}}",
-      "do_until": "Jederzeit bis {{date}}",
       "ready": "Bereit zum Erledigen",
-      "planned_for": "Geplant für {{date}}",
-      "plan_passed": "(geplantes Datum vergangen)",
       "overdue_by": "Seit {{time}} überfällig"
     },
     "milestone": "{{count}}-Tage-Serie bei {{title}} 🔥"
@@ -144,7 +138,7 @@
     "after_completion_title": "Nach Erledigung",
     "after_completion_description": "Fällig N Tage/Monate nach der letzten Erledigung",
     "after_completion_desc": "Alle {{unit}} nach letzter Erledigung",
-    "window_label": "Erledigungsfenster — wie lange hast du Zeit, sobald es fällig ist?",
+    "window_label": "Vorlaufzeit — wie viele Tage im Voraus soll diese erscheinen?",
     "window_days": "Tage",
     "window_zero_hint": "(nur am Fälligkeitstag)"
   },

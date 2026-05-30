@@ -22,9 +22,8 @@ type AssigneeFilter = (typeof ASSIGNEE_FILTERS)[number];
 const STATE_ORDER: Record<string, number> = {
   overdue: 0,
   eligible: 1,
-  planned: 2,
-  not_yet: 3,
-  done: 4,
+  not_yet: 2,
+  done: 3,
 };
 
 export function AllTasksPage() {

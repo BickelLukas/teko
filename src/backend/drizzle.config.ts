@@ -4,4 +4,7 @@ export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle/migrations",
   dialect: "sqlite",
+  dbCredentials: {
+    url: "data/teko.db",
+  },
 });

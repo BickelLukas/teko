@@ -28,7 +28,7 @@ export async function runTick(
       and(
         isNull(schema.tasks.archived_at),
         ne(schema.tasks.state, "done"),
-        isNotNull(schema.tasks.next_due_at),
+        isNotNull(schema.tasks.due_at),
       ),
     )
     .all();
@@ -50,14 +50,8 @@ export async function runTick(
       }
 
       const updates: {
-        state: "not_yet" | "eligible" | "planned" | "overdue" | "done";
-        planned_for?: Date | null;
+        state: "not_yet" | "eligible" | "overdue" | "done";
       } = { state: computed };
-
-      // clear planned_for if the planned date has passed and state is no longer planned
-      if (task.planned_for !== null && computed !== "planned") {
-        updates.planned_for = null;
-      }
 
       db.update(schema.tasks).set(updates).where(eq(schema.tasks.id, task.id)).run();
 

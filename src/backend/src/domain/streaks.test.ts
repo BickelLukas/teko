@@ -239,12 +239,6 @@ describe("isStreakActive", () => {
     expect(result.at_risk).toBe(false);
   });
 
-  it("active when task is planned", () => {
-    const result = isStreakActive(5, "planned");
-    expect(result.active).toBe(true);
-    expect(result.at_risk).toBe(false);
-  });
-
   it("at_risk when task is overdue", () => {
     const result = isStreakActive(5, "overdue");
     expect(result.active).toBe(true);

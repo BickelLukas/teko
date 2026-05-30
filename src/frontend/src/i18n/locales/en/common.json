@@ -98,7 +98,10 @@
   "edit_task": {
     "title": "Edit task",
     "save": "Save changes",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "scheduled_for": "Scheduled for",
+    "add_recurrence": "+ Set recurrence",
+    "hide_recurrence": "Remove recurrence"
   },
   "add_task": {
     "title": "New task",

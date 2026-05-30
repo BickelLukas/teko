@@ -249,6 +249,21 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (body.data.description !== undefined) updates.description = body.data.description;
     if ("assignee_id" in body.data) updates.assignee_id = body.data.assignee_id ?? null;
 
+    if ("planned_for" in body.data) {
+      if (body.data.planned_for === null) {
+        updates.planned_for = null;
+        if (task.state !== "done") {
+          const now = getNow();
+          const recomputed = computeTaskState({ ...task, planned_for: null }, now);
+          updates.state =
+            recomputed === "archived" || recomputed === "done" ? task.state : recomputed;
+        }
+      } else if (body.data.planned_for) {
+        updates.planned_for = new Date(body.data.planned_for);
+        if (task.state !== "done") updates.state = "planned";
+      }
+    }
+
     const recurrenceRuleChanged = body.data.recurrence_rule !== undefined;
     const recurrenceModeChanged = body.data.recurrence_mode !== undefined;
     const windowChanged = body.data.completion_window_days !== undefined;

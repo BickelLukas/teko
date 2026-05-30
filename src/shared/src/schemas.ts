@@ -146,6 +146,7 @@ export const UpdateTaskBodySchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
+  planned_for: z.string().datetime().nullable().optional(),
   recurrence_rule: z.string().nullable().optional(),
   recurrence_mode: RecurrenceModeSchema.nullable().optional(),
   completion_window_days: z.number().int().nonnegative().nullable().optional(),

@@ -98,7 +98,10 @@
   "edit_task": {
     "title": "Aufgabe bearbeiten",
     "save": "Änderungen speichern",
-    "saving": "Wird gespeichert…"
+    "saving": "Wird gespeichert…",
+    "scheduled_for": "Eingeplant für",
+    "add_recurrence": "+ Wiederholung festlegen",
+    "hide_recurrence": "Wiederholung entfernen"
   },
   "add_task": {
     "title": "Neue Aufgabe",

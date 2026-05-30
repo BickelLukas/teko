@@ -106,9 +106,7 @@ function SomedayCard({ task }: { task: TaskResponse }) {
                 </DropdownMenuRoot>
               </div>
 
-              {showSchedule && (
-                <SchedulePanel task={task} onDone={() => setShowSchedule(false)} />
-              )}
+              {showSchedule && <SchedulePanel task={task} onDone={() => setShowSchedule(false)} />}
             </div>
           </div>
         </CardContent>

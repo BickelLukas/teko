@@ -181,10 +181,7 @@ export function AddTaskModal({
           </div>
 
           {/* ── Description ───────────────────────────────────────────────── */}
-          <Input
-            placeholder={t("add_task.description_placeholder")}
-            {...register("description")}
-          />
+          <Input placeholder={t("add_task.description_placeholder")} {...register("description")} />
 
           {/* ── Assignee ──────────────────────────────────────────────────── */}
           {users.length > 0 && (

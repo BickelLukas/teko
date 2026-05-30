@@ -592,7 +592,6 @@ describe("PATCH /api/tasks/:id", () => {
     });
     expect(res.statusCode).toBe(409);
   });
-
 });
 
 describe("Someday scope", () => {
@@ -612,9 +611,7 @@ describe("Someday scope", () => {
   function insertSomedayTask(title: string) {
     // A Someday item: no recurrence, no dates
     const id = randomUUID();
-    db.insert(schema.tasks)
-      .values({ id, title, created_by: userId, state: "eligible" })
-      .run();
+    db.insert(schema.tasks).values({ id, title, created_by: userId, state: "eligible" }).run();
     return id;
   }
 

@@ -87,9 +87,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
         assignee_id: resolvedAssignee,
         // Only send planned_for when there's no recurrence — for recurring tasks
         // planned_for is managed via the schedule action, not here.
-        ...(recurrence.rule === null
-          ? { planned_for: plannedFor?.toISOString() ?? null }
-          : {}),
+        ...(recurrence.rule === null ? { planned_for: plannedFor?.toISOString() ?? null } : {}),
         recurrence_rule: recurrence.rule,
         recurrence_mode: recurrence.rule ? recurrence.mode : null,
         completion_window_days: recurrence.rule ? (recurrence.windowDays ?? null) : null,
@@ -125,10 +123,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
           </div>
 
           {/* ── Description ───────────────────────────────────────────────── */}
-          <Input
-            placeholder={t("add_task.description_placeholder")}
-            {...register("description")}
-          />
+          <Input placeholder={t("add_task.description_placeholder")} {...register("description")} />
 
           {/* ── Assignee ──────────────────────────────────────────────────── */}
           {users.length > 0 && (

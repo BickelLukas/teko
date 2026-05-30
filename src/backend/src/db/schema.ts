@@ -35,7 +35,7 @@ export const tasks = sqliteTable("tasks", {
   description: text("description"),
   assignee_id: text("assignee_id").references(() => users.id, { onDelete: "set null" }),
   state: text("state", {
-    enum: ["not_yet", "eligible", "planned", "overdue", "done"],
+    enum: ["not_yet", "eligible", "overdue", "done"],
   })
     .notNull()
     .default("eligible"),
@@ -51,8 +51,7 @@ export const tasks = sqliteTable("tasks", {
     enum: ["fixed", "after_completion"],
   }),
   completion_window_days: integer("completion_window_days"),
-  next_due_at: integer("next_due_at", { mode: "timestamp_ms" }),
-  planned_for: integer("planned_for", { mode: "timestamp_ms" }),
+  due_at: integer("due_at", { mode: "timestamp_ms" }),
   points: integer("points"),
   tags: text("tags"),
   exposed_to_ha: integer("exposed_to_ha", { mode: "boolean" }).notNull().default(false),

@@ -68,7 +68,7 @@ function addDueTask(db: Db, userId: string, title: string, dueAt: Date): void {
       assignee_id: userId,
       created_by: userId,
       state: "eligible",
-      next_due_at: dueAt,
+      due_at: dueAt,
       completion_window_days: 0,
     })
     .run();

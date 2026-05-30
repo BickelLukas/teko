@@ -8,8 +8,7 @@
     "cycle_detected": "Eine Aufgabe kann nicht ihr eigener Vorfahre sein.",
     "already_completed": "Diese Aufgabe ist bereits erledigt.",
     "already_archived": "Diese Aufgabe ist bereits archiviert.",
-    "not_archivable": "Aktive Aufgaben mit offenen Unteraufgaben können nicht archiviert werden.",
-    "snooze_past": "Die Zurückstellzeit muss in der Zukunft liegen."
+    "not_archivable": "Aktive Aufgaben mit offenen Unteraufgaben können nicht archiviert werden."
   },
   "notifications": {
     "digest": {

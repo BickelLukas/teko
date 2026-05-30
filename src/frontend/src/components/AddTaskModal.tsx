@@ -74,6 +74,7 @@ export function AddTaskModal({
   const [taskType, setTaskType] = useState<TaskType>(defaultType);
   const [assigneeId, setAssigneeId] = useState<string>("__me__");
   const [startDate, setStartDate] = useState<Date | null>(null);
+  const [windowDays, setWindowDays] = useState<number>(0);
   const [recurrence, setRecurrence] = useState<RecurrenceValue>({
     rule: null,
     mode: "fixed",
@@ -96,6 +97,7 @@ export function AddTaskModal({
     setTaskType(defaultType);
     setAssigneeId("__me__");
     setStartDate(null);
+    setWindowDays(0);
     setRecurrence({ rule: null, mode: "fixed", windowDays: null });
   }
 
@@ -122,7 +124,10 @@ export function AddTaskModal({
         description: data.description,
         assignee_id: resolvedAssignee,
         ...(taskType === "date" && startDate
-          ? { start_date: format(startDate, "yyyy-MM-dd") }
+          ? {
+              start_date: format(startDate, "yyyy-MM-dd"),
+              completion_window_days: windowDays > 0 ? windowDays : undefined,
+            }
           : {}),
         ...(taskType === "recurring"
           ? {
@@ -233,15 +238,43 @@ export function AddTaskModal({
 
           {/* ── Date (on a date mode) ──────────────────────────────────────── */}
           {taskType === "date" && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                {t("add_task.when")}
-              </label>
-              <DateShortcutPicker value={startDate} onChange={setStartDate} />
-              {startDate === null && (
-                <p className="mt-1 text-xs text-muted-foreground/60">
-                  {t("add_task.no_date_hint")}
-                </p>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  {t("add_task.when")}
+                </label>
+                <DateShortcutPicker value={startDate} onChange={setStartDate} />
+                {startDate === null && (
+                  <p className="mt-1 text-xs text-muted-foreground/60">
+                    {t("add_task.no_date_hint")}
+                  </p>
+                )}
+              </div>
+              {startDate !== null && (
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">
+                    {t("recurrence.window_label")}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={365}
+                      value={windowDays}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        setWindowDays(Number.isFinite(v) && v >= 0 ? v : 0);
+                      }}
+                      className="w-24"
+                    />
+                    <span className="text-sm">{t("recurrence.window_days")}</span>
+                    {windowDays === 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        {t("recurrence.window_zero_hint")}
+                      </span>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}

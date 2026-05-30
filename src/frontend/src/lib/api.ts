@@ -102,22 +102,13 @@ export async function completeTask(id: string): Promise<CompleteTaskResult> {
   return json(await apiFetch(`/api/tasks/${id}/complete`, { method: "POST" }));
 }
 
-export async function scheduleTask(id: string, plannedFor: Date): Promise<void> {
+/** Sets due_at to a new date, or null to move the task to Someday. */
+export async function rescheduleTask(id: string, dueAt: Date | null): Promise<void> {
   await throwIfNotOk(
-    await apiFetch(`/api/tasks/${id}/schedule`, {
+    await apiFetch(`/api/tasks/${id}/reschedule`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planned_for: plannedFor.toISOString() }),
-    }),
-  );
-}
-
-export async function snoozeTask(id: string, until: Date): Promise<void> {
-  await throwIfNotOk(
-    await apiFetch(`/api/tasks/${id}/snooze`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ until: until.toISOString() }),
+      body: JSON.stringify({ due_at: dueAt ? dueAt.toISOString() : null }),
     }),
   );
 }
@@ -128,11 +119,6 @@ export async function archiveTask(id: string): Promise<void> {
 
 export async function unarchiveTask(id: string): Promise<void> {
   await throwIfNotOk(await apiFetch(`/api/tasks/${id}/unarchive`, { method: "POST" }));
-}
-
-/** Clears planned_for, moving a non-recurring scheduled task back to Someday. */
-export async function unscheduleTask(id: string): Promise<void> {
-  await throwIfNotOk(await apiFetch(`/api/tasks/${id}/unschedule`, { method: "POST" }));
 }
 
 // ── Me ────────────────────────────────────────────────────────────────────────

@@ -22,10 +22,19 @@ type AssigneeFilter = (typeof ASSIGNEE_FILTERS)[number];
 const STATE_ORDER: Record<string, number> = {
   overdue: 0,
   eligible: 1,
-  planned: 2,
-  not_yet: 3,
-  done: 4,
+  not_yet: 2,
+  done: 3,
 };
+
+function sortTasks(tasks: TaskResponse[]): TaskResponse[] {
+  return [...tasks].sort((a, b) => {
+    const sd = (STATE_ORDER[a.state] ?? 9) - (STATE_ORDER[b.state] ?? 9);
+    if (sd !== 0) return sd;
+    const ta = a.due_at ? new Date(a.due_at).getTime() : Infinity;
+    const tb = b.due_at ? new Date(b.due_at).getTime() : Infinity;
+    return ta - tb;
+  });
+}
 
 export function AllTasksPage() {
   const { t } = useTranslation(["pages", "common"]);
@@ -46,9 +55,7 @@ export function AllTasksPage() {
     queryFn: () => fetchTasks(assigneeFilter, scope),
   });
 
-  const sorted = [...tasks].sort(
-    (a: TaskResponse, b: TaskResponse) => (STATE_ORDER[a.state] ?? 9) - (STATE_ORDER[b.state] ?? 9),
-  );
+  const sorted = sortTasks(tasks);
 
   const displayName = me?.display_name ?? me?.name ?? t("common:person.me_short");
 

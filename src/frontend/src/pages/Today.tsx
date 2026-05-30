@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { isSameDay, isWithinInterval, addDays, startOfDay } from "date-fns";
 import { fetchTasks, fetchMe, fetchTodayStats, fetchMeStats } from "@/lib/api";
+import { sortByDueAt } from "@/lib/utils";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
 import { AddTaskModal } from "@/components/AddTaskModal";
@@ -27,33 +28,29 @@ function bucketTasks(tasks: TaskResponse[], now: Date): Sections {
   const comingUp: TaskResponse[] = [];
 
   for (const t of tasks) {
-    const nextDue = t.next_due_at ? new Date(t.next_due_at) : null;
-    const plannedFor = t.planned_for ? new Date(t.planned_for) : null;
+    const dueAt = t.due_at ? new Date(t.due_at) : null;
 
     if (t.state === "overdue") {
       overdue.push(t);
-    } else if (t.state === "planned") {
-      if (plannedFor && isSameDay(plannedFor, now)) {
-        todayTasks.push(t);
-      } else if (plannedFor && isWithinInterval(plannedFor, { start: today, end: inTwoDays })) {
-        comingUp.push(t);
-      } else {
-        eligible.push(t);
-      }
     } else if (t.state === "eligible") {
-      if (!nextDue || isSameDay(nextDue, now) || nextDue <= now) {
+      if (!dueAt || isSameDay(dueAt, now) || dueAt <= now) {
         todayTasks.push(t);
       } else {
         eligible.push(t);
       }
     } else if (t.state === "not_yet") {
-      if (nextDue && isWithinInterval(nextDue, { start: today, end: inTwoDays })) {
+      if (dueAt && isWithinInterval(dueAt, { start: today, end: inTwoDays })) {
         comingUp.push(t);
       }
     }
   }
 
-  return { overdue, today: todayTasks, eligible, comingUp };
+  return {
+    overdue: sortByDueAt(overdue),
+    today: sortByDueAt(todayTasks),
+    eligible: sortByDueAt(eligible),
+    comingUp: sortByDueAt(comingUp),
+  };
 }
 
 export function TodayPage() {

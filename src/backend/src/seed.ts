@@ -120,7 +120,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
     recurrence_mode: "after_completion",
     completion_window_days: 2,
-    next_due_at: today,
+    due_at: today,
     points: 1,
   })
   .run();
@@ -141,7 +141,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=MONTHLY;BYMONTHDAY=1",
     recurrence_mode: "fixed",
     completion_window_days: 3,
-    next_due_at: rentDue,
+    due_at: rentDue,
     points: 2,
   })
   .run();
@@ -161,7 +161,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=MONTHLY;INTERVAL=6",
     recurrence_mode: "after_completion",
     completion_window_days: 14,
-    next_due_at: bushesDue,
+    due_at: bushesDue,
     points: 3,
   })
   .run();
@@ -178,7 +178,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
     recurrence_mode: "after_completion",
     completion_window_days: 2,
-    next_due_at: subDays(today, 3),
+    due_at: subDays(today, 3),
     points: 1,
   })
   .run();
@@ -195,7 +195,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=WEEKLY;INTERVAL=4",
     recurrence_mode: "after_completion",
     completion_window_days: 5,
-    next_due_at: subDays(today, 1),
+    due_at: subDays(today, 1),
     points: 1,
   })
   .run();
@@ -212,7 +212,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
     recurrence_mode: "after_completion",
     completion_window_days: 1,
-    next_due_at: today,
+    due_at: today,
     points: 1,
   })
   .run();
@@ -229,7 +229,7 @@ db.insert(schema.tasks)
     recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
     recurrence_mode: "after_completion",
     completion_window_days: 2,
-    next_due_at: addDays(today, 2),
+    due_at: addDays(today, 2),
     points: 1,
   })
   .run();
@@ -245,7 +245,7 @@ db.insert(schema.tasks)
     assignee_id: aliceId,
     created_by: aliceId,
     state: "overdue",
-    next_due_at: subDays(today, 2),
+    due_at: subDays(today, 2),
     points: null,
   })
   .run();
@@ -259,7 +259,7 @@ db.insert(schema.tasks)
     assignee_id: bobId,
     created_by: bobId,
     state: "eligible",
-    next_due_at: today,
+    due_at: today,
     points: null,
   })
   .run();
@@ -273,7 +273,7 @@ db.insert(schema.tasks)
     assignee_id: charlieId,
     created_by: charlieId,
     state: "not_yet",
-    next_due_at: addDays(today, 5),
+    due_at: addDays(today, 5),
     points: null,
   })
   .run();
@@ -287,7 +287,7 @@ db.insert(schema.tasks)
     assignee_id: null,
     created_by: aliceId,
     state: "eligible",
-    next_due_at: subDays(today, 1),
+    due_at: subDays(today, 1),
     points: 1,
   })
   .run();

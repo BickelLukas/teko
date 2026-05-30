@@ -17,14 +17,10 @@ export function buildAssigneeNameMap(db: Db, assigneeIds: string[]): Map<string,
   return new Map(rows.map((r) => [r.id, r.display_name ?? r.name]));
 }
 
-/** A Someday item: non-recurring, no date set, not archived, not done. */
+/** A Someday item: non-recurring, no due date, not archived, not done. */
 function computeIsSomeday(t: typeof schema.tasks.$inferSelect): boolean {
   return (
-    t.recurrence_rule === null &&
-    t.next_due_at === null &&
-    t.planned_for === null &&
-    t.archived_at === null &&
-    t.state !== "done"
+    t.recurrence_rule === null && t.due_at === null && t.archived_at === null && t.state !== "done"
   );
 }
 
@@ -47,8 +43,7 @@ export function taskToResponse(
     recurrence_rule: t.recurrence_rule,
     recurrence_mode: t.recurrence_mode,
     completion_window_days: t.completion_window_days,
-    next_due_at: t.next_due_at,
-    planned_for: t.planned_for,
+    due_at: t.due_at,
     archived_at: t.archived_at,
     is_someday: computeIsSomeday(t),
   };

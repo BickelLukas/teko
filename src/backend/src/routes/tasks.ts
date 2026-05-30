@@ -9,15 +9,13 @@ import {
   UpdateTaskBodySchema,
   CompleteTaskParamsSchema,
   TaskIdParamsSchema,
-  ScheduleTaskBodySchema,
-  SnoozeTaskBodySchema,
+  RescheduleTaskBodySchema,
   GetTasksQuerySchema,
 } from "@teko/shared";
 import {
   computeNextDueAt,
   computeTaskState,
-  computeWindowEnd,
-  isWithinCompletionWindow,
+  isOnTime,
   suggestCompletionWindow,
 } from "../domain/recurrence.js";
 import { computeStreakUpdate, awardPoints, detectStreakMilestone } from "../domain/streaks.js";
@@ -38,10 +36,8 @@ const tasks: FastifyPluginAsync = async (fastify) => {
   // ?assignee=mine (default) | me | unassigned | all | <uuid>
   // ?scope=active (default) | someday | all
   //
-  // active:  non-archived, non-done tasks that are NOT Someday items
-  //          i.e. have a recurrence rule OR a planned date OR a next_due_at
-  // someday: non-archived, non-done tasks with no recurrence and no date set
-  //          (recurrence_rule IS NULL AND next_due_at IS NULL AND planned_for IS NULL)
+  // active:  tasks with a recurrence rule OR a due_at set
+  // someday: non-recurring tasks with no due_at (recurrence_rule IS NULL AND due_at IS NULL)
   // all:     no scope filter (both active and someday items)
 
   fastify.get("/api/tasks", async (request, reply) => {
@@ -64,19 +60,14 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     ];
 
     if (scope === "active") {
-      // Exclude Someday items: keep tasks that have recurrence OR a date
+      // Exclude Someday items: keep tasks that have recurrence OR a due_at
       baseConditions.push(
-        or(
-          isNotNull(schema.tasks.recurrence_rule),
-          isNotNull(schema.tasks.next_due_at),
-          isNotNull(schema.tasks.planned_for),
-        ),
+        or(isNotNull(schema.tasks.recurrence_rule), isNotNull(schema.tasks.due_at)),
       );
     } else if (scope === "someday") {
       // Only Someday items
       baseConditions.push(isNull(schema.tasks.recurrence_rule));
-      baseConditions.push(isNull(schema.tasks.next_due_at));
-      baseConditions.push(isNull(schema.tasks.planned_for));
+      baseConditions.push(isNull(schema.tasks.due_at));
     }
     // scope === "all": no additional filter
 
@@ -158,20 +149,19 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    let nextDueAt: Date | null = null;
+    let dueAt: Date | null = null;
     let windowDays: number | null = completion_window_days ?? null;
     let normalizedRule: string | null = recurrence_rule ?? null;
-    let initialState: "eligible" | "not_yet" | "planned" = "eligible";
-    let plannedFor: Date | null = null;
+    let initialState: "eligible" | "not_yet" = "eligible";
 
     if (recurrence_rule && recurrence_mode) {
       // First occurrence is "now" (or the chosen start date) for both modes,
       // unless a calendar constraint in the rule pushes it to a later slot.
       const effectiveNow = anchor ?? now;
-      const taskForDue = { recurrence_rule, recurrence_mode, next_due_at: null };
-      nextDueAt = computeNextDueAt(taskForDue, null, effectiveNow);
+      const taskForDue = { recurrence_rule, recurrence_mode, due_at: null };
+      dueAt = computeNextDueAt(taskForDue, null, effectiveNow);
 
-      normalizedRule = normalizeRrule(recurrence_rule, nextDueAt);
+      normalizedRule = normalizeRrule(recurrence_rule, dueAt);
       if (windowDays === null) {
         windowDays = suggestCompletionWindow(recurrence_rule);
       }
@@ -180,17 +170,26 @@ const tasks: FastifyPluginAsync = async (fastify) => {
           archived_at: null,
           state: "eligible",
           recurrence_rule: normalizedRule,
-          next_due_at: nextDueAt,
+          due_at: dueAt,
           completion_window_days: windowDays,
-          planned_for: null,
         },
         now,
       );
       initialState = computed === "not_yet" ? "not_yet" : "eligible";
-    } else if (anchor !== null && anchor > now) {
-      // One-off task with a future start date: schedule it directly.
-      plannedFor = anchor;
-      initialState = "planned";
+    } else if (anchor !== null) {
+      // One-off task with a start date: set it as the due date.
+      dueAt = anchor;
+      const computed = computeTaskState(
+        {
+          archived_at: null,
+          state: "eligible",
+          recurrence_rule: null,
+          due_at: dueAt,
+          completion_window_days: null,
+        },
+        now,
+      );
+      initialState = computed === "not_yet" ? "not_yet" : "eligible";
     }
     // A task with no recurrence and no date is a Someday item — state stays "eligible"
     // which is fine; the Someday predicate is what matters for filtering.
@@ -208,8 +207,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         recurrence_rule: normalizedRule,
         recurrence_mode: recurrence_mode ?? null,
         completion_window_days: windowDays,
-        next_due_at: nextDueAt,
-        planned_for: plannedFor,
+        due_at: dueAt,
       })
       .run();
 
@@ -242,18 +240,22 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (body.data.description !== undefined) updates.description = body.data.description;
     if ("assignee_id" in body.data) updates.assignee_id = body.data.assignee_id ?? null;
 
-    if ("planned_for" in body.data) {
-      if (body.data.planned_for === null) {
-        updates.planned_for = null;
+    if ("due_at" in body.data) {
+      const now = getNow();
+      if (body.data.due_at === null) {
+        updates.due_at = null;
         if (task.state !== "done") {
-          const now = getNow();
-          const recomputed = computeTaskState({ ...task, planned_for: null }, now);
+          const recomputed = computeTaskState({ ...task, due_at: null }, now);
           updates.state =
             recomputed === "archived" || recomputed === "done" ? task.state : recomputed;
         }
-      } else if (body.data.planned_for) {
-        updates.planned_for = new Date(body.data.planned_for);
-        if (task.state !== "done") updates.state = "planned";
+      } else if (body.data.due_at) {
+        updates.due_at = new Date(body.data.due_at);
+        if (task.state !== "done") {
+          const recomputed = computeTaskState({ ...task, due_at: updates.due_at }, now);
+          updates.state =
+            recomputed === "archived" || recomputed === "done" ? task.state : recomputed;
+        }
       }
     }
 
@@ -271,7 +273,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         updates.recurrence_rule = null;
         updates.recurrence_mode = null;
         updates.completion_window_days = null;
-        updates.next_due_at = null;
+        updates.due_at = null;
         if (task.state !== "done") updates.state = "eligible";
       } else {
         const now = getNow();
@@ -286,7 +288,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         const anchor =
           newMode === "after_completion" && lastCompletion ? lastCompletion.completed_at : null;
         const nextDueAt = computeNextDueAt(
-          { recurrence_rule: newRule, recurrence_mode: newMode, next_due_at: null },
+          { recurrence_rule: newRule, recurrence_mode: newMode, due_at: null },
           anchor,
           now,
         );
@@ -301,9 +303,8 @@ const tasks: FastifyPluginAsync = async (fastify) => {
             archived_at: null,
             state: "eligible",
             recurrence_rule: normalizedRule,
-            next_due_at: nextDueAt,
+            due_at: nextDueAt,
             completion_window_days: windowDays,
-            planned_for: task.planned_for,
           },
           now,
         );
@@ -311,7 +312,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         updates.recurrence_rule = normalizedRule;
         updates.recurrence_mode = newMode;
         updates.completion_window_days = windowDays;
-        updates.next_due_at = nextDueAt;
+        updates.due_at = nextDueAt;
         if (task.state !== "done") {
           updates.state = computedState === "not_yet" ? "not_yet" : "eligible";
         }
@@ -362,15 +363,19 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (task.archived_at !== null) return reply.code(409).send({ error: "Task is archived" });
 
     const now = getNow();
-    const wasOnTime = isWithinCompletionWindow(task, now);
+    const currentState = computeTaskState(task, now);
+    if (currentState === "not_yet") {
+      return reply.code(409).send({ error: "Task is not yet due — reschedule it first" });
+    }
+    const wasOnTime = isOnTime(task, now);
     const isRecurring = task.recurrence_rule !== null && task.recurrence_mode !== null;
     const pointsAwarded = awardPoints(task);
-    const cycleDueAt = task.next_due_at;
+    const cycleDueAt = task.due_at;
 
     // Reserve the cycle with a conditional update. Guards against two concurrent
     // completes both passing the state read above and double-cycling the task.
     // For one-off: claim by flipping state to "done" only if not already done.
-    // For recurring: claim by replacing next_due_at only if it still matches
+    // For recurring: claim by replacing due_at only if it still matches
     // the value we read (a parallel completer would have already advanced it).
     const reserved = isRecurring
       ? (() => {
@@ -379,9 +384,8 @@ const tasks: FastifyPluginAsync = async (fastify) => {
             archived_at: null,
             state: "not_yet" as const,
             recurrence_rule: task.recurrence_rule,
-            next_due_at: nextDueAt,
+            due_at: nextDueAt,
             completion_window_days: task.completion_window_days,
-            planned_for: null,
           };
           const computed = computeTaskState(nextStateInput, now);
           const nextState =
@@ -389,13 +393,13 @@ const tasks: FastifyPluginAsync = async (fastify) => {
 
           const result = db
             .update(schema.tasks)
-            .set({ next_due_at: nextDueAt, planned_for: null, state: nextState })
+            .set({ due_at: nextDueAt, state: nextState })
             .where(
               and(
                 eq(schema.tasks.id, task.id),
                 cycleDueAt === null
-                  ? isNull(schema.tasks.next_due_at)
-                  : eq(schema.tasks.next_due_at, cycleDueAt),
+                  ? isNull(schema.tasks.due_at)
+                  : eq(schema.tasks.due_at, cycleDueAt),
                 ne(schema.tasks.state, "done"),
                 isNull(schema.tasks.archived_at),
               ),
@@ -538,83 +542,29 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     return reply.code(204).send();
   });
 
-  // ── POST /api/tasks/:id/schedule ────────────────────────────────────────────
-  // Schedules a task by setting planned_for. Works for both active tasks and
-  // Someday items — the latter leave Someday and appear in the active scope.
+  // ── POST /api/tasks/:id/reschedule ──────────────────────────────────────────
+  // Sets due_at to any date (earlier or later) or clears it (moves task to Someday).
+  // Works for all non-archived tasks regardless of recurrence.
 
-  fastify.post("/api/tasks/:id/schedule", async (request, reply) => {
+  fastify.post("/api/tasks/:id/reschedule", async (request, reply) => {
     const params = TaskIdParamsSchema.safeParse(request.params);
     if (!params.success) return reply.code(400).send({ error: params.error.flatten() });
 
-    const body = ScheduleTaskBodySchema.safeParse(request.body);
+    const body = RescheduleTaskBodySchema.safeParse(request.body);
     if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
 
     const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, params.data.id)).get();
     if (!task) return reply.code(404).send({ error: "Task not found" });
     if (task.archived_at !== null) return reply.code(409).send({ error: "Task is archived" });
 
-    const plannedFor = new Date(body.data.planned_for);
-
-    let warning: string | undefined;
-    if (task.next_due_at !== null) {
-      const windowEnd = computeWindowEnd(task.next_due_at, task.completion_window_days ?? 0);
-      if (plannedFor >= windowEnd) {
-        warning = "planned_for is past the completion window end";
-      }
-    }
-
-    db.update(schema.tasks)
-      .set({ planned_for: plannedFor, state: "planned" })
-      .where(eq(schema.tasks.id, task.id))
-      .run();
-
-    return reply.code(200).send(warning ? { warning } : {});
-  });
-
-  // ── POST /api/tasks/:id/unschedule ──────────────────────────────────────────
-  // Clears planned_for. For non-recurring tasks this moves them to Someday.
-
-  fastify.post("/api/tasks/:id/unschedule", async (request, reply) => {
-    const params = TaskIdParamsSchema.safeParse(request.params);
-    if (!params.success) return reply.code(400).send({ error: params.error.flatten() });
-
-    const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, params.data.id)).get();
-    if (!task) return reply.code(404).send({ error: "Task not found" });
-    if (task.archived_at !== null) return reply.code(409).send({ error: "Task is archived" });
-
     const now = getNow();
-    const newState = computeTaskState({ ...task, planned_for: null }, now);
-    const state = newState === "archived" || newState === "done" ? task.state : newState;
+    const newDueAt = body.data.due_at !== null ? new Date(body.data.due_at) : null;
+
+    const newState = computeTaskState({ ...task, due_at: newDueAt }, now);
+    const state = newState === "archived" || newState === "done" ? ("eligible" as const) : newState;
 
     db.update(schema.tasks)
-      .set({ planned_for: null, state })
-      .where(eq(schema.tasks.id, task.id))
-      .run();
-
-    return reply.code(204).send();
-  });
-
-  // ── POST /api/tasks/:id/snooze ──────────────────────────────────────────────
-
-  fastify.post("/api/tasks/:id/snooze", async (request, reply) => {
-    const params = TaskIdParamsSchema.safeParse(request.params);
-    if (!params.success) return reply.code(400).send({ error: params.error.flatten() });
-
-    const body = SnoozeTaskBodySchema.safeParse(request.body);
-    if (!body.success) return reply.code(400).send({ error: body.error.flatten() });
-
-    const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, params.data.id)).get();
-    if (!task) return reply.code(404).send({ error: "Task not found" });
-    if (task.archived_at !== null) return reply.code(409).send({ error: "Task is archived" });
-
-    const until = new Date(body.data.until);
-    const now = getNow();
-
-    const newState = computeTaskState({ ...task, next_due_at: until, planned_for: null }, now);
-    const state = newState === "archived" || newState === "done" ? ("not_yet" as const) : newState;
-
-    db.update(schema.tasks)
-      .set({ next_due_at: until, planned_for: null, state })
+      .set({ due_at: newDueAt, state })
       .where(eq(schema.tasks.id, task.id))
       .run();
 

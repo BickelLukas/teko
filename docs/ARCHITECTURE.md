@@ -124,7 +124,7 @@ The middleware handles all four in a single deterministic flow: dev → ingress 
 Detailed contracts (entity names, service schemas, event payloads) live in the integration code and HA's standard files (`services.yaml`, `manifest.json`). Documenting them here would guarantee drift. The principles:
 
 - **Aggregate entities by default** (per-user counts, household totals, todo lists). Per-task entities are opt-in via a toggle in the task editor to avoid entity explosion.
-- **Services cover the full task lifecycle** (create, complete, snooze, schedule, assign). Service calls return; state changes propagate via events.
+- **Services cover the full task lifecycle** (create, complete, reschedule, assign). Service calls return; state changes propagate via events.
 - **Events on HA's bus** carry every meaningful state change. Power users build automations from these.
 - **Sidebar panel** auto-registered, points at the add-on's ingress URL.
 

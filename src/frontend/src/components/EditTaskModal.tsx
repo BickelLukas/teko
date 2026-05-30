@@ -49,9 +49,8 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
   const [assigneeId, setAssigneeId] = useState<string>(task.assignee_id ?? "__unassigned__");
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(recurrenceFromTask(task));
   const [showRecurrence, setShowRecurrence] = useState(task.recurrence_rule !== null);
-  const [plannedFor, setPlannedFor] = useState<Date | null>(
-    task.planned_for ? new Date(task.planned_for) : null,
-  );
+  const [dueAt, setDueAt] = useState<Date | null>(task.due_at ? new Date(task.due_at) : null);
+  const [windowDays, setWindowDays] = useState<number>(task.completion_window_days ?? 0);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
   const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
@@ -73,7 +72,8 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
       setAssigneeId(task.assignee_id ?? "__unassigned__");
       setRecurrence(recurrenceFromTask(task));
       setShowRecurrence(task.recurrence_rule !== null);
-      setPlannedFor(task.planned_for ? new Date(task.planned_for) : null);
+      setDueAt(task.due_at ? new Date(task.due_at) : null);
+      setWindowDays(task.completion_window_days ?? 0);
     }
   }, [open, task, reset]);
 
@@ -85,12 +85,15 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
         title: data.title,
         description: data.description ?? null,
         assignee_id: resolvedAssignee,
-        // Only send planned_for when there's no recurrence — for recurring tasks
-        // planned_for is managed via the schedule action, not here.
-        ...(recurrence.rule === null ? { planned_for: plannedFor?.toISOString() ?? null } : {}),
+        due_at: recurrence.rule === null ? (dueAt?.toISOString() ?? null) : undefined,
+        completion_window_days:
+          recurrence.rule === null
+            ? dueAt !== null
+              ? windowDays
+              : null
+            : (recurrence.windowDays ?? null),
         recurrence_rule: recurrence.rule,
         recurrence_mode: recurrence.rule ? recurrence.mode : null,
-        completion_window_days: recurrence.rule ? (recurrence.windowDays ?? null) : null,
       });
     },
     onSuccess: () => {
@@ -154,17 +157,45 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
             </div>
           )}
 
-          {/* ── Due date (non-recurring only) ──────────────────────────────── */}
+          {/* ── Due date + window (non-recurring only) ────────────────────── */}
           {recurrence.rule === null && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                {t("edit_task.scheduled_for")}
-              </label>
-              <DatePicker value={plannedFor} onChange={setPlannedFor} />
-              {plannedFor === null && (
-                <p className="mt-1 text-xs text-muted-foreground/60">
-                  {t("add_task.no_date_hint")}
-                </p>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  {t("edit_task.scheduled_for")}
+                </label>
+                <DatePicker value={dueAt} onChange={setDueAt} />
+                {dueAt === null && (
+                  <p className="mt-1 text-xs text-muted-foreground/60">
+                    {t("add_task.no_date_hint")}
+                  </p>
+                )}
+              </div>
+              {dueAt !== null && (
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">
+                    {t("recurrence.window_label")}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={365}
+                      value={windowDays}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        setWindowDays(Number.isFinite(v) && v >= 0 ? v : 0);
+                      }}
+                      className="w-24"
+                    />
+                    <span className="text-sm">{t("recurrence.window_days")}</span>
+                    {windowDays === 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        {t("recurrence.window_zero_hint")}
+                      </span>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}

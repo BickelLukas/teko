@@ -6,7 +6,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { fetchTasks, fetchMe, archiveTask } from "@/lib/api";
 import { AddTaskModal } from "@/components/AddTaskModal";
 import { EditTaskModal } from "@/components/EditTaskModal";
-import { SchedulePanel } from "@/components/SchedulePanel";
+import { ReschedulePanel } from "@/components/ReschedulePanel";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -91,7 +91,7 @@ function SomedayCard({ task }: { task: TaskResponse }) {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setShowSchedule((v) => !v)}>
                       <IconCalendar className="mr-2 size-4" />
-                      {t("common:actions.schedule")}
+                      {t("common:actions.reschedule")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -106,7 +106,9 @@ function SomedayCard({ task }: { task: TaskResponse }) {
                 </DropdownMenuRoot>
               </div>
 
-              {showSchedule && <SchedulePanel task={task} onDone={() => setShowSchedule(false)} />}
+              {showSchedule && (
+                <ReschedulePanel task={task} onDone={() => setShowSchedule(false)} />
+              )}
             </div>
           </div>
         </CardContent>

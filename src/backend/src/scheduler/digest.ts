@@ -2,7 +2,7 @@ import { and, eq, isNull, isNotNull, or } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import * as schema from "../db/schema.js";
 import type { SupervisorClient } from "../ha/supervisor.js";
-import { computeTaskState } from "../domain/recurrence.js";
+import { computeTaskState, computeEligibleStart } from "../domain/recurrence.js";
 import { buildDigest, type DigestData, type DigestTaskInfo } from "../domain/digest.js";
 import { getNow } from "../domain/clock.js";
 import { bareNotifyServiceName } from "@teko/shared";
@@ -81,20 +81,21 @@ export function categorizeUserTasks(
       continue;
     }
 
-    // Anything the user committed to today is "due today", whether the planned
-    // moment has already passed (state fell back to eligible) or is still ahead
-    // (state is planned).
-    if (task.planned_for !== null && localDateKey(task.planned_for, timeZone) === today) {
-      dueToday.push({ title: task.title });
-      continue;
-    }
-
-    if (state === "eligible" && task.next_due_at !== null) {
-      if (localDateKey(task.next_due_at, timeZone) !== today) continue; // became eligible earlier
+    if (state === "eligible" && task.due_at !== null) {
       const windowDays = task.completion_window_days ?? 0;
-      if (windowDays === 0) {
+
+      if (localDateKey(task.due_at, timeZone) === today) {
+        // Due today
         dueToday.push({ title: task.title });
-      } else {
+        continue;
+      }
+
+      // Became eligible today (window opened today but due later)
+      const eligibleStartKey = localDateKey(
+        computeEligibleStart(task.due_at, windowDays),
+        timeZone,
+      );
+      if (eligibleStartKey === today && windowDays > 0) {
         newlyEligible.push({ title: task.title });
       }
     }

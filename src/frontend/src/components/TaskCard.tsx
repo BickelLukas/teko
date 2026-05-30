@@ -1,13 +1,10 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { addHours, addDays, addWeeks } from "date-fns";
-import { getNow } from "@/lib/clock";
 import {
   IconCheck,
   IconDots,
   IconCalendar,
-  IconZzz,
   IconFlame,
   IconPencil,
   IconArchive,
@@ -23,12 +20,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { completeTask, snoozeTask, archiveTask, unscheduleTask } from "@/lib/api";
+import { completeTask, rescheduleTask, archiveTask } from "@/lib/api";
 import type { TaskResponse } from "@teko/shared";
 import { EditTaskModal } from "@/components/EditTaskModal";
 import { ArchiveConfirmDialog } from "@/components/ArchiveConfirmDialog";
 import { TaskStateBadge } from "@/components/TaskStateBadge";
-import { SchedulePanel } from "@/components/SchedulePanel";
+import { ReschedulePanel } from "@/components/ReschedulePanel";
 import { describeRecurrenceLocalized } from "@/lib/recurrence";
 import { useLocale } from "@/lib/locale";
 import confetti from "canvas-confetti";
@@ -60,7 +57,7 @@ export function TaskCard({ task, showAssignee, streakLength = 0, somedayBadge }:
   const { t } = useTranslation("common");
   const { locale } = useLocale();
   const queryClient = useQueryClient();
-  const [showSchedule, setShowSchedule] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
   const [justDone, setJustDone] = useState(false);
   const [milestoneCaption, setMilestoneCaption] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -93,11 +90,6 @@ export function TaskCard({ task, showAssignee, streakLength = 0, somedayBadge }:
     },
   });
 
-  const snoozeMutation = useMutation({
-    mutationFn: (until: Date) => snoozeTask(task.id, until),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tasks"] }),
-  });
-
   const archiveMutation = useMutation({
     mutationFn: () => archiveTask(task.id),
     onSuccess: () => {
@@ -108,20 +100,21 @@ export function TaskCard({ task, showAssignee, streakLength = 0, somedayBadge }:
     },
   });
 
-  // "Move to Someday" — only for non-recurring tasks that have a planned date.
-  // Clears planned_for, which moves the task back to the Someday list.
+  // "Move to Someday" — only for tasks that already have a due_at set.
+  // Clears due_at, which moves the task back to the Someday list.
   const moveToSomedayMutation = useMutation({
-    mutationFn: () => unscheduleTask(task.id),
+    mutationFn: () => rescheduleTask(task.id, null),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tasks"] }),
   });
 
   const canMoveToSomeday =
     task.recurrence_rule === null &&
-    task.planned_for !== null &&
+    task.due_at !== null &&
     task.archived_at === null &&
     task.state !== "done";
 
   const isOverdue = task.state === "overdue";
+  const canComplete = task.state !== "not_yet" && task.state !== "done";
   const showStreakBadge = streakLength >= 3;
 
   const recurrenceSummary =
@@ -157,14 +150,16 @@ export function TaskCard({ task, showAssignee, streakLength = 0, somedayBadge }:
       <Card className={isOverdue ? "border-destructive/40" : ""}>
         <CardContent className="py-3">
           <div className="flex items-start gap-3">
-            <button
-              onClick={() => completeMutation.mutate()}
-              disabled={completeMutation.isPending}
-              className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border transition-all duration-200 hover:scale-110 hover:border-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-50"
-              aria-label={t("task.mark_done_aria")}
-            >
-              {completeMutation.isPending && <IconCheck className="size-3 text-primary/50" />}
-            </button>
+            {canComplete && (
+              <button
+                onClick={() => completeMutation.mutate()}
+                disabled={completeMutation.isPending}
+                className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-border transition-all duration-200 hover:scale-110 hover:border-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-50"
+                aria-label={t("task.mark_done_aria")}
+              >
+                {completeMutation.isPending && <IconCheck className="size-3 text-primary/50" />}
+              </button>
+            )}
 
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
@@ -214,7 +209,7 @@ export function TaskCard({ task, showAssignee, streakLength = 0, somedayBadge }:
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => completeMutation.mutate()}
-                      disabled={completeMutation.isPending}
+                      disabled={completeMutation.isPending || !canComplete}
                     >
                       <IconCheck className="mr-2 size-4" />
                       {t("actions.mark_done")}
@@ -224,37 +219,10 @@ export function TaskCard({ task, showAssignee, streakLength = 0, somedayBadge }:
                       {t("actions.edit")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuLabel>{t("actions.snooze")}</DropdownMenuLabel>
-                    <DropdownMenuItem
-                      disabled={snoozeMutation.isPending}
-                      onClick={() => snoozeMutation.mutate(addHours(getNow(), 1))}
-                    >
-                      <IconZzz className="mr-2 size-4" />
-                      {t("snooze_options.one_hour")}
+                    <DropdownMenuItem onClick={() => setShowReschedule((v) => !v)}>
+                      <IconCalendar className="mr-2 size-4" />
+                      {t("actions.reschedule")}
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={snoozeMutation.isPending}
-                      onClick={() => snoozeMutation.mutate(addDays(getNow(), 1))}
-                    >
-                      <IconZzz className="mr-2 size-4" />
-                      {t("snooze_options.tomorrow")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={snoozeMutation.isPending}
-                      onClick={() => snoozeMutation.mutate(addWeeks(getNow(), 1))}
-                    >
-                      <IconZzz className="mr-2 size-4" />
-                      {t("snooze_options.next_week")}
-                    </DropdownMenuItem>
-                    {(task.state === "eligible" || task.state === "overdue") && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setShowSchedule((v) => !v)}>
-                          <IconCalendar className="mr-2 size-4" />
-                          {t("actions.schedule")}
-                        </DropdownMenuItem>
-                      </>
-                    )}
                     {canMoveToSomeday && (
                       <>
                         <DropdownMenuSeparator />
@@ -279,7 +247,9 @@ export function TaskCard({ task, showAssignee, streakLength = 0, somedayBadge }:
                 </DropdownMenuRoot>
               </div>
 
-              {showSchedule && <SchedulePanel task={task} onDone={() => setShowSchedule(false)} />}
+              {showReschedule && (
+                <ReschedulePanel task={task} onDone={() => setShowReschedule(false)} />
+              )}
             </div>
           </div>
         </CardContent>

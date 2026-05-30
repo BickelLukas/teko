@@ -49,18 +49,20 @@ export function SchedulePanel({ task, onDone }: { task: TaskResponse; onDone: ()
         </Button>
       </div>
       <div className="mt-2 flex items-center gap-2">
-        <DatePicker
-          value={null}
-          onChange={(date) => {
-            if (date)
-              scheduleMutation.mutate({
-                date: new Date(date.toISOString().split("T")[0] + "T12:00:00Z"),
-              });
-          }}
-          min={getNow()}
-          disabled={scheduleMutation.isPending}
-          className="h-6 px-2 text-xs"
-        />
+        <div className="min-w-0 flex-1">
+          <DatePicker
+            value={null}
+            onChange={(date) => {
+              if (date)
+                scheduleMutation.mutate({
+                  date: new Date(date.toISOString().split("T")[0] + "T12:00:00Z"),
+                });
+            }}
+            min={getNow()}
+            disabled={scheduleMutation.isPending}
+            className="h-6 w-full px-2 text-xs"
+          />
+        </div>
         <Button size="xs" variant="ghost" onClick={onDone}>
           {t("actions.cancel")}
         </Button>

@@ -17,8 +17,9 @@ import {
 } from "@/components/ui/select";
 import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceValue } from "@/components/RecurrencePicker";
-import { updateTask, fetchMe, fetchUsers } from "@/lib/api";
-import type { TaskResponse } from "@teko/shared";
+import { TagSelector } from "@/components/TagPicker";
+import { updateTask, fetchMe, fetchUsers, setTaskTags } from "@/lib/api";
+import type { TaskResponse, TagResponse } from "@teko/shared";
 
 function buildFormSchema(titleRequired: string) {
   return z.object({
@@ -51,6 +52,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
   const [showRecurrence, setShowRecurrence] = useState(task.recurrence_rule !== null);
   const [dueAt, setDueAt] = useState<Date | null>(task.due_at ? new Date(task.due_at) : null);
   const [windowDays, setWindowDays] = useState<number>(task.completion_window_days ?? 0);
+  const [selectedTags, setSelectedTags] = useState<TagResponse[]>(task.tags);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
   const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
@@ -74,6 +76,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
       setShowRecurrence(task.recurrence_rule !== null);
       setDueAt(task.due_at ? new Date(task.due_at) : null);
       setWindowDays(task.completion_window_days ?? 0);
+      setSelectedTags(task.tags);
     }
   }, [open, task, reset]);
 
@@ -96,7 +99,11 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
         recurrence_mode: recurrence.rule ? recurrence.mode : null,
       });
     },
-    onSuccess: () => {
+    onSuccess: async (updated) => {
+      await setTaskTags(
+        updated.id,
+        selectedTags.map((t) => t.id),
+      );
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
       onOpenChange(false);
     },
@@ -214,6 +221,14 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
               {showRecurrence ? t("edit_task.hide_recurrence") : t("edit_task.add_recurrence")}
             </button>
             {showRecurrence && <RecurrencePicker value={recurrence} onChange={setRecurrence} />}
+          </div>
+
+          {/* ── Tags ──────────────────────────────────────────────────────── */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              {t("tags.label")}
+            </label>
+            <TagSelector selected={selectedTags} onChange={setSelectedTags} />
           </div>
 
           {saveMutation.isError && (

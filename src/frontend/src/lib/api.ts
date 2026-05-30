@@ -15,6 +15,10 @@ import type {
   HealthResponse,
   NotifyService,
   NotifyServicesResponse,
+  TagResponse,
+  TagWithCount,
+  CreateTagBody,
+  UpdateTagBody,
 } from "@teko/shared";
 import { setOffsetMs } from "./clock.js";
 import { basePath } from "./basePath.js";
@@ -70,10 +74,12 @@ async function throwIfNotOk(res: Response): Promise<void> {
 export async function fetchTasks(
   assignee?: string,
   scope?: "active" | "someday" | "all",
+  tagIds?: number[],
 ): Promise<TaskListResponse> {
   const params = new URLSearchParams();
   if (assignee) params.set("assignee", assignee);
   if (scope) params.set("scope", scope);
+  if (tagIds && tagIds.length > 0) params.set("tags", tagIds.join(","));
   const qs = params.toString();
   return json(await apiFetch(`/api/tasks${qs ? `?${qs}` : ""}`));
 }
@@ -201,6 +207,46 @@ export async function sendTestNotification(): Promise<TestNotificationResult> {
 
 export async function fetchHealth(): Promise<HealthResponse> {
   return json(await apiFetch("/api/health"));
+}
+
+// ── Tags ─────────────────────────────────────────────────────────────────────
+
+export async function fetchTags(): Promise<TagWithCount[]> {
+  return json(await apiFetch("/api/tags"));
+}
+
+export async function createTag(body: CreateTagBody): Promise<TagResponse> {
+  return json(
+    await apiFetch("/api/tags", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+export async function updateTag(id: number, body: UpdateTagBody): Promise<TagResponse> {
+  return json(
+    await apiFetch(`/api/tags/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+export async function deleteTag(id: number): Promise<void> {
+  await throwIfNotOk(await apiFetch(`/api/tags/${id}`, { method: "DELETE" }));
+}
+
+export async function setTaskTags(taskId: string, tagIds: number[]): Promise<TagResponse[]> {
+  return json(
+    await apiFetch(`/api/tasks/${taskId}/tags`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag_ids: tagIds }),
+    }),
+  );
 }
 
 // ── Dev ───────────────────────────────────────────────────────────────────────

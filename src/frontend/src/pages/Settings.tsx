@@ -18,6 +18,7 @@ import {
 import { fetchMe, updatePreferences, fetchUsers, fetchHealth, triggerUserSync } from "@/lib/api";
 import { parseEnum } from "@/lib/utils";
 import { NotificationsSettings } from "@/components/NotificationsSettings";
+import { TagsSettings } from "@/components/TagsSettings";
 
 const FormSchema = z.object({
   display_name: z.string().optional(),
@@ -231,6 +232,21 @@ export function SettingsPage() {
         <Card>
           <CardContent className="pt-5">
             <NotificationsSettings />
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* ── Tags ── */}
+      <section aria-labelledby="tags-heading">
+        <h2
+          id="tags-heading"
+          className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        >
+          {t("settings.tags_section")}
+        </h2>
+        <Card>
+          <CardContent className="pt-5">
+            <TagsSettings />
           </CardContent>
         </Card>
       </section>

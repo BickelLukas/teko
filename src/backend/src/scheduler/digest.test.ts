@@ -22,7 +22,6 @@ function task(overrides: Partial<TaskRow>): TaskRow {
     completion_window_days: null,
     due_at: null,
     points: null,
-    tags: null,
     exposed_to_ha: false,
     is_household: false,
     ...overrides,

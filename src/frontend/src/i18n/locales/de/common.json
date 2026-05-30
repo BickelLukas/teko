@@ -153,5 +153,17 @@
   "date_formats": {
     "long": "EEEE, d. MMMM yyyy",
     "short": "d. MMM"
+  },
+  "tags": {
+    "label": "Tags",
+    "add_tag": "Tag hinzufügen",
+    "filter_label": "Tags",
+    "search_placeholder": "Tags suchen…",
+    "no_tags_picker": "Noch keine Tags vorhanden.",
+    "no_tags_filter": "Noch keine Tags vorhanden.",
+    "create_in_settings": "Erstelle sie in Einstellungen → Tags",
+    "no_match": "Keine Tags gefunden.",
+    "clear_filters": "Filter zurücksetzen",
+    "no_match_filter": "Keine Aufgaben entsprechen diesen Filtern."
   }
 }

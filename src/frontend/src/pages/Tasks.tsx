@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { fetchTasks, fetchMe } from "@/lib/api";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
+import { TagChip } from "@/components/TagChip";
+import { TagFilterPill } from "@/components/TagPicker";
 import { Button } from "@/components/ui/button";
 import {
   SelectRoot,
@@ -13,7 +15,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { parseEnum } from "@/lib/utils";
-import type { TaskResponse } from "@teko/shared";
+import type { TaskResponse, TagResponse } from "@teko/shared";
 
 const ASSIGNEE_FILTERS = ["mine", "me", "unassigned", "all"] as const;
 type AssigneeFilter = (typeof ASSIGNEE_FILTERS)[number];
@@ -39,8 +41,11 @@ export function TasksPage() {
   const { t } = useTranslation(["pages", "common"]);
   const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilter>("all");
   const [recurringOnly, setRecurringOnly] = useState(false);
+  const [tagFilter, setTagFilter] = useState<TagResponse[]>([]);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
+
+  const tagIds = tagFilter.map((t) => t.id);
 
   const {
     data: tasks = [],
@@ -48,14 +53,15 @@ export function TasksPage() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["tasks", assigneeFilter, "active"],
-    queryFn: () => fetchTasks(assigneeFilter, "active"),
+    queryKey: ["tasks", assigneeFilter, "active", tagIds],
+    queryFn: () => fetchTasks(assigneeFilter, "active", tagIds),
   });
 
   const filtered = recurringOnly
     ? tasks.filter((t: TaskResponse) => t.recurrence_rule !== null)
     : tasks;
   const sorted = sortTasks(filtered);
+  const hasFilter = tagFilter.length > 0 || recurringOnly;
 
   const displayName = me?.display_name ?? me?.name ?? t("common:person.me_short");
 
@@ -64,11 +70,12 @@ export function TasksPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{t("pages:tasks.title")}</h1>
         <div className="flex items-center gap-2">
+          <TagFilterPill selected={tagFilter} onChange={setTagFilter} />
           <SelectRoot
             value={assigneeFilter}
             onValueChange={(v) => setAssigneeFilter(parseEnum(v, ASSIGNEE_FILTERS, "all"))}
           >
-            <SelectTrigger size="sm" className="w-40">
+            <SelectTrigger size="sm" className="w-auto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -83,15 +90,33 @@ export function TasksPage() {
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-xs text-muted-foreground">
-        <input
-          type="checkbox"
-          checked={recurringOnly}
-          onChange={(e) => setRecurringOnly(e.target.checked)}
-          className="size-3"
-        />
-        {t("pages:tasks.recurring_only")}
-      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={recurringOnly}
+            onChange={(e) => setRecurringOnly(e.target.checked)}
+            className="size-3"
+          />
+          {t("pages:tasks.recurring_only")}
+        </label>
+        {tagFilter.map((tag) => (
+          <TagChip
+            key={tag.id}
+            tag={tag}
+            onRemove={() => setTagFilter((prev) => prev.filter((t) => t.id !== tag.id))}
+          />
+        ))}
+        {hasFilter && tagFilter.length > 0 && (
+          <button
+            type="button"
+            className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+            onClick={() => setTagFilter([])}
+          >
+            {t("common:tags.clear_filters")}
+          </button>
+        )}
+      </div>
 
       {isLoading && <TaskListSkeleton />}
 
@@ -105,15 +130,38 @@ export function TasksPage() {
       )}
 
       {!isLoading && !isError && sorted.length === 0 && (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          {t("pages:tasks.no_tasks")}
-        </p>
+        <div className="py-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            {hasFilter ? t("common:tags.no_match_filter") : t("pages:tasks.no_tasks")}
+          </p>
+          {hasFilter && (
+            <button
+              type="button"
+              className="mt-1 text-xs text-muted-foreground underline-offset-2 hover:underline"
+              onClick={() => {
+                setTagFilter([]);
+                setRecurringOnly(false);
+              }}
+            >
+              {t("common:tags.clear_filters")}
+            </button>
+          )}
+        </div>
       )}
 
       <ul className="space-y-2">
         {sorted.map((task: TaskResponse) => (
           <li key={task.id}>
-            <TaskCard task={task} showAssignee />
+            <TaskCard
+              task={task}
+              showAssignee
+              onTagClick={(id) => {
+                const tag = task.tags.find((t) => t.id === id);
+                if (tag && !tagFilter.some((f) => f.id === id)) {
+                  setTagFilter((prev) => [...prev, tag]);
+                }
+              }}
+            />
           </li>
         ))}
       </ul>

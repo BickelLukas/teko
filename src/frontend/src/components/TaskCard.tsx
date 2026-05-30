@@ -26,6 +26,7 @@ import { EditTaskModal } from "@/components/EditTaskModal";
 import { ArchiveConfirmDialog } from "@/components/ArchiveConfirmDialog";
 import { TaskStateBadge } from "@/components/TaskStateBadge";
 import { ReschedulePanel } from "@/components/ReschedulePanel";
+import { TagChip, OverflowChip } from "@/components/TagChip";
 import { describeRecurrenceLocalized } from "@/lib/recurrence";
 import { useLocale } from "@/lib/locale";
 import confetti from "canvas-confetti";
@@ -51,9 +52,17 @@ type TaskCardProps = {
   streakLength?: number;
   /** When provided, renders a small "Someday" badge next to the title. */
   somedayBadge?: string | undefined;
+  /** When provided, tapping a tag chip calls this to set it as a filter. */
+  onTagClick?: (tagId: number) => void;
 };
 
-export function TaskCard({ task, showAssignee, streakLength = 0, somedayBadge }: TaskCardProps) {
+export function TaskCard({
+  task,
+  showAssignee,
+  streakLength = 0,
+  somedayBadge,
+  onTagClick,
+}: TaskCardProps) {
   const { t } = useTranslation("common");
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -186,6 +195,18 @@ export function TaskCard({ task, showAssignee, streakLength = 0, somedayBadge }:
                     <p className="text-xs text-muted-foreground/70">{recurrenceSummary}</p>
                   )}
                   <TaskStateBadge task={task} />
+                  {task.tags.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {task.tags.slice(0, 2).map((tag) => (
+                        <TagChip
+                          key={tag.id}
+                          tag={tag}
+                          {...(onTagClick ? { onClick: () => onTagClick(tag.id) } : {})}
+                        />
+                      ))}
+                      {task.tags.length > 2 && <OverflowChip count={task.tags.length - 2} />}
+                    </div>
+                  )}
                   {showAssignee && (
                     <span className="mt-0.5 ml-1 inline-block text-xs text-muted-foreground/60">
                       {task.assignee_name ?? t("filters.unassigned")}

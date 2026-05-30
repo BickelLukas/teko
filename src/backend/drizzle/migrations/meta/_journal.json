@@ -57,6 +57,13 @@
       "when": 1780140000000,
       "tag": "0007_single_due_at",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1780150565725,
+      "tag": "0008_tags",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { integer, text, sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { integer, text, sqliteTable, uniqueIndex, primaryKey } from "drizzle-orm/sqlite-core";
 import { getNow } from "../domain/clock.js";
 
 export const users = sqliteTable("users", {
@@ -53,7 +53,6 @@ export const tasks = sqliteTable("tasks", {
   completion_window_days: integer("completion_window_days"),
   due_at: integer("due_at", { mode: "timestamp_ms" }),
   points: integer("points"),
-  tags: text("tags"),
   exposed_to_ha: integer("exposed_to_ha", { mode: "boolean" }).notNull().default(false),
   is_household: integer("is_household", { mode: "boolean" }).notNull().default(false),
 });
@@ -95,3 +94,31 @@ export const devSettings = sqliteTable("dev_settings", {
   value: text("value").notNull(),
   updated_at: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
+
+export const tags = sqliteTable("tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  color: text("color").notNull(),
+  created_at: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => getNow()),
+  created_by: text("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "restrict" }),
+});
+
+export const task_tags = sqliteTable(
+  "task_tags",
+  {
+    task_id: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    tag_id: integer("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+    created_at: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => getNow()),
+  },
+  (table) => [primaryKey({ columns: [table.task_id, table.tag_id] })],
+);

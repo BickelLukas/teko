@@ -25,7 +25,9 @@ import {
 } from "@/components/ui/select";
 import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceValue } from "@/components/RecurrencePicker";
-import { createTask, fetchMe, fetchUsers } from "@/lib/api";
+import { TagSelector } from "@/components/TagPicker";
+import { createTask, fetchMe, fetchUsers, setTaskTags } from "@/lib/api";
+import type { TagResponse } from "@teko/shared";
 import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -80,6 +82,7 @@ export function AddTaskModal({
     mode: "fixed",
     windowDays: null,
   });
+  const [selectedTags, setSelectedTags] = useState<TagResponse[]>([]);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
   const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
@@ -99,6 +102,7 @@ export function AddTaskModal({
     setStartDate(null);
     setWindowDays(0);
     setRecurrence({ rule: null, mode: "fixed", windowDays: null });
+    setSelectedTags([]);
   }
 
   function handleTypeChange(type: TaskType) {
@@ -139,7 +143,13 @@ export function AddTaskModal({
           : {}),
       });
     },
-    onSuccess: () => {
+    onSuccess: async (task) => {
+      if (selectedTags.length > 0) {
+        await setTaskTags(
+          task.id,
+          selectedTags.map((t) => t.id),
+        );
+      }
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
       resetForm();
       setOpen(false);
@@ -216,6 +226,14 @@ export function AddTaskModal({
               </SelectRoot>
             </div>
           )}
+
+          {/* ── Tags ──────────────────────────────────────────────────────── */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              {t("tags.label")}
+            </label>
+            <TagSelector selected={selectedTags} onChange={setSelectedTags} />
+          </div>
 
           {/* ── Type selector ─────────────────────────────────────────────── */}
           <div className="grid grid-cols-3 rounded-lg bg-muted p-1">

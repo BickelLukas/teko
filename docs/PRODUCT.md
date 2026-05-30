@@ -55,7 +55,7 @@ The **type** of a task is derived from its fields:
 - No recurring rule, due_at set → **Active one-off** (appears in Today)
 - No recurring rule, no due_at, not archived → **Someday item** (appears in Someday list)
 
-Tasks may also have tags and a "household" vs "personal" flag for shared vs individual chores.
+Tasks may also have **tags** and a "household" vs "personal" flag for shared vs individual chores.
 
 ### Chore
 
@@ -126,6 +126,12 @@ Points are designed to encourage participation, not to compare. There is no lead
 ### Household
 
 The shared space. One Teko instance = one household. Everyone signed in via the same HA instance shares the same task universe.
+
+### Tag
+
+A small household-shared label with a name and a color. Tags group tasks across the unified task model — spanning chores, one-off tasks, and Someday items. The tag library is deliberately curated: tags are created and managed in Settings → Tags, not inline during task creation. This keeps the library small and meaningful. Applying existing tags to a task is always available from the task's create/edit forms and picker.
+
+Tag filtering uses AND semantics: selecting multiple tags narrows the result to tasks that carry all selected tags. Filter state is per-view and clears when switching tabs.
 
 ### User
 
@@ -209,9 +215,9 @@ All active tasks (due_at IS NOT NULL, not archived), organized for browsing and 
 
 ### Someday
 
-Flat list of dateless intentions.
+Flat list of dateless intentions. Tags are the primary mechanism for grouping the Someday list — use them to surface items by room, theme, or energy level.
 
-- Filter: assignee
+- Filter: assignee, tags (AND semantics)
 - Sorted: newest first by default
 - "+ Add to Someday" button (minimal form: title, description, assignee — no date, no recurrence)
 - Per-item actions: Edit (title/description/assignee), Schedule (opens date picker; item moves to active), Archive
@@ -229,6 +235,7 @@ Personal and household progress.
 Per-user and per-household preferences.
 
 - **You**: language, notification time for daily digest, notification preferences per category (chores, project deadlines, milestones)
+- **Tags**: the household tag library. Create, rename, recolor, and delete tags. Usage count shown per tag. This is the only place where new tags can be created.
 - **Household** (admin only): timezone, week start day, default point values, archive policy
 
 ### Task Detail / Edit

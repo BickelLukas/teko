@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { isSameDay, isWithinInterval, addDays, startOfDay } from "date-fns";
@@ -5,10 +6,12 @@ import { fetchTasks, fetchMe, fetchTodayStats, fetchMeStats } from "@/lib/api";
 import { sortByDueAt } from "@/lib/utils";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
+import { TagChip } from "@/components/TagChip";
+import { TagFilterPill } from "@/components/TagPicker";
 import { Button } from "@/components/ui/button";
 import { useLocale, formatDateLong } from "@/lib/locale";
 import { getNow } from "@/lib/clock";
-import type { TaskResponse } from "@teko/shared";
+import type { TaskResponse, TagResponse } from "@teko/shared";
 
 type Sections = {
   overdue: TaskResponse[];
@@ -56,6 +59,9 @@ export function TodayPage() {
   const { t } = useTranslation("pages");
   const { locale } = useLocale();
   const now = getNow();
+  const [tagFilter, setTagFilter] = useState<TagResponse[]>([]);
+
+  const tagIds = tagFilter.map((t) => t.id);
 
   const {
     data: tasks = [],
@@ -63,8 +69,8 @@ export function TodayPage() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["tasks", "mine", "active"],
-    queryFn: () => fetchTasks("mine", "active"),
+    queryKey: ["tasks", "mine", "active", tagIds],
+    queryFn: () => fetchTasks("mine", "active", tagIds),
   });
 
   const { data: me } = useQuery({
@@ -104,12 +110,41 @@ export function TodayPage() {
 
   const longestActive = meStats?.streaks.active[0] ?? null;
 
+  function handleTagClick(allTasks: TaskResponse[], tagId: number) {
+    const found = allTasks.flatMap((t) => t.tags).find((tag) => tag.id === tagId);
+    if (found && !tagFilter.some((f) => f.id === tagId)) {
+      setTagFilter((prev) => [...prev, found]);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-6">
-      <div>
-        <h1 className="text-xl font-semibold">{greeting}</h1>
-        <p className="text-sm text-muted-foreground">{formatDateLong(now, locale)}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">{greeting}</h1>
+          <p className="text-sm text-muted-foreground">{formatDateLong(now, locale)}</p>
+        </div>
+        <TagFilterPill selected={tagFilter} onChange={setTagFilter} />
       </div>
+
+      {tagFilter.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {tagFilter.map((tag) => (
+            <TagChip
+              key={tag.id}
+              tag={tag}
+              onRemove={() => setTagFilter((prev) => prev.filter((t) => t.id !== tag.id))}
+            />
+          ))}
+          <button
+            type="button"
+            className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+            onClick={() => setTagFilter([])}
+          >
+            {t("common:tags.clear_filters")}
+          </button>
+        </div>
+      )}
 
       {isLoading && <TaskListSkeleton />}
 
@@ -134,6 +169,7 @@ export function TodayPage() {
           accent="text-destructive"
           tasks={sections.overdue}
           streakByTask={streakByTask}
+          onTagClick={(id) => handleTagClick(tasks, id)}
         />
       )}
 
@@ -142,6 +178,7 @@ export function TodayPage() {
           title={t("today.sections.today")}
           tasks={sections.today}
           streakByTask={streakByTask}
+          onTagClick={(id) => handleTagClick(tasks, id)}
         />
       )}
 
@@ -152,6 +189,7 @@ export function TodayPage() {
           muted
           tasks={sections.eligible}
           streakByTask={streakByTask}
+          onTagClick={(id) => handleTagClick(tasks, id)}
         />
       )}
 
@@ -161,6 +199,7 @@ export function TodayPage() {
           muted
           tasks={sections.comingUp}
           streakByTask={streakByTask}
+          onTagClick={(id) => handleTagClick(tasks, id)}
         />
       )}
 
@@ -192,6 +231,7 @@ function Section({
   accent,
   muted,
   streakByTask,
+  onTagClick,
 }: {
   title: string;
   subtitle?: string;
@@ -199,6 +239,7 @@ function Section({
   accent?: string;
   muted?: boolean;
   streakByTask: Map<string, number>;
+  onTagClick?: (tagId: number) => void;
 }) {
   return (
     <section>
@@ -216,7 +257,11 @@ function Section({
       <ul className="space-y-2">
         {tasks.map((t) => (
           <li key={t.id}>
-            <TaskCard task={t} streakLength={streakByTask.get(t.id) ?? 0} />
+            <TaskCard
+              task={t}
+              streakLength={streakByTask.get(t.id) ?? 0}
+              {...(onTagClick ? { onTagClick } : {})}
+            />
           </li>
         ))}
       </ul>

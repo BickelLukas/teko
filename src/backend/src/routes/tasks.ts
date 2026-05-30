@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, and, isNull, isNotNull, ne, or, sql } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, ne, or, sql, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { RRule } from "rrule";
 import * as schema from "../db/schema.js";
@@ -19,7 +19,7 @@ import {
   suggestCompletionWindow,
 } from "../domain/recurrence.js";
 import { computeStreakUpdate, awardPoints, detectStreakMilestone } from "../domain/streaks.js";
-import { taskToResponse, buildAssigneeNameMap } from "./taskResponseHelper.js";
+import { taskToResponse, buildAssigneeNameMap, buildTaskTagsMap } from "./taskResponseHelper.js";
 import "../types.js";
 
 function normalizeRrule(ruleStr: string, dtstart: Date): string {
@@ -53,6 +53,14 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     }
     const assignee = query.success ? (query.data.assignee ?? "mine") : "mine";
     const scope = query.success ? (query.data.scope ?? "active") : "active";
+    // Parse comma-separated tag IDs for AND filtering
+    const tagIds: number[] = [];
+    if (query.success && query.data.tags) {
+      for (const part of query.data.tags.split(",")) {
+        const n = parseInt(part.trim(), 10);
+        if (!isNaN(n) && n > 0) tagIds.push(n);
+      }
+    }
 
     const baseConditions: Parameters<typeof and>[0][] = [
       isNull(schema.tasks.archived_at),
@@ -107,13 +115,34 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         .all();
     }
 
-    const now = getNow();
-    const assigneeIds = [...new Set(rows.filter((r) => r.assignee_id).map((r) => r.assignee_id!))];
-    const assigneeNames = buildAssigneeNameMap(db, assigneeIds);
+    // AND-filter by tags: keep only tasks that have ALL requested tag IDs
+    let filteredRows = rows;
+    if (tagIds.length > 0) {
+      const taskIdsWithAllTags = db
+        .select({ task_id: schema.task_tags.task_id })
+        .from(schema.task_tags)
+        .where(inArray(schema.task_tags.tag_id, tagIds))
+        .groupBy(schema.task_tags.task_id)
+        .having(sql`COUNT(DISTINCT ${schema.task_tags.tag_id}) = ${tagIds.length}`)
+        .all()
+        .map((r) => r.task_id);
 
-    return rows.map((t) =>
+      const matchSet = new Set(taskIdsWithAllTags);
+      filteredRows = rows.filter((r) => matchSet.has(r.id));
+    }
+
+    const now = getNow();
+    const assigneeIds = [
+      ...new Set(filteredRows.filter((r) => r.assignee_id).map((r) => r.assignee_id!)),
+    ];
+    const assigneeNames = buildAssigneeNameMap(db, assigneeIds);
+    const taskIds = filteredRows.map((r) => r.id);
+    const tagsMap = buildTaskTagsMap(db, taskIds);
+
+    return filteredRows.map((t) =>
       taskToResponse(t, now, {
         assigneeName: t.assignee_id ? (assigneeNames.get(t.assignee_id) ?? null) : null,
+        tags: tagsMap.get(t.id) ?? [],
       }),
     );
   });
@@ -215,9 +244,11 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (!task) return reply.code(500).send({ error: "Failed to retrieve created task" });
 
     const assigneeNames = buildAssigneeNameMap(db, task.assignee_id ? [task.assignee_id] : []);
+    const tagsForNew = buildTaskTagsMap(db, [task.id]);
     return reply.code(201).send(
       taskToResponse(task, getNow(), {
         assigneeName: task.assignee_id ? (assigneeNames.get(task.assignee_id) ?? null) : null,
+        tags: tagsForNew.get(task.id) ?? [],
       }),
     );
   });
@@ -326,9 +357,11 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         db,
         task.assignee_id ? [task.assignee_id] : [],
       );
+      const tagsNoOp = buildTaskTagsMap(db, [task.id]);
       return reply.code(200).send(
         taskToResponse(task, getNow(), {
           assigneeName: task.assignee_id ? (assigneeNamesNoOp.get(task.assignee_id) ?? null) : null,
+          tags: tagsNoOp.get(task.id) ?? [],
         }),
       );
     }
@@ -342,11 +375,13 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       db,
       updated.assignee_id ? [updated.assignee_id] : [],
     );
+    const tagsUpdated = buildTaskTagsMap(db, [updated.id]);
     return reply.code(200).send(
       taskToResponse(updated, getNow(), {
         assigneeName: updated.assignee_id
           ? (assigneeNamesUpdated.get(updated.assignee_id) ?? null)
           : null,
+        tags: tagsUpdated.get(updated.id) ?? [],
       }),
     );
   });
@@ -492,6 +527,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       db,
       updatedTask?.assignee_id ? [updatedTask.assignee_id] : [],
     );
+    const completeTags = updatedTask ? buildTaskTagsMap(db, [updatedTask.id]) : new Map();
 
     return reply.code(200).send({
       task: updatedTask
@@ -499,6 +535,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
             assigneeName: updatedTask.assignee_id
               ? (completeAssigneeNames.get(updatedTask.assignee_id) ?? null)
               : null,
+            tags: completeTags.get(updatedTask.id) ?? [],
           })
         : null,
       completion: { was_on_time: wasOnTime, points_awarded: pointsAwarded },

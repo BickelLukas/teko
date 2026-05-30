@@ -6,6 +6,8 @@ import { fetchTasks, fetchMe, archiveTask } from "@/lib/api";
 import { EditTaskModal } from "@/components/EditTaskModal";
 import { ReschedulePanel } from "@/components/ReschedulePanel";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
+import { TagChip } from "@/components/TagChip";
+import { TagFilterPill } from "@/components/TagPicker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -24,7 +26,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { parseEnum } from "@/lib/utils";
-import type { TaskResponse } from "@teko/shared";
+import type { TaskResponse, TagResponse } from "@teko/shared";
 import { useLocale, formatDateShort } from "@/lib/locale";
 
 const ASSIGNEE_FILTERS = ["mine", "me", "unassigned", "all"] as const;
@@ -33,7 +35,13 @@ type AssigneeFilter = (typeof ASSIGNEE_FILTERS)[number];
 // ── SomedayCard ───────────────────────────────────────────────────────────────
 // Calm card — no completion circle, no urgency colours, no progress bars.
 
-function SomedayCard({ task }: { task: TaskResponse }) {
+function SomedayCard({
+  task,
+  onTagClick,
+}: {
+  task: TaskResponse;
+  onTagClick?: (tagId: number) => void;
+}) {
   const { t } = useTranslation(["common", "pages"]);
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -67,6 +75,22 @@ function SomedayCard({ task }: { task: TaskResponse }) {
                     )}
                     <span className="text-xs text-muted-foreground/50">{createdDate}</span>
                   </div>
+                  {task.tags.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {task.tags.slice(0, 2).map((tag) => (
+                        <TagChip
+                          key={tag.id}
+                          tag={tag}
+                          {...(onTagClick ? { onClick: () => onTagClick(tag.id) } : {})}
+                        />
+                      ))}
+                      {task.tags.length > 2 && (
+                        <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground leading-none">
+                          +{task.tags.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <DropdownMenuRoot>
@@ -122,8 +146,11 @@ function SomedayCard({ task }: { task: TaskResponse }) {
 export function SomedayPage() {
   const { t } = useTranslation(["pages", "common"]);
   const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilter>("mine");
+  const [tagFilter, setTagFilter] = useState<TagResponse[]>([]);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
+
+  const tagIds = tagFilter.map((t) => t.id);
 
   const {
     data: tasks = [],
@@ -131,8 +158,8 @@ export function SomedayPage() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["tasks", assigneeFilter, "someday"],
-    queryFn: () => fetchTasks(assigneeFilter, "someday"),
+    queryKey: ["tasks", assigneeFilter, "someday", tagIds],
+    queryFn: () => fetchTasks(assigneeFilter, "someday", tagIds),
   });
 
   // Newest first
@@ -148,11 +175,12 @@ export function SomedayPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{t("pages:someday.title")}</h1>
         <div className="flex items-center gap-2">
+          <TagFilterPill selected={tagFilter} onChange={setTagFilter} />
           <SelectRoot
             value={assigneeFilter}
             onValueChange={(v) => setAssigneeFilter(parseEnum(v, ASSIGNEE_FILTERS, "mine"))}
           >
-            <SelectTrigger size="sm" className="w-40">
+            <SelectTrigger size="sm" className="w-auto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -167,6 +195,25 @@ export function SomedayPage() {
         </div>
       </div>
 
+      {tagFilter.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {tagFilter.map((tag) => (
+            <TagChip
+              key={tag.id}
+              tag={tag}
+              onRemove={() => setTagFilter((prev) => prev.filter((t) => t.id !== tag.id))}
+            />
+          ))}
+          <button
+            type="button"
+            className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+            onClick={() => setTagFilter([])}
+          >
+            {t("common:tags.clear_filters")}
+          </button>
+        </div>
+      )}
+
       {isLoading && <TaskListSkeleton />}
 
       {isError && (
@@ -180,19 +227,42 @@ export function SomedayPage() {
 
       {!isLoading && !isError && tasks.length === 0 && (
         <div className="py-12 text-center">
-          <p className="text-sm font-medium text-muted-foreground">
-            {t("pages:someday.empty_title")}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground/70">
-            {t("pages:someday.empty_description")}
-          </p>
+          {tagFilter.length > 0 ? (
+            <>
+              <p className="text-sm text-muted-foreground">{t("common:tags.no_match_filter")}</p>
+              <button
+                type="button"
+                className="mt-1 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                onClick={() => setTagFilter([])}
+              >
+                {t("common:tags.clear_filters")}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-muted-foreground">
+                {t("pages:someday.empty_title")}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground/70">
+                {t("pages:someday.empty_description")}
+              </p>
+            </>
+          )}
         </div>
       )}
 
       <ul className="space-y-2">
         {sorted.map((task: TaskResponse) => (
           <li key={task.id}>
-            <SomedayCard task={task} />
+            <SomedayCard
+              task={task}
+              onTagClick={(id) => {
+                const tag = task.tags.find((t) => t.id === id);
+                if (tag && !tagFilter.some((f) => f.id === id)) {
+                  setTagFilter((prev) => [...prev, tag]);
+                }
+              }}
+            />
           </li>
         ))}
       </ul>

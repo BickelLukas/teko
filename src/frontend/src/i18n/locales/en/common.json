@@ -153,5 +153,17 @@
   "date_formats": {
     "long": "EEEE, MMMM d, yyyy",
     "short": "MMM d"
+  },
+  "tags": {
+    "label": "Tags",
+    "add_tag": "Add tag",
+    "filter_label": "Tags",
+    "search_placeholder": "Search tags…",
+    "no_tags_picker": "No tags yet.",
+    "no_tags_filter": "No tags yet.",
+    "create_in_settings": "Create them in Settings → Tags",
+    "no_match": "No tags match.",
+    "clear_filters": "Clear filters",
+    "no_match_filter": "No tasks match these filters."
   }
 }

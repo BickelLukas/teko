@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TAG_PALETTE_KEYS } from "./palette.js";
 
 // ── Domain types ─────────────────────────────────────────────────────────────
 
@@ -84,6 +85,65 @@ export const TestNotificationResponseSchema = z.object({
 });
 export type TestNotificationResponse = z.infer<typeof TestNotificationResponseSchema>;
 
+// ── Tag ──────────────────────────────────────────────────────────────────────
+
+export const TagPaletteKeySchema = z.enum(TAG_PALETTE_KEYS);
+// TagPaletteKey type lives in palette.ts and is re-exported via index.ts
+
+export const TagSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().min(1).max(50),
+  color: TagPaletteKeySchema,
+  created_at: z.coerce.date(),
+  created_by: z.string().uuid(),
+});
+export type Tag = z.infer<typeof TagSchema>;
+
+export const TagResponseSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string(),
+  color: TagPaletteKeySchema,
+});
+export type TagResponse = z.infer<typeof TagResponseSchema>;
+
+export const TagWithCountSchema = TagResponseSchema.extend({
+  count: z.number().int().nonnegative(),
+});
+export type TagWithCount = z.infer<typeof TagWithCountSchema>;
+
+export const TagIdParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+export type TagIdParams = z.infer<typeof TagIdParamsSchema>;
+
+export const CreateTagBodySchema = z.object({
+  name: z
+    .string()
+    .min(1)
+    .max(50)
+    .transform((v) => v.trim())
+    .refine((v) => v.length > 0, "Name cannot be empty after trimming"),
+  color: TagPaletteKeySchema,
+});
+export type CreateTagBody = z.infer<typeof CreateTagBodySchema>;
+
+export const UpdateTagBodySchema = z.object({
+  name: z
+    .string()
+    .min(1)
+    .max(50)
+    .transform((v) => v.trim())
+    .refine((v) => v.length > 0, "Name cannot be empty after trimming")
+    .optional(),
+  color: TagPaletteKeySchema.optional(),
+});
+export type UpdateTagBody = z.infer<typeof UpdateTagBodySchema>;
+
+export const SetTaskTagsBodySchema = z.object({
+  tag_ids: z.array(z.number().int().positive()),
+});
+export type SetTaskTagsBody = z.infer<typeof SetTaskTagsBodySchema>;
+
 // ── Task ─────────────────────────────────────────────────────────────────────
 
 export const TaskSchema = z.object({
@@ -100,7 +160,6 @@ export const TaskSchema = z.object({
   completion_window_days: z.number().int().nullable(),
   due_at: z.coerce.date().nullable(),
   points: z.number().int().nullable(),
-  tags: z.string().nullable(),
   exposed_to_ha: z.boolean(),
   is_household: z.boolean(),
 });
@@ -168,6 +227,8 @@ export const GetTasksQuerySchema = z.object({
   // someday: non-recurring tasks with no due_at (recurrence_rule IS NULL AND due_at IS NULL)
   // all: no scope filter (includes someday items)
   scope: z.enum(["active", "someday", "all"]).optional(),
+  // AND filter: comma-separated tag IDs; returns tasks that have ALL specified tags
+  tags: z.string().optional(),
 });
 export type GetTasksQuery = z.infer<typeof GetTasksQuerySchema>;
 
@@ -205,7 +266,6 @@ export const TaskResponseSchema = TaskSchema.pick({
   created_at: true,
   created_by: true,
   points: true,
-  tags: true,
   recurrence_rule: true,
   recurrence_mode: true,
   completion_window_days: true,
@@ -213,6 +273,8 @@ export const TaskResponseSchema = TaskSchema.pick({
   archived_at: true,
 }).extend({
   assignee_name: z.string().nullable(),
+  // Resolved tag objects for this task (joined at response time).
+  tags: z.array(TagResponseSchema),
   // True when the task is a Someday item: non-recurring, no date set, not archived.
   // Derived server-side so the frontend doesn't need to re-compute the predicate.
   is_someday: z.boolean(),

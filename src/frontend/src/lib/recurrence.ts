@@ -19,7 +19,12 @@ function afterCompletionUnit(freq: number, interval: number, locale: string): st
 
 // Minimal German descriptions for fixed-schedule RRULEs
 function toTextDe(rule: RRule): string {
-  const { freq, interval = 1, byweekday, bymonthday } = rule.options;
+  const { freq, interval, byweekday } = rule.options;
+  // Read the explicit day-of-month from origOptions: rrule derives a bymonthday
+  // from DTSTART in `options`, which would otherwise make "every N months" look
+  // like a day-of-month rule.
+  const explicitMonthDay = rule.origOptions.bymonthday;
+  const monthDay = Array.isArray(explicitMonthDay) ? explicitMonthDay[0] : explicitMonthDay;
   const DE_DAYS: Record<number, string> = {
     0: "Mo",
     1: "Di",
@@ -32,14 +37,12 @@ function toTextDe(rule: RRule): string {
   if (freq === RRule.DAILY && interval === 1) return "Täglich";
   if (freq === RRule.DAILY) return `Alle ${interval} Tage`;
   if (freq === RRule.WEEKLY && interval === 1 && byweekday?.length) {
-    const days = byweekday
-      .map((d) => DE_DAYS[typeof d === "number" ? d : (d as { weekday: number }).weekday] ?? "")
-      .join(", ");
+    const days = byweekday.map((d) => DE_DAYS[d] ?? "").join(", ");
     return `Jeden ${days}`;
   }
   if (freq === RRule.WEEKLY && interval === 1) return "Jede Woche";
   if (freq === RRule.WEEKLY) return `Alle ${interval} Wochen`;
-  if (freq === RRule.MONTHLY && bymonthday?.length) return `Am ${bymonthday[0]}. jeden Monat`;
+  if (freq === RRule.MONTHLY && monthDay != null) return `Am ${monthDay}. jeden Monat`;
   if (freq === RRule.MONTHLY && interval === 1) return "Jeden Monat";
   if (freq === RRule.MONTHLY) return `Alle ${interval} Monate`;
   if (freq === RRule.YEARLY && interval === 1) return "Jedes Jahr";

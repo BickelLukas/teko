@@ -252,16 +252,11 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     let plannedFor: Date | null = null;
 
     if (recurrence_rule && recurrence_mode) {
+      // First occurrence is "now" (or the chosen start date) for both modes,
+      // unless a calendar constraint in the rule pushes it to a later slot.
       const effectiveNow = anchor ?? now;
-
-      if (recurrence_mode === "after_completion" && anchor !== null) {
-        // User chose an anchor date: treat it as the first due date directly.
-        // Standard creation (no anchor) would compute anchor+interval, which is wrong here.
-        nextDueAt = anchor;
-      } else {
-        const taskForDue = { recurrence_rule, recurrence_mode, next_due_at: null };
-        nextDueAt = computeNextDueAt(taskForDue, null, effectiveNow);
-      }
+      const taskForDue = { recurrence_rule, recurrence_mode, next_due_at: null };
+      nextDueAt = computeNextDueAt(taskForDue, null, effectiveNow);
 
       normalizedRule = normalizeRrule(recurrence_rule, nextDueAt);
       if (windowDays === null) {

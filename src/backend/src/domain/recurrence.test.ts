@@ -74,6 +74,62 @@ describe("computeNextDueAt", () => {
       const result = computeNextDueAt(task, utc(2024, 1, 8), utc(2024, 1, 8));
       expect(result).toEqual(utc(2024, 1, 15));
     });
+
+    // The frontend emits rules without an explicit DTSTART. On creation the
+    // schedule anchors at "now", so an unconstrained cadence is due immediately.
+    describe("creation with no explicit DTSTART → first due is the creation day (start of day UTC)", () => {
+      it("daily created mid-day → due today at start of day (not tomorrow)", () => {
+        const task = {
+          recurrence_rule: "RRULE:FREQ=DAILY",
+          recurrence_mode: "fixed" as const,
+          next_due_at: null,
+        };
+        const result = computeNextDueAt(task, null, utc(2024, 5, 15, 14, 30));
+        expect(result).toEqual(utc(2024, 5, 15));
+      });
+
+      it("every 3 days created → due today at start of day", () => {
+        const task = {
+          recurrence_rule: "RRULE:FREQ=DAILY;INTERVAL=3",
+          recurrence_mode: "fixed" as const,
+          next_due_at: null,
+        };
+        const result = computeNextDueAt(task, null, utc(2024, 5, 15, 9, 0));
+        expect(result).toEqual(utc(2024, 5, 15));
+      });
+
+      it("yearly created → due today at start of day", () => {
+        const task = {
+          recurrence_rule: "RRULE:FREQ=YEARLY",
+          recurrence_mode: "fixed" as const,
+          next_due_at: null,
+        };
+        const result = computeNextDueAt(task, null, utc(2024, 5, 15, 9, 0));
+        expect(result).toEqual(utc(2024, 5, 15));
+      });
+
+      it("weekly on Monday created on a Tuesday → next Monday (calendar constraint wins)", () => {
+        // May 14 2024 is a Tuesday; the next Monday is May 20.
+        const task = {
+          recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=MO",
+          recurrence_mode: "fixed" as const,
+          next_due_at: null,
+        };
+        const result = computeNextDueAt(task, null, utc(2024, 5, 14, 14, 0));
+        expect(result).toEqual(utc(2024, 5, 20));
+      });
+
+      it("weekly on Monday created on a Monday → due today at start of day", () => {
+        // May 20 2024 is a Monday.
+        const task = {
+          recurrence_rule: "RRULE:FREQ=WEEKLY;BYDAY=MO",
+          recurrence_mode: "fixed" as const,
+          next_due_at: null,
+        };
+        const result = computeNextDueAt(task, null, utc(2024, 5, 20, 14, 0));
+        expect(result).toEqual(utc(2024, 5, 20));
+      });
+    });
   });
 
   describe("after_completion mode", () => {
@@ -117,13 +173,24 @@ describe("computeNextDueAt", () => {
       expect(result).toEqual(utc(2024, 2, 29));
     });
 
-    it("creation (null lastCompletedAt): first due = now + interval", () => {
+    it("creation (null lastCompletedAt): first due = now (interval starts after first completion)", () => {
       const task = {
         recurrence_rule: WEEKLY_7,
         recurrence_mode: "after_completion" as const,
         next_due_at: null,
       };
       const result = computeNextDueAt(task, null, utc(2024, 1, 1));
+      expect(result).toEqual(utc(2024, 1, 1));
+    });
+
+    it("snaps to start of day UTC when completed mid-day", () => {
+      // Completed Jan 1 at 14:30 → next due is Jan 8 at 00:00, not 14:30.
+      const task = {
+        recurrence_rule: WEEKLY_7,
+        recurrence_mode: "after_completion" as const,
+        next_due_at: null,
+      };
+      const result = computeNextDueAt(task, utc(2024, 1, 1, 14, 30), utc(2024, 1, 1, 14, 30));
       expect(result).toEqual(utc(2024, 1, 8));
     });
 

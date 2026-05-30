@@ -164,6 +164,44 @@ describe("POST /api/tasks", () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it("recurring fixed daily + no start_date → due today, eligible", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: {
+        title: "Daily chore",
+        recurrence_rule: "RRULE:FREQ=DAILY",
+        recurrence_mode: "fixed",
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as TaskResponse;
+    expect(body.state).toBe("eligible");
+    expect(body.next_due_at).toBeTruthy();
+    // First occurrence is today (start of day UTC), not the next interval.
+    expect(new Date(body.next_due_at!).getTime()).toBeLessThanOrEqual(Date.now());
+    expect(new Date(body.next_due_at!).toISOString()).toMatch(/T00:00:00\.000Z$/);
+  });
+
+  it("recurring after_completion + no start_date → due today, eligible", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/tasks",
+      payload: {
+        title: "Water plants",
+        recurrence_rule: "RRULE:FREQ=WEEKLY;INTERVAL=1",
+        recurrence_mode: "after_completion",
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as TaskResponse;
+    expect(body.state).toBe("eligible");
+    expect(body.next_due_at).toBeTruthy();
+    // First occurrence is today (start of day UTC), not now + one week.
+    expect(new Date(body.next_due_at!).getTime()).toBeLessThanOrEqual(Date.now());
+    expect(new Date(body.next_due_at!).toISOString()).toMatch(/T00:00:00\.000Z$/);
+  });
+
   it("recurring fixed + future start_date → next_due_at on/after anchor", async () => {
     // Weekly on Mondays. 2099-06-15 is a Monday → next_due_at = that Monday.
     const res = await app.inject({
@@ -179,10 +217,10 @@ describe("POST /api/tasks", () => {
     expect(res.statusCode).toBe(201);
     const body = res.json() as TaskResponse;
     expect(body.next_due_at).toBeTruthy();
-    // next_due_at must be on or after 2099-06-15T12:00:00Z
-    expect(new Date(body.next_due_at!).getTime()).toBeGreaterThanOrEqual(
-      new Date("2099-06-15T12:00:00Z").getTime(),
-    );
+    // next_due_at is day-aligned (start of day UTC) and on or after the anchor day.
+    const due = new Date(body.next_due_at!);
+    expect(due.getTime()).toBeGreaterThanOrEqual(new Date("2099-06-15T00:00:00Z").getTime());
+    expect(due.toISOString()).toMatch(/T00:00:00\.000Z$/);
   });
 
   it("recurring after_completion + future start_date → next_due_at = anchor", async () => {

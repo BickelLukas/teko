@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { fetchTasks, fetchMe } from "@/lib/api";
-import { sortByDueAt } from "@/lib/utils";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListSkeleton } from "@/components/TaskCardSkeleton";
 import { AddTaskModal } from "@/components/AddTaskModal";

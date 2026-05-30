@@ -64,7 +64,7 @@ describe("GET /api/tasks", () => {
     expect(res.json()).toEqual([]);
   });
 
-  it("returns only the user's open tasks", async () => {
+  it("returns only the user's open tasks (scope=all includes Someday)", async () => {
     db.insert(schema.tasks)
       .values({
         id: randomUUID(),
@@ -86,7 +86,8 @@ describe("GET /api/tasks", () => {
       })
       .run();
 
-    const res = await app.inject({ method: "GET", url: "/api/tasks" });
+    // scope=all includes Someday items (dateless tasks) alongside active ones
+    const res = await app.inject({ method: "GET", url: "/api/tasks?scope=all" });
     expect(res.statusCode).toBe(200);
     const body = res.json() as TaskListResponse;
     expect(body).toHaveLength(1);
@@ -592,15 +593,120 @@ describe("PATCH /api/tasks/:id", () => {
     expect(res.statusCode).toBe(409);
   });
 
-  it("returns 422 when parent_id would create a cycle", async () => {
-    const parentId = insertTask();
-    const childId = insertTask({ parent_id: parentId });
-    const res = await app.inject({
-      method: "PATCH",
-      url: `/api/tasks/${parentId}`,
-      payload: { parent_id: childId },
+});
+
+describe("Someday scope", () => {
+  let app: FastifyInstance;
+  let db: Db;
+  let userId: string;
+
+  beforeEach(async () => {
+    ({ db, userId } = buildTestDb());
+    app = await buildApp(db, TEST_CONFIG);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  function insertSomedayTask(title: string) {
+    // A Someday item: no recurrence, no dates
+    const id = randomUUID();
+    db.insert(schema.tasks)
+      .values({ id, title, created_by: userId, state: "eligible" })
+      .run();
+    return id;
+  }
+
+  it("Someday item appears in scope=someday and not in scope=active", async () => {
+    const id = insertSomedayTask("Renovate basement");
+
+    const somedayRes = await app.inject({ method: "GET", url: "/api/tasks?scope=someday" });
+    expect(somedayRes.statusCode).toBe(200);
+    const somedayBody = somedayRes.json() as TaskListResponse;
+    expect(somedayBody.some((t) => t.id === id)).toBe(true);
+    // is_someday flag should be true
+    const item = somedayBody.find((t) => t.id === id);
+    expect(item?.is_someday).toBe(true);
+
+    const activeRes = await app.inject({ method: "GET", url: "/api/tasks?scope=active" });
+    expect(activeRes.statusCode).toBe(200);
+    const activeBody = activeRes.json() as TaskListResponse;
+    expect(activeBody.some((t) => t.id === id)).toBe(false);
+  });
+
+  it("scheduling a Someday item moves it to scope=active", async () => {
+    const id = insertSomedayTask("Fix squeaky hinge");
+
+    const plannedFor = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    const schedRes = await app.inject({
+      method: "POST",
+      url: `/api/tasks/${id}/schedule`,
+      payload: { planned_for: plannedFor.toISOString() },
     });
-    expect(res.statusCode).toBe(422);
+    expect(schedRes.statusCode).toBe(200);
+
+    const somedayRes = await app.inject({ method: "GET", url: "/api/tasks?scope=someday" });
+    const somedayBody = somedayRes.json() as TaskListResponse;
+    expect(somedayBody.some((t) => t.id === id)).toBe(false);
+
+    const activeRes = await app.inject({ method: "GET", url: "/api/tasks?scope=active" });
+    const activeBody = activeRes.json() as TaskListResponse;
+    const found = activeBody.find((t) => t.id === id);
+    expect(found).toBeTruthy();
+    expect(found?.planned_for).toBeTruthy();
+    expect(found?.is_someday).toBe(false);
+  });
+
+  it("unscheduling a planned one-off task moves it back to Someday", async () => {
+    const id = randomUUID();
+    // A scheduled one-off (has planned_for but no recurrence)
+    db.insert(schema.tasks)
+      .values({
+        id,
+        title: "Book dentist",
+        created_by: userId,
+        state: "planned",
+        planned_for: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      })
+      .run();
+
+    const res = await app.inject({ method: "POST", url: `/api/tasks/${id}/unschedule` });
+    expect(res.statusCode).toBe(204);
+
+    const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, id)).get();
+    expect(task?.planned_for).toBeNull();
+
+    const somedayRes = await app.inject({ method: "GET", url: "/api/tasks?scope=someday" });
+    const somedayBody = somedayRes.json() as TaskListResponse;
+    expect(somedayBody.some((t) => t.id === id)).toBe(true);
+  });
+
+  it("archiving a Someday item removes it from both scopes", async () => {
+    const id = insertSomedayTask("Plant a vegetable garden");
+
+    const archiveRes = await app.inject({ method: "POST", url: `/api/tasks/${id}/archive` });
+    expect(archiveRes.statusCode).toBe(204);
+
+    const somedayRes = await app.inject({ method: "GET", url: "/api/tasks?scope=someday" });
+    const somedayBody = somedayRes.json() as TaskListResponse;
+    expect(somedayBody.some((t) => t.id === id)).toBe(false);
+
+    const activeRes = await app.inject({ method: "GET", url: "/api/tasks?scope=active" });
+    const activeBody = activeRes.json() as TaskListResponse;
+    expect(activeBody.some((t) => t.id === id)).toBe(false);
+  });
+
+  it("completing a task does not trigger any cascade (no parent relationships)", async () => {
+    const id = insertSomedayTask("Quick standalone item");
+
+    // First schedule it so it can be completed (Someday items in eligible state can be completed)
+    const res = await app.inject({ method: "POST", url: `/api/tasks/${id}/complete` });
+    expect(res.statusCode).toBe(200);
+
+    const task = db.select().from(schema.tasks).where(eq(schema.tasks.id, id)).get();
+    expect(task?.state).toBe("done");
+    // No error means no cascade attempted — there are no parent links to walk
   });
 });
 

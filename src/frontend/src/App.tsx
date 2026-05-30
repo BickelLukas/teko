@@ -13,8 +13,7 @@ import { TodayPage } from "@/pages/Today";
 import { ChoresPage } from "@/pages/Chores";
 import { AllTasksPage } from "@/pages/AllTasks";
 import { SettingsPage } from "@/pages/Settings";
-import { ProjectsPage } from "@/pages/Projects";
-import { ProjectDetailPage } from "@/pages/ProjectDetail";
+import { SomedayPage } from "@/pages/Someday";
 import { StatsPage } from "@/pages/Stats";
 import { fetchMe } from "@/lib/api";
 
@@ -101,8 +100,7 @@ export function App() {
                 <Route path="/" element={<TodayPage />} />
                 <Route path="/chores" element={<ChoresPage />} />
                 <Route path="/tasks" element={<AllTasksPage />} />
-                <Route path="/projects" element={<ProjectsPage />} />
-                <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                <Route path="/someday" element={<SomedayPage />} />
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Routes>

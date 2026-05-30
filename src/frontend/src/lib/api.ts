@@ -1,7 +1,6 @@
 import type {
   TaskListResponse,
   TaskResponse,
-  ProjectListResponse,
   UserResponse,
   TodayStats,
   DevUser,
@@ -70,7 +69,7 @@ async function throwIfNotOk(res: Response): Promise<void> {
 
 export async function fetchTasks(
   assignee?: string,
-  scope?: "leaves" | "all" | "top_level",
+  scope?: "active" | "someday" | "all",
 ): Promise<TaskListResponse> {
   const params = new URLSearchParams();
   if (assignee) params.set("assignee", assignee);
@@ -131,19 +130,9 @@ export async function unarchiveTask(id: string): Promise<void> {
   await throwIfNotOk(await apiFetch(`/api/tasks/${id}/unarchive`, { method: "POST" }));
 }
 
-// ── Projects ──────────────────────────────────────────────────────────────────
-
-export async function fetchProjects(assignee?: string): Promise<ProjectListResponse> {
-  const params = assignee ? `?assignee=${encodeURIComponent(assignee)}` : "";
-  return json(await apiFetch(`/api/projects${params}`));
-}
-
-export async function fetchTaskTree(id: string): Promise<TaskListResponse> {
-  return json(await apiFetch(`/api/tasks/${id}/tree`));
-}
-
-export async function fetchTaskChildren(id: string): Promise<TaskListResponse> {
-  return json(await apiFetch(`/api/tasks/${id}/children`));
+/** Clears planned_for, moving a non-recurring scheduled task back to Someday. */
+export async function unscheduleTask(id: string): Promise<void> {
+  await throwIfNotOk(await apiFetch(`/api/tasks/${id}/unschedule`, { method: "POST" }));
 }
 
 // ── Me ────────────────────────────────────────────────────────────────────────

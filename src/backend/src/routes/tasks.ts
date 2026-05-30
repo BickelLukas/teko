@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, and, isNull, isNotNull, ne, or, inArray, sql } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, ne, or, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { RRule } from "rrule";
 import * as schema from "../db/schema.js";
@@ -22,97 +22,11 @@ import {
 } from "../domain/recurrence.js";
 import { computeStreakUpdate, awardPoints, detectStreakMilestone } from "../domain/streaks.js";
 import { taskToResponse, buildAssigneeNameMap } from "./taskResponseHelper.js";
-import { fetchDescendants } from "../db/queries.js";
-import type { Db } from "../db/client.js";
 import "../types.js";
 
 function normalizeRrule(ruleStr: string, dtstart: Date): string {
   const parsed = RRule.fromString(ruleStr);
   return new RRule({ ...parsed.origOptions, dtstart }).toString();
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getDescendantIds(db: Db, taskId: string): string[] {
-  return fetchDescendants(db, taskId).map((d) => d.id);
-}
-
-function buildChildCountMap(db: Db): Map<string, number> {
-  const rows = db
-    .select({
-      parent_id: schema.tasks.parent_id,
-      count: sql<number>`COUNT(*)`,
-    })
-    .from(schema.tasks)
-    .where(and(isNotNull(schema.tasks.parent_id), isNull(schema.tasks.archived_at)))
-    .groupBy(schema.tasks.parent_id)
-    .all();
-
-  const map = new Map<string, number>();
-  for (const r of rows) {
-    if (r.parent_id) map.set(r.parent_id, r.count);
-  }
-  return map;
-}
-
-function buildParentTitleMap(db: Db, parentIds: string[]): Map<string, string> {
-  if (parentIds.length === 0) return new Map();
-  const rows = db
-    .select({ id: schema.tasks.id, title: schema.tasks.title })
-    .from(schema.tasks)
-    .where(inArray(schema.tasks.id, parentIds))
-    .all();
-  return new Map(rows.map((r) => [r.id, r.title]));
-}
-
-// After completing a task, walk upward and auto-complete any ancestor whose
-// auto_complete_when_children_done setting is on and all direct children done.
-// Collects all eligible ancestors first (tracking pending completions) then
-// writes everything in a single transaction for atomicity.
-function checkAndAutoCompleteAncestors(db: Db, parentId: string, userId: string, now: Date): void {
-  const toComplete: (typeof schema.tasks.$inferSelect)[] = [];
-  const pendingDoneIds = new Set<string>();
-  let currentParentId: string | null = parentId;
-
-  while (currentParentId) {
-    const parent = db.select().from(schema.tasks).where(eq(schema.tasks.id, currentParentId)).get();
-    if (!parent || parent.state === "done" || parent.archived_at !== null) break;
-    if (!parent.auto_complete_when_children_done) break;
-
-    const directChildren = db
-      .select()
-      .from(schema.tasks)
-      .where(eq(schema.tasks.parent_id, parent.id))
-      .all();
-
-    if (directChildren.length === 0) break;
-
-    const allDone = directChildren.every(
-      (c) => c.state === "done" || c.archived_at !== null || pendingDoneIds.has(c.id),
-    );
-    if (!allDone) break;
-
-    toComplete.push(parent);
-    pendingDoneIds.add(parent.id);
-    currentParentId = parent.parent_id;
-  }
-
-  if (toComplete.length === 0) return;
-
-  db.transaction((tx) => {
-    for (const parent of toComplete) {
-      tx.insert(schema.completions)
-        .values({
-          id: randomUUID(),
-          task_id: parent.id,
-          completed_by: userId,
-          completed_at: now,
-          was_on_time: null,
-        })
-        .run();
-      tx.update(schema.tasks).set({ state: "done" }).where(eq(schema.tasks.id, parent.id)).run();
-    }
-  });
 }
 
 // ── Route plugin ──────────────────────────────────────────────────────────────
@@ -122,7 +36,13 @@ const tasks: FastifyPluginAsync = async (fastify) => {
 
   // ── GET /api/tasks ──────────────────────────────────────────────────────────
   // ?assignee=mine (default) | me | unassigned | all | <uuid>
-  // ?scope=all (default) | leaves | top_level
+  // ?scope=active (default) | someday | all
+  //
+  // active:  non-archived, non-done tasks that are NOT Someday items
+  //          i.e. have a recurrence rule OR a planned date OR a next_due_at
+  // someday: non-archived, non-done tasks with no recurrence and no date set
+  //          (recurrence_rule IS NULL AND next_due_at IS NULL AND planned_for IS NULL)
+  // all:     no scope filter (both active and someday items)
 
   fastify.get("/api/tasks", async (request, reply) => {
     const query = GetTasksQuerySchema.safeParse(request.query);
@@ -136,25 +56,38 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       }
     }
     const assignee = query.success ? (query.data.assignee ?? "mine") : "mine";
-    const scope = query.success ? (query.data.scope ?? "all") : "all";
+    const scope = query.success ? (query.data.scope ?? "active") : "active";
 
-    const scopeConditions: Parameters<typeof and>[0][] = [
+    // A "Someday" item has no recurrence rule and no date set.
+    const isSomedaySql = sql`(
+      ${schema.tasks.recurrence_rule} IS NULL
+      AND ${schema.tasks.next_due_at} IS NULL
+      AND ${schema.tasks.planned_for} IS NULL
+    )`;
+
+    const baseConditions: Parameters<typeof and>[0][] = [
       isNull(schema.tasks.archived_at),
       ne(schema.tasks.state, "done"),
     ];
 
-    if (scope === "leaves") {
-      scopeConditions.push(
-        sql`${schema.tasks.id} NOT IN (
-          SELECT DISTINCT parent_id FROM tasks
-          WHERE parent_id IS NOT NULL AND archived_at IS NULL
-        )`,
+    if (scope === "active") {
+      // Exclude Someday items: keep tasks that have recurrence OR a date
+      baseConditions.push(
+        or(
+          isNotNull(schema.tasks.recurrence_rule),
+          isNotNull(schema.tasks.next_due_at),
+          isNotNull(schema.tasks.planned_for),
+        ),
       );
-    } else if (scope === "top_level") {
-      scopeConditions.push(isNull(schema.tasks.parent_id));
+    } else if (scope === "someday") {
+      // Only Someday items
+      baseConditions.push(isNull(schema.tasks.recurrence_rule));
+      baseConditions.push(isNull(schema.tasks.next_due_at));
+      baseConditions.push(isNull(schema.tasks.planned_for));
     }
+    // scope === "all": no additional filter
 
-    const baseWhere = and(...scopeConditions);
+    const baseWhere = and(...baseConditions);
 
     let rows;
     if (assignee === "mine") {
@@ -191,16 +124,11 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     }
 
     const now = getNow();
-    const childCounts = buildChildCountMap(db);
-    const parentIds = [...new Set(rows.filter((r) => r.parent_id).map((r) => r.parent_id!))];
-    const parentTitles = buildParentTitleMap(db, parentIds);
     const assigneeIds = [...new Set(rows.filter((r) => r.assignee_id).map((r) => r.assignee_id!))];
     const assigneeNames = buildAssigneeNameMap(db, assigneeIds);
 
     return rows.map((t) =>
       taskToResponse(t, now, {
-        childCount: childCounts.get(t.id) ?? 0,
-        parentTitle: t.parent_id ? (parentTitles.get(t.parent_id) ?? null) : null,
         assigneeName: t.assignee_id ? (assigneeNames.get(t.assignee_id) ?? null) : null,
       }),
     );
@@ -218,19 +146,11 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       title,
       description,
       assignee_id,
-      parent_id,
       recurrence_rule,
       recurrence_mode,
       completion_window_days,
       start_date,
     } = parsed.data;
-
-    if (parent_id) {
-      const parent = db.select().from(schema.tasks).where(eq(schema.tasks.id, parent_id)).get();
-      if (!parent) return reply.code(404).send({ error: "Parent task not found" });
-      if (parent.archived_at !== null)
-        return reply.code(409).send({ error: "Parent task is archived" });
-    }
 
     const id = randomUUID();
     const now = getNow();
@@ -279,6 +199,8 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       plannedFor = anchor;
       initialState = "planned";
     }
+    // A task with no recurrence and no date is a Someday item — state stays "eligible"
+    // which is fine; the Someday predicate is what matters for filtering.
 
     const resolvedAssignee = assignee_id === null ? null : (assignee_id ?? request.user.id);
 
@@ -288,7 +210,6 @@ const tasks: FastifyPluginAsync = async (fastify) => {
         title,
         description: description ?? null,
         assignee_id: resolvedAssignee,
-        parent_id: parent_id ?? null,
         created_by: request.user.id,
         state: initialState,
         recurrence_rule: normalizedRule,
@@ -327,29 +248,6 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (body.data.title !== undefined) updates.title = body.data.title;
     if (body.data.description !== undefined) updates.description = body.data.description;
     if ("assignee_id" in body.data) updates.assignee_id = body.data.assignee_id ?? null;
-    if (body.data.auto_complete_when_children_done !== undefined) {
-      updates.auto_complete_when_children_done = body.data.auto_complete_when_children_done;
-    }
-
-    if ("parent_id" in body.data) {
-      const newParentId = body.data.parent_id ?? null;
-
-      if (newParentId !== null) {
-        if (newParentId === task.id) {
-          return reply.code(422).send({ error: "Task cannot be its own parent" });
-        }
-        const descendantIds = getDescendantIds(db, task.id);
-        if (descendantIds.includes(newParentId)) {
-          return reply.code(422).send({ error: "Moving task would create a cycle" });
-        }
-        const parent = db.select().from(schema.tasks).where(eq(schema.tasks.id, newParentId)).get();
-        if (!parent) return reply.code(404).send({ error: "Parent task not found" });
-        if (parent.archived_at !== null)
-          return reply.code(409).send({ error: "Parent task is archived" });
-      }
-
-      updates.parent_id = newParentId;
-    }
 
     const recurrenceRuleChanged = body.data.recurrence_rule !== undefined;
     const recurrenceModeChanged = body.data.recurrence_mode !== undefined;
@@ -431,22 +329,12 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     const updated = db.select().from(schema.tasks).where(eq(schema.tasks.id, task.id)).get();
     if (!updated) return reply.code(500).send({ error: "Failed to retrieve updated task" });
 
-    const childCounts = buildChildCountMap(db);
-    const parentTitle = updated.parent_id
-      ? (db
-          .select({ title: schema.tasks.title })
-          .from(schema.tasks)
-          .where(eq(schema.tasks.id, updated.parent_id))
-          .get()?.title ?? null)
-      : null;
     const assigneeNamesUpdated = buildAssigneeNameMap(
       db,
       updated.assignee_id ? [updated.assignee_id] : [],
     );
     return reply.code(200).send(
       taskToResponse(updated, getNow(), {
-        childCount: childCounts.get(updated.id) ?? 0,
-        parentTitle,
         assigneeName: updated.assignee_id
           ? (assigneeNamesUpdated.get(updated.assignee_id) ?? null)
           : null,
@@ -587,11 +475,6 @@ const tasks: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    // Walk upward: auto-complete ancestors whose all children are now done
-    if (task.parent_id && !isRecurring) {
-      checkAndAutoCompleteAncestors(db, task.parent_id, request.user.id, now);
-    }
-
     const updatedTask = db.select().from(schema.tasks).where(eq(schema.tasks.id, task.id)).get();
     const completeAssigneeNames = buildAssigneeNameMap(
       db,
@@ -627,18 +510,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
     if (task.archived_at !== null) return reply.code(409).send({ error: "Task already archived" });
 
     const now = getNow();
-    const descendantIds = getDescendantIds(db, task.id);
-
-    db.transaction((tx) => {
-      tx.update(schema.tasks).set({ archived_at: now }).where(eq(schema.tasks.id, task.id)).run();
-
-      if (descendantIds.length > 0) {
-        tx.update(schema.tasks)
-          .set({ archived_at: now })
-          .where(and(inArray(schema.tasks.id, descendantIds), isNull(schema.tasks.archived_at)))
-          .run();
-      }
-    });
+    db.update(schema.tasks).set({ archived_at: now }).where(eq(schema.tasks.id, task.id)).run();
 
     return reply.code(204).send();
   });
@@ -659,6 +531,8 @@ const tasks: FastifyPluginAsync = async (fastify) => {
   });
 
   // ── POST /api/tasks/:id/schedule ────────────────────────────────────────────
+  // Schedules a task by setting planned_for. Works for both active tasks and
+  // Someday items — the latter leave Someday and appear in the active scope.
 
   fastify.post("/api/tasks/:id/schedule", async (request, reply) => {
     const params = TaskIdParamsSchema.safeParse(request.params);
@@ -690,6 +564,7 @@ const tasks: FastifyPluginAsync = async (fastify) => {
   });
 
   // ── POST /api/tasks/:id/unschedule ──────────────────────────────────────────
+  // Clears planned_for. For non-recurring tasks this moves them to Someday.
 
   fastify.post("/api/tasks/:id/unschedule", async (request, reply) => {
     const params = TaskIdParamsSchema.safeParse(request.params);

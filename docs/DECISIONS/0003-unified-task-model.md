@@ -1,7 +1,8 @@
 # ADR-0003: One unified task model for chores, projects, and one-off tasks
 
 **Date:** 2026-05-23  
-**Status:** Accepted
+**Status:** Accepted  
+**Superseded in part by:** [ADR-0006](0006-someday-replaces-projects.md) — the Project shape (parent_id, hierarchical tasks, auto-completion) has been removed. The unified single-`tasks`-entity decision still stands.
 
 ## Context
 

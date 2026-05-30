@@ -3,7 +3,7 @@
     "today": "Heute",
     "chores": "Aufgaben",
     "all_tasks": "Alle Aufgaben",
-    "projects": "Projekte",
+    "someday": "Irgendwann",
     "stats": "Statistik",
     "settings": "Einstellungen"
   },
@@ -17,13 +17,11 @@
     "saved": "Gespeichert.",
     "add_task": "Aufgabe hinzufügen",
     "adding": "Wird hinzugefügt…",
-    "new_project": "Neues Projekt",
-    "creating": "Wird erstellt…",
-    "create_project": "Projekt erstellen",
     "confirm": "Bestätigen",
     "edit": "Bearbeiten",
     "archive": "Archivieren",
-    "confirm_archive": "Archivieren"
+    "confirm_archive": "Archivieren",
+    "move_to_someday": "Auf Irgendwann verschieben"
   },
   "states": {
     "overdue": "Überfällig",
@@ -81,12 +79,11 @@
     "dropdown_label": "Aktionen",
     "mark_done_aria": "Erledigt",
     "actions_aria": "Aufgaben-Aktionen",
-    "add_subtask_aria": "Teilaufgabe hinzufügen",
     "edit_aria": "Aufgabe bearbeiten",
     "archive_aria": "Aufgabe archivieren",
     "archive_confirm_title": "{{title}} archivieren?",
     "archive_confirm_body": "Diese Aufgabe wird archiviert.",
-    "archive_confirm_body_with_children": "Diese Aufgabe und alle Teilaufgaben werden archiviert.",
+    "archive_confirm_body_with_children": "Diese Aufgabe wird archiviert.",
     "state_badge": {
       "due": "Fällig {{time}}",
       "do_until": "Jederzeit bis {{date}}",
@@ -97,20 +94,7 @@
     },
     "milestone": "{{count}}-Tage-Serie bei {{title}} 🔥"
   },
-  "project_card": {
-    "done_progress": "{{completed}} / {{total}} erledigt",
-    "pending_one": "{{count}} offen",
-    "pending_other": "{{count}} offen",
-    "no_tasks": "Noch keine Aufgaben",
-    "active": "Zuletzt aktiv {{time}}"
-  },
-  "task_tree": {
-    "no_tasks": "Noch keine Aufgaben.",
-    "add_first": "Erste Aufgabe hinzufügen",
-    "overdue_badge": "Überfällig",
-    "expand": "{{title}} ausklappen",
-    "collapse": "{{title}} einklappen"
-  },
+  "someday_badge": "Irgendwann",
   "edit_task": {
     "title": "Aufgabe bearbeiten",
     "save": "Änderungen speichern",
@@ -120,8 +104,6 @@
     "title": "Neue Aufgabe",
     "title_placeholder": "Aufgabenname",
     "description_placeholder": "Beschreibung (optional)",
-    "project_optional": "Teil eines Projekts (optional)",
-    "none": "Keines",
     "hide_recurrence": "Wiederholung ausblenden",
     "add_recurrence": "+ Wiederholung hinzufügen",
     "when": "Wann?",

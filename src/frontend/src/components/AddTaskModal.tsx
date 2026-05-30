@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceValue } from "@/components/RecurrencePicker";
-import { createTask, fetchMe, fetchProjects, fetchUsers } from "@/lib/api";
+import { createTask, fetchMe, fetchUsers } from "@/lib/api";
 import { getNow } from "@/lib/clock";
 
 function buildFormSchema(titleRequired: string) {
@@ -37,16 +37,11 @@ function buildFormSchema(titleRequired: string) {
 type FormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
 type AddTaskModalProps = {
-  defaultParentId?: string | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 };
 
-export function AddTaskModal({
-  defaultParentId,
-  open: controlledOpen,
-  onOpenChange,
-}: AddTaskModalProps = {}) {
+export function AddTaskModal({ open: controlledOpen, onOpenChange }: AddTaskModalProps = {}) {
   const { t } = useTranslation("common");
   const isControlled = controlledOpen !== undefined;
   const queryClient = useQueryClient();
@@ -54,11 +49,6 @@ export function AddTaskModal({
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? (v: boolean) => onOpenChange?.(v) : setInternalOpen;
   const [assigneeId, setAssigneeId] = useState<string>("__me__");
-  const [parentId, setParentId] = useState<string>(defaultParentId ?? "__none__");
-
-  useEffect(() => {
-    setParentId(defaultParentId ?? "__none__");
-  }, [defaultParentId]);
 
   const [recurrence, setRecurrence] = useState<RecurrenceValue>({
     rule: null,
@@ -75,11 +65,6 @@ export function AddTaskModal({
     queryFn: fetchUsers,
   });
 
-  const { data: projects = [] } = useQuery({
-    queryKey: ["projects", "all"],
-    queryFn: () => fetchProjects("all"),
-  });
-
   const FormSchema = buildFormSchema(t("form.title_required"));
   const {
     register,
@@ -91,7 +76,6 @@ export function AddTaskModal({
   function resetForm() {
     reset();
     setAssigneeId("__me__");
-    setParentId(defaultParentId ?? "__none__");
     setRecurrence({ rule: null, mode: "fixed", windowDays: null });
     setShowRecurrence(false);
     setStartDate(null);
@@ -101,12 +85,10 @@ export function AddTaskModal({
     mutationFn: (data: FormValues) => {
       const resolvedAssignee =
         assigneeId === "__me__" ? undefined : assigneeId === "__unassigned__" ? null : assigneeId;
-      const resolvedParent = parentId === "__none__" ? undefined : parentId;
       return createTask({
         title: data.title,
         description: data.description,
         assignee_id: resolvedAssignee,
-        parent_id: resolvedParent,
         recurrence_rule: recurrence.rule ?? undefined,
         recurrence_mode: recurrence.rule ? recurrence.mode : undefined,
         completion_window_days: recurrence.windowDays ?? undefined,
@@ -115,8 +97,6 @@ export function AddTaskModal({
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
-      void queryClient.invalidateQueries({ queryKey: ["task-tree"] });
       resetForm();
       setOpen(false);
     },
@@ -183,27 +163,6 @@ export function AddTaskModal({
                         {u.name}
                       </SelectItem>
                     ))}
-                </SelectContent>
-              </SelectRoot>
-            </div>
-          )}
-
-          {!isControlled && projects.length > 0 && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                {t("add_task.project_optional")}
-              </label>
-              <SelectRoot value={parentId} onValueChange={setParentId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">{t("add_task.none")}</SelectItem>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.title}
-                    </SelectItem>
-                  ))}
                 </SelectContent>
               </SelectRoot>
             </div>

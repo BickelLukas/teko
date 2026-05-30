@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { RecurrencePicker } from "@/components/RecurrencePicker";
 import type { RecurrenceValue } from "@/components/RecurrencePicker";
-import { updateTask, fetchMe, fetchProjects, fetchUsers } from "@/lib/api";
+import { updateTask, fetchMe, fetchUsers } from "@/lib/api";
 import type { TaskResponse } from "@teko/shared";
 
 function buildFormSchema(titleRequired: string) {
@@ -46,7 +46,6 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
   const queryClient = useQueryClient();
 
   const [assigneeId, setAssigneeId] = useState<string>(task.assignee_id ?? "__unassigned__");
-  const [parentId, setParentId] = useState<string>(task.parent_id ?? "__none__");
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(recurrenceFromTask(task));
   const [showRecurrence, setShowRecurrence] = useState(task.recurrence_rule !== null);
 
@@ -55,11 +54,6 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
   const { data: users = [] } = useQuery({
     queryKey: ["users"],
     queryFn: fetchUsers,
-  });
-
-  const { data: projects = [] } = useQuery({
-    queryKey: ["projects", "all"],
-    queryFn: () => fetchProjects("all"),
   });
 
   const FormSchema = buildFormSchema(t("form.title_required"));
@@ -77,7 +71,6 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
     if (open) {
       reset({ title: task.title, description: task.description ?? "" });
       setAssigneeId(task.assignee_id ?? "__unassigned__");
-      setParentId(task.parent_id ?? "__none__");
       setRecurrence(recurrenceFromTask(task));
       setShowRecurrence(task.recurrence_rule !== null);
     }
@@ -86,13 +79,11 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
   const saveMutation = useMutation({
     mutationFn: (data: FormValues) => {
       const resolvedAssignee = assigneeId === "__unassigned__" ? null : assigneeId;
-      const resolvedParent = parentId === "__none__" ? null : parentId;
 
       return updateTask(task.id, {
         title: data.title,
         description: data.description ?? null,
         assignee_id: resolvedAssignee,
-        parent_id: resolvedParent,
         recurrence_rule: recurrence.rule,
         recurrence_mode: recurrence.rule ? recurrence.mode : null,
         completion_window_days: recurrence.rule ? (recurrence.windowDays ?? null) : null,
@@ -100,8 +91,6 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
-      void queryClient.invalidateQueries({ queryKey: ["task-tree"] });
       onOpenChange(false);
     },
   });
@@ -153,27 +142,6 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
                         {u.name}
                       </SelectItem>
                     ))}
-                </SelectContent>
-              </SelectRoot>
-            </div>
-          )}
-
-          {projects.length > 0 && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                {t("add_task.project_optional")}
-              </label>
-              <SelectRoot value={parentId} onValueChange={setParentId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">{t("add_task.none")}</SelectItem>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.title}
-                    </SelectItem>
-                  ))}
                 </SelectContent>
               </SelectRoot>
             </div>

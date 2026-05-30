@@ -203,7 +203,8 @@ A non-exhaustive list of things that have come up in design and are settled. If 
 - Roll a custom recurrence engine instead of using `rrule.js`.
 - Add native `Date` arithmetic instead of using `date-fns`.
 - Concatenate strings into SQL.
-- Add a "type" enum to the tasks table — the type is derived from `recurrence_rule` and `parent_id` (see ADR-0003).
+- Add a "type" enum to the tasks table — the type is derived from `recurrence_rule`, `planned_for`, and `next_due_at` (see ADR-0003 and ADR-0006).
+- Reintroduce hierarchical Projects — see ADR-0006. If a future feature seems to want hierarchy, propose it as a separate ADR first.
 - Ship a feature with English strings hardcoded.
 - Add a sidebar navigation entry that promotes Teko's own concepts over the user's household concepts.
 

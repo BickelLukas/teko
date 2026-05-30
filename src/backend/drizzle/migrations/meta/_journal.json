@@ -43,6 +43,13 @@
       "when": 1780085888613,
       "tag": "0005_same_kingpin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1780136527658,
+      "tag": "0006_living_jane_foster",
+      "breakpoints": true
     }
   ]
 }

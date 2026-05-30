@@ -3,7 +3,7 @@
     "today": "Today",
     "chores": "Chores",
     "all_tasks": "All tasks",
-    "projects": "Projects",
+    "someday": "Someday",
     "stats": "Stats",
     "settings": "Settings"
   },
@@ -17,13 +17,11 @@
     "saved": "Saved.",
     "add_task": "Add task",
     "adding": "Adding…",
-    "new_project": "New project",
-    "creating": "Creating…",
-    "create_project": "Create project",
     "confirm": "Confirm",
     "edit": "Edit",
     "archive": "Archive",
-    "confirm_archive": "Archive"
+    "confirm_archive": "Archive",
+    "move_to_someday": "Move to Someday"
   },
   "states": {
     "overdue": "Overdue",
@@ -81,12 +79,11 @@
     "dropdown_label": "Actions",
     "mark_done_aria": "Mark done",
     "actions_aria": "Task actions",
-    "add_subtask_aria": "Add sub-task",
     "edit_aria": "Edit task",
     "archive_aria": "Archive task",
     "archive_confirm_title": "Archive {{title}}?",
     "archive_confirm_body": "This task will be archived.",
-    "archive_confirm_body_with_children": "This task and all its sub-tasks will be archived.",
+    "archive_confirm_body_with_children": "This task will be archived.",
     "state_badge": {
       "due": "Due {{time}}",
       "do_until": "Do any time until {{date}}",
@@ -97,20 +94,7 @@
     },
     "milestone": "{{count}}-day streak on {{title}} 🔥"
   },
-  "project_card": {
-    "done_progress": "{{completed}} / {{total}} done",
-    "pending_one": "{{count}} pending",
-    "pending_other": "{{count}} pending",
-    "no_tasks": "No tasks yet",
-    "active": "Active {{time}}"
-  },
-  "task_tree": {
-    "no_tasks": "No tasks yet.",
-    "add_first": "Add first task",
-    "overdue_badge": "Overdue",
-    "expand": "Expand {{title}}",
-    "collapse": "Collapse {{title}}"
-  },
+  "someday_badge": "Someday",
   "edit_task": {
     "title": "Edit task",
     "save": "Save changes",
@@ -120,8 +104,6 @@
     "title": "New task",
     "title_placeholder": "Task name",
     "description_placeholder": "Description (optional)",
-    "project_optional": "Part of project (optional)",
-    "none": "None",
     "hide_recurrence": "Hide recurrence",
     "add_recurrence": "+ Add recurrence",
     "when": "When?",

@@ -30,11 +30,11 @@ const STATE_ORDER: Record<string, number> = {
 export function AllTasksPage() {
   const { t } = useTranslation(["pages", "common"]);
   const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilter>("all");
-  const [includeProjects, setIncludeProjects] = useState(false);
+  const [includeSomeday, setIncludeSomeday] = useState(false);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
 
-  const scope = includeProjects ? "all" : "leaves";
+  const scope = includeSomeday ? "all" : "active";
 
   const {
     data: tasks = [],
@@ -80,11 +80,11 @@ export function AllTasksPage() {
       <label className="flex items-center gap-2 text-xs text-muted-foreground">
         <input
           type="checkbox"
-          checked={includeProjects}
-          onChange={(e) => setIncludeProjects(e.target.checked)}
+          checked={includeSomeday}
+          onChange={(e) => setIncludeSomeday(e.target.checked)}
           className="size-3"
         />
-        {t("pages:all_tasks.include_projects")}
+        {t("pages:all_tasks.include_someday")}
       </label>
 
       {isLoading && <TaskListSkeleton />}
@@ -107,7 +107,11 @@ export function AllTasksPage() {
       <ul className="space-y-2">
         {sorted.map((task: TaskResponse) => (
           <li key={task.id}>
-            <TaskCard task={task} showAssignee />
+            <TaskCard
+              task={task}
+              showAssignee
+              {...(task.is_someday ? { somedayBadge: t("common:someday_badge") } : {})}
+            />
           </li>
         ))}
       </ul>

@@ -1,5 +1,4 @@
 import { integer, text, sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
-import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { getNow } from "../domain/clock.js";
 
 export const users = sqliteTable("users", {
@@ -35,9 +34,6 @@ export const tasks = sqliteTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   assignee_id: text("assignee_id").references(() => users.id, { onDelete: "set null" }),
-  parent_id: text("parent_id").references((): AnySQLiteColumn => tasks.id, {
-    onDelete: "set null",
-  }),
   state: text("state", {
     enum: ["not_yet", "eligible", "planned", "overdue", "done"],
   })
@@ -61,11 +57,6 @@ export const tasks = sqliteTable("tasks", {
   tags: text("tags"),
   exposed_to_ha: integer("exposed_to_ha", { mode: "boolean" }).notNull().default(false),
   is_household: integer("is_household", { mode: "boolean" }).notNull().default(false),
-  auto_complete_when_children_done: integer("auto_complete_when_children_done", {
-    mode: "boolean",
-  })
-    .notNull()
-    .default(true),
 });
 
 export const streaks = sqliteTable(

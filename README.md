@@ -18,7 +18,7 @@ It's built for households, not workplaces. The design favours quiet motivation o
 
 - 🏠 **Native Home Assistant integration** — HA users are Teko users, no separate accounts
 - 🔁 **Flexible recurrence** — daily, weekly, "every N days after last completion", or full iCal RRULE for the weird cases
-- 📋 **Unified model, two UX modes** — Chores (recurring, gamified) and Projects (hierarchical, ad-hoc) share one data model
+- 📋 **One model, two modes** — Chores (recurring, gamified) and Someday (flat intentions list, no dates) share one data model
 - 🔥 **Streaks and household points** — personal motivation, collaborative totals, no leaderboards
 - 🔔 **Actionable notifications** — tap "Done" directly from the push notification
 - ⚡ **Two-way HA automations** — Teko emits events HA can react to, and HA can create or complete tasks via services

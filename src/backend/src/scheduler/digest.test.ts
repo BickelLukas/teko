@@ -13,7 +13,6 @@ function task(overrides: Partial<TaskRow>): TaskRow {
     title: "Task",
     description: null,
     assignee_id: null,
-    parent_id: null,
     state: "eligible",
     created_at: NOW,
     created_by: "creator",
@@ -27,7 +26,6 @@ function task(overrides: Partial<TaskRow>): TaskRow {
     tags: null,
     exposed_to_ha: false,
     is_household: false,
-    auto_complete_when_children_done: true,
     ...overrides,
   };
 }

@@ -104,10 +104,14 @@
     "title": "Neue Aufgabe",
     "title_placeholder": "Aufgabenname",
     "description_placeholder": "Beschreibung (optional)",
-    "hide_recurrence": "Wiederholung ausblenden",
-    "add_recurrence": "+ Wiederholung hinzufügen",
     "when": "Wann?",
-    "starting": "Beginnt am"
+    "starting": "Beginnt am (optional)",
+    "no_date_hint": "Kein Datum gewählt — wird als Irgendwann gespeichert.",
+    "type": {
+      "someday": "Irgendwann",
+      "date": "An einem Datum",
+      "recurring": "Wiederkehrend"
+    }
   },
   "date_picker": {
     "pick_date": "Datum wählen",

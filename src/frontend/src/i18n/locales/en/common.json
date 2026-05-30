@@ -104,10 +104,14 @@
     "title": "New task",
     "title_placeholder": "Task name",
     "description_placeholder": "Description (optional)",
-    "hide_recurrence": "Hide recurrence",
-    "add_recurrence": "+ Add recurrence",
     "when": "When?",
-    "starting": "Starting"
+    "starting": "Starting (optional)",
+    "no_date_hint": "No date picked — will be saved as Someday.",
+    "type": {
+      "someday": "Someday",
+      "date": "On a date",
+      "recurring": "Recurring"
+    }
   },
   "date_picker": {
     "pick_date": "Pick a date",

@@ -27,6 +27,8 @@ const users: FastifyPluginAsync = async (fastify) => {
       notification_time: u.notification_time,
       notification_service: u.notification_service,
       notify_digest_enabled: u.notify_digest_enabled,
+      notify_evening_reminder_enabled: u.notify_evening_reminder_enabled,
+      evening_reminder_time: u.evening_reminder_time,
       is_admin: u.is_admin,
       is_active: u.is_active,
       week_start_day: u.week_start_day as 0 | 1,

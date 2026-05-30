@@ -29,6 +29,14 @@
         "and_more": "und {{count}} weitere"
       }
     },
+    "evening_reminder": {
+      "title": {
+        "single": "1 Aufgabe noch offen",
+        "multiple": "{{count}} Aufgaben noch offen"
+      },
+      "body": "Noch offen: {{tasks}}.",
+      "and_more": "und {{count}} weitere"
+    },
     "test": {
       "title": "Test von Teko",
       "message": "Wenn du das siehst, funktioniert dein Benachrichtigungsziel."

@@ -21,6 +21,8 @@ function toUserResponse(user: UserRow): UserResponse {
     notification_time: user.notification_time,
     notification_service: user.notification_service,
     notify_digest_enabled: user.notify_digest_enabled,
+    notify_evening_reminder_enabled: user.notify_evening_reminder_enabled,
+    evening_reminder_time: user.evening_reminder_time,
     is_admin: user.is_admin,
     is_active: user.is_active,
     week_start_day: user.week_start_day as 0 | 1,
@@ -61,6 +63,10 @@ const me: FastifyPluginAsync = async (fastify) => {
       updates.notification_service = parsed.data.notification_service;
     if (parsed.data.notify_digest_enabled !== undefined)
       updates.notify_digest_enabled = parsed.data.notify_digest_enabled;
+    if (parsed.data.notify_evening_reminder_enabled !== undefined)
+      updates.notify_evening_reminder_enabled = parsed.data.notify_evening_reminder_enabled;
+    if (parsed.data.evening_reminder_time !== undefined)
+      updates.evening_reminder_time = parsed.data.evening_reminder_time;
     if (parsed.data.display_name !== undefined) updates.display_name = parsed.data.display_name;
     if (parsed.data.week_start_day !== undefined)
       updates.week_start_day = parsed.data.week_start_day;

@@ -27,6 +27,13 @@ function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+function timeToMinutes(time: string): number {
+  const parts = time.split(":");
+  const h = Number(parts[0] ?? "0");
+  const m = Number(parts[1] ?? "0");
+  return h * 60 + m;
+}
+
 type TestStatus = { ok: boolean; text: string } | null;
 
 export function NotificationsSettings() {
@@ -43,6 +50,8 @@ export function NotificationsSettings() {
   const [selected, setSelected] = useState<string>(NONE);
   const [digestEnabled, setDigestEnabled] = useState(true);
   const [digestTime, setDigestTime] = useState("08:00");
+  const [eveningEnabled, setEveningEnabled] = useState(true);
+  const [eveningTime, setEveningTime] = useState("19:00");
   const [testStatus, setTestStatus] = useState<TestStatus>(null);
   const [refreshing, setRefreshing] = useState(false);
   const touchedRef = useRef(false);
@@ -54,6 +63,8 @@ export function NotificationsSettings() {
     setSelected(me.notification_service ?? NONE);
     setDigestEnabled(me.notify_digest_enabled);
     setDigestTime(me.notification_time ?? "08:00");
+    setEveningEnabled(me.notify_evening_reminder_enabled);
+    setEveningTime(me.evening_reminder_time ?? "19:00");
   }, [me]);
 
   const storedId = me?.notification_service ?? null;
@@ -82,12 +93,22 @@ export function NotificationsSettings() {
   const showSuggestionHint = !storedId && suggestionId !== null && selected === suggestionId;
   const isEmpty = !!services && services.length === 0;
 
+  const notifControlsDisabled = selected === NONE;
+
+  // Warn when evening time would fire before the morning digest.
+  const showBeforeMorningWarning =
+    eveningEnabled &&
+    !notifControlsDisabled &&
+    timeToMinutes(eveningTime) <= timeToMinutes(digestTime);
+
   const saveMutation = useMutation({
     mutationFn: () =>
       updatePreferences({
         notification_service: selected === NONE ? null : selected,
         notify_digest_enabled: digestEnabled,
         notification_time: digestTime,
+        notify_evening_reminder_enabled: eveningEnabled,
+        evening_reminder_time: eveningTime,
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["me"] });
@@ -144,7 +165,6 @@ export function NotificationsSettings() {
     setTestStatus(null);
   }
 
-  const digestControlsDisabled = selected === NONE;
   const testDisabled = !storedId || testMutation.isPending;
 
   return (
@@ -213,20 +233,20 @@ export function NotificationsSettings() {
       {/* Daily digest toggle */}
       <div
         className="flex items-center justify-between gap-3"
-        title={digestControlsDisabled ? t("settings.digest_toggle_disabled_hint") : undefined}
+        title={notifControlsDisabled ? t("settings.digest_toggle_disabled_hint") : undefined}
       >
         <div>
           <p className="text-sm font-medium">{t("settings.digest_toggle_label")}</p>
           <p className="text-xs text-muted-foreground">
-            {digestControlsDisabled
+            {notifControlsDisabled
               ? t("settings.digest_toggle_disabled_hint")
               : t("settings.digest_toggle_hint")}
           </p>
         </div>
         <Switch
-          checked={digestEnabled && !digestControlsDisabled}
+          checked={digestEnabled && !notifControlsDisabled}
           onCheckedChange={setDigestEnabled}
-          disabled={digestControlsDisabled}
+          disabled={notifControlsDisabled}
           aria-label={t("settings.digest_toggle_label")}
         />
       </div>
@@ -241,9 +261,50 @@ export function NotificationsSettings() {
           type="time"
           value={digestTime}
           onChange={(e) => setDigestTime(e.target.value)}
-          disabled={digestControlsDisabled || !digestEnabled}
+          disabled={notifControlsDisabled || !digestEnabled}
           className="w-32"
         />
+      </div>
+
+      {/* Evening reminder toggle */}
+      <div
+        className="flex items-center justify-between gap-3"
+        title={notifControlsDisabled ? t("settings.evening_reminder_disabled_hint") : undefined}
+      >
+        <div>
+          <p className="text-sm font-medium">{t("settings.evening_reminder_label")}</p>
+          <p className="text-xs text-muted-foreground">
+            {notifControlsDisabled
+              ? t("settings.evening_reminder_disabled_hint")
+              : t("settings.evening_reminder_hint")}
+          </p>
+        </div>
+        <Switch
+          checked={eveningEnabled && !notifControlsDisabled}
+          onCheckedChange={setEveningEnabled}
+          disabled={notifControlsDisabled}
+          aria-label={t("settings.evening_reminder_label")}
+        />
+      </div>
+
+      {/* Evening reminder time */}
+      <div>
+        <label htmlFor="evening-reminder-time" className="mb-1 block text-xs font-medium">
+          {t("settings.evening_reminder_time_label")}
+        </label>
+        <Input
+          id="evening-reminder-time"
+          type="time"
+          value={eveningTime}
+          onChange={(e) => setEveningTime(e.target.value)}
+          disabled={notifControlsDisabled || !eveningEnabled}
+          className="w-32"
+        />
+        {showBeforeMorningWarning && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("settings.evening_reminder_warning_before_morning")}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

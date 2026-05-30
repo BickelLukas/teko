@@ -2,6 +2,7 @@ import cron from "node-cron";
 import type { Db } from "../db/client.js";
 import { runTick } from "./tick.js";
 import { runDigestTick } from "./digest.js";
+import { runEveningReminderTick } from "./evening-reminder.js";
 import type { SupervisorClient } from "../ha/supervisor.js";
 import { syncUsers } from "../ha/user-sync.js";
 import { updateSyncState } from "../ha/sync-state.js";
@@ -64,6 +65,17 @@ export function startScheduler(
       if (logger) logger.error({ err: message }, "scheduler.digest-tick-failed");
       else console.error("Digest tick failed:", err);
     });
+  });
+
+  // Evening reminder evaluation, every minute. Same guard pattern as the digest.
+  cron.schedule("* * * * *", () => {
+    void runEveningReminderTick(db, supervisorClient ?? null, undefined, logger).catch(
+      (err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        if (logger) logger.error({ err: message }, "scheduler.evening-reminder-tick-failed");
+        else console.error("Evening reminder tick failed:", err);
+      },
+    );
   });
 
   if (!supervisorClient) return;

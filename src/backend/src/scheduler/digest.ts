@@ -154,6 +154,17 @@ export async function runDigestTick(
   const todayKey = localDateKey(now, timeZone);
   const currentTime = localTimeKey(now, timeZone);
 
+  let clickAction: string | undefined;
+  try {
+    clickAction = await supervisorClient.getIngressPath();
+  } catch (err) {
+    // Non-fatal — notifications still send, just without a deep link.
+    logger?.warn(
+      { err: err instanceof Error ? err.message : String(err) },
+      "digest.ingress-path-unavailable",
+    );
+  }
+
   const candidates = db
     .select()
     .from(schema.users)
@@ -188,6 +199,7 @@ export async function runDigestTick(
       const result = await supervisorClient.sendNotification(serviceName, {
         title: message.title,
         message: message.body,
+        ...(clickAction !== undefined ? { clickAction } : {}),
       });
 
       if (result.ok) {

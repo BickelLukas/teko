@@ -26,9 +26,10 @@ function fakeClient(opts: {
 }): SupervisorClient {
   return {
     getUsers: async () => [],
-    getInfo: async () => ({ version: "test" }),
+    getInfo: async () => ({ version: "test", slug: "teko" }),
     listNotifyServices: async (): Promise<NotifyService[]> => [],
     getTimeZone: async () => opts.timeZone ?? "UTC",
+    getIngressPath: async () => "/hassio/ingress/teko",
     sendNotification: async (service, payload): Promise<SendNotificationResult> => {
       opts.sent.push({ service, payload });
       return opts.result ?? { ok: true };
@@ -103,6 +104,7 @@ describe("runDigestTick", () => {
     expect(sent[0]!.service).toBe("mobile_app_alice");
     expect(sent[0]!.payload.title).toBe("1 thing today");
     expect(sent[0]!.payload.message).toContain("take out trash");
+    expect(sent[0]!.payload.clickAction).toBe("/hassio/ingress/teko");
 
     const user = db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
     expect(user!.last_digest_sent_date).toBe(TODAY);

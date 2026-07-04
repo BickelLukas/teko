@@ -23,6 +23,7 @@ export type HaUser = {
 const AddOnInfoDataSchema = z.looseObject({
   version: z.string(),
   hostname: z.string().optional(),
+  slug: z.string(),
 });
 
 const AddOnInfoResponseSchema = z.object({
@@ -33,6 +34,7 @@ const AddOnInfoResponseSchema = z.object({
 export type AddOnInfo = {
   version: string;
   hostname?: string;
+  slug: string;
 };
 
 // ── Notify services ───────────────────────────────────────────────────────────
@@ -64,6 +66,10 @@ const ConfigResponseSchema = z.looseObject({
 export type SendNotificationPayload = {
   title: string;
   message: string;
+  // Relative HA path opened when the user taps the notification, e.g.
+  // "/hassio/ingress/teko". Without it the companion app just foregrounds
+  // itself on whatever screen it last showed.
+  clickAction?: string;
 };
 
 export type SendNotificationResult =
@@ -97,6 +103,9 @@ export type SupervisorClient = {
   // Household timezone (IANA) from HA core config. Cached for the container's
   // lifetime; restart to pick up a changed HA timezone.
   getTimeZone(): Promise<string>;
+  // Relative ingress panel path (e.g. "/hassio/ingress/teko") for deep-linking
+  // notifications straight into the add-on. Cached for the container's lifetime.
+  getIngressPath(): Promise<string>;
 };
 
 export function createSupervisorClient(token: string): SupervisorClient {
@@ -108,6 +117,7 @@ export function createSupervisorClient(token: string): SupervisorClient {
 
   let notifyCache: { at: number; data: NotifyService[] } | null = null;
   let timeZoneCache: string | null = null;
+  let ingressPathCache: string | null = null;
 
   async function request<T>(schema: z.ZodType<T>, path: string): Promise<T> {
     const url = `${baseUrl}${path}`;
@@ -172,7 +182,7 @@ export function createSupervisorClient(token: string): SupervisorClient {
 
     async getInfo(): Promise<AddOnInfo> {
       const resp = await request(AddOnInfoResponseSchema, "/addons/self/info");
-      const info: AddOnInfo = { version: resp.data.version };
+      const info: AddOnInfo = { version: resp.data.version, slug: resp.data.slug };
       if (resp.data.hostname !== undefined) info.hostname = resp.data.hostname;
       return info;
     },
@@ -202,12 +212,19 @@ export function createSupervisorClient(token: string): SupervisorClient {
       payload: SendNotificationPayload,
     ): Promise<SendNotificationResult> {
       const path = `/core/api/services/notify/${serviceName}`;
+      const body: { title: string; message: string; data?: { clickAction: string } } = {
+        title: payload.title,
+        message: payload.message,
+      };
+      if (payload.clickAction !== undefined) {
+        body.data = { clickAction: payload.clickAction };
+      }
       let res: Response;
       try {
         res = await fetch(`${baseUrl}${path}`, {
           method: "POST",
           headers,
-          body: JSON.stringify({ title: payload.title, message: payload.message }),
+          body: JSON.stringify(body),
         });
       } catch (err) {
         return {
@@ -228,6 +245,13 @@ export function createSupervisorClient(token: string): SupervisorClient {
       const config = await request(ConfigResponseSchema, "/core/api/config");
       timeZoneCache = config.time_zone ?? "UTC";
       return timeZoneCache;
+    },
+
+    async getIngressPath(): Promise<string> {
+      if (ingressPathCache) return ingressPathCache;
+      const info = await request(AddOnInfoResponseSchema, "/addons/self/info");
+      ingressPathCache = `/hassio/ingress/${info.data.slug}`;
+      return ingressPathCache;
     },
   };
 }

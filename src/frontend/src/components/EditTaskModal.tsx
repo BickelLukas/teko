@@ -85,6 +85,10 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
     mutationFn: (data: FormValues) => {
       const resolvedAssignee = assigneeId === "__unassigned__" ? null : assigneeId;
 
+      const recurrenceChanged =
+        recurrence.rule !== task.recurrence_rule ||
+        recurrence.mode !== (task.recurrence_mode ?? "fixed");
+
       return updateTask(task.id, {
         title: data.title,
         description: data.description ?? null,
@@ -96,8 +100,8 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
               ? windowDays
               : null
             : (recurrence.windowDays ?? null),
-        recurrence_rule: recurrence.rule,
-        recurrence_mode: recurrence.rule ? recurrence.mode : null,
+        recurrence_rule: recurrenceChanged ? recurrence.rule : undefined,
+        recurrence_mode: recurrenceChanged ? (recurrence.rule ? recurrence.mode : null) : undefined,
       });
     },
     onSuccess: async (updated) => {

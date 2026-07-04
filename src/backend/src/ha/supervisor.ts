@@ -106,6 +106,11 @@ export type SupervisorClient = {
   // Relative ingress panel path (e.g. "/hassio/ingress/teko") for deep-linking
   // notifications straight into the add-on. Cached for the container's lifetime.
   getIngressPath(): Promise<string>;
+  // Announces this add-on to the Teko HA integration via Supervisor discovery
+  // (config.yaml "discovery: [teko]"), so config_flow's async_step_hassio
+  // fires with the host/port pre-filled. Idempotent — Supervisor dedupes by
+  // service + config, so it's safe to call on every startup.
+  pushDiscovery(host: string, port: number): Promise<void>;
 };
 
 export function createSupervisorClient(token: string): SupervisorClient {
@@ -252,6 +257,31 @@ export function createSupervisorClient(token: string): SupervisorClient {
       const info = await request(AddOnInfoResponseSchema, "/addons/self/info");
       ingressPathCache = `/hassio/ingress/${info.data.slug}`;
       return ingressPathCache;
+    },
+
+    async pushDiscovery(host: string, port: number): Promise<void> {
+      const path = "/discovery";
+      let res: Response;
+      try {
+        res = await fetch(`${baseUrl}${path}`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ service: "teko", config: { host, port } }),
+        });
+      } catch (err) {
+        throw new SupervisorApiError(
+          `Network error calling Supervisor: ${err instanceof Error ? err.message : String(err)}`,
+          undefined,
+          path,
+        );
+      }
+      if (!res.ok) {
+        throw new SupervisorApiError(
+          `Supervisor API returned ${res.status} for ${path}`,
+          res.status,
+          path,
+        );
+      }
     },
   };
 }

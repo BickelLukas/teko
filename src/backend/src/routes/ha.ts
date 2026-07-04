@@ -1,6 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import type { NotifyServicesResponse } from "@teko/shared";
+import { and, isNull, ne } from "drizzle-orm";
+import type { NotifyServicesResponse, HaSummaryResponse } from "@teko/shared";
+import * as schema from "../db/schema.js";
 import "../types.js";
 
 const NotifyServicesQuerySchema = z.object({
@@ -35,6 +37,33 @@ const ha: FastifyPluginAsync = async (fastify) => {
       }
     },
   );
+
+  // ── GET /api/ha/summary ────────────────────────────────────────────────────
+  // Household-wide aggregate consumed by the HA integration (open/overdue
+  // counts + the open-task list backing the `todo` entity). Not user-scoped —
+  // reachable via ingress (dev/UI) or the integration's bearer token.
+  fastify.get("/api/ha/summary", async (): Promise<HaSummaryResponse> => {
+    const db = fastify.db;
+
+    const openTasks = db
+      .select({
+        id: schema.tasks.id,
+        title: schema.tasks.title,
+        due_at: schema.tasks.due_at,
+        state: schema.tasks.state,
+      })
+      .from(schema.tasks)
+      .where(and(isNull(schema.tasks.archived_at), ne(schema.tasks.state, "done")))
+      .all();
+
+    const overdueCount = openTasks.filter((t) => t.state === "overdue").length;
+
+    return {
+      open_count: openTasks.length,
+      overdue_count: overdueCount,
+      tasks: openTasks,
+    };
+  });
 };
 
 export default ha;

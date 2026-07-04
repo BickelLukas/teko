@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "url": "Add-on-URL",
+          "token": "Pairing-Token"
+        },
+        "data_description": {
+          "url": "Die interne Adresse des Teko-Add-ons, z. B. http://homeassistant.local:8099",
+          "token": "Erstellt in Teko unter Einstellungen → Home-Assistant-Integration"
+        }
+      },
+      "hassio_confirm": {
+        "title": "Teko gefunden unter {url}",
+        "description": "Füge das Pairing-Token ein, erstellt in Teko unter Einstellungen → Home-Assistant-Integration.",
+        "data": {
+          "token": "Pairing-Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Das Teko-Add-on konnte unter dieser URL nicht erreicht werden.",
+      "invalid_auth": "Dieses Pairing-Token wurde abgelehnt. Erstelle ein neues in Teko.",
+      "unknown": "Unerwarteter Fehler."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "open_tasks": { "name": "Offene Aufgaben" },
+      "overdue_tasks": { "name": "Überfällige Aufgaben" }
+    },
+    "todo": {
+      "open_tasks": { "name": "Aufgaben" }
+    }
+  }
+}

@@ -58,6 +58,26 @@ async function init() {
   const app = await buildApp(db, config, supervisorClient);
   startScheduler(db, app.log, supervisorClient, config.userSyncIntervalMinutes);
   await app.listen({ port: config.port, host: "0.0.0.0" });
+
+  // Announce ourselves to the Teko HA integration via Supervisor discovery so
+  // its config flow can pre-fill the add-on's internal host/port. Best-effort:
+  // the integration falls back to manual URL entry if this fails.
+  if (supervisorClient) {
+    try {
+      const info = await supervisorClient.getInfo();
+      if (info.hostname) {
+        await supervisorClient.pushDiscovery(info.hostname, config.port);
+        app.log.info(`[startup] Pushed Supervisor discovery (${info.hostname}:${config.port})`);
+      } else {
+        app.log.warn("[startup] Supervisor did not report a hostname; skipping discovery push");
+      }
+    } catch (err) {
+      app.log.warn(
+        { err },
+        "[startup] Supervisor discovery push failed (integration falls back to manual entry)",
+      );
+    }
+  }
 }
 
 init().catch((err) => {

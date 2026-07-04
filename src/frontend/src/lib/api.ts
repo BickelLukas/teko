@@ -19,6 +19,9 @@ import type {
   TagWithCount,
   CreateTagBody,
   UpdateTagBody,
+  IntegrationToken,
+  IntegrationTokenCreatedResponse,
+  CreateIntegrationTokenBody,
 } from "@teko/shared";
 import { setOffsetMs } from "./clock.js";
 import { basePath } from "./basePath.js";
@@ -249,6 +252,28 @@ export async function setTaskTags(taskId: string, tagIds: number[]): Promise<Tag
       body: JSON.stringify({ tag_ids: tagIds }),
     }),
   );
+}
+
+// ── Integration tokens (HA integration pairing) ────────────────────────────────
+
+export async function fetchIntegrationTokens(): Promise<IntegrationToken[]> {
+  return json(await apiFetch("/api/integration/tokens"));
+}
+
+export async function createIntegrationToken(
+  body: CreateIntegrationTokenBody,
+): Promise<IntegrationTokenCreatedResponse> {
+  return json(
+    await apiFetch("/api/integration/tokens", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+export async function revokeIntegrationToken(id: string): Promise<void> {
+  await throwIfNotOk(await apiFetch(`/api/integration/tokens/${id}`, { method: "DELETE" }));
 }
 
 // ── Dev ───────────────────────────────────────────────────────────────────────

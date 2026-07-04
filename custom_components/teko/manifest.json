@@ -1,0 +1,13 @@
+{
+  "domain": "teko",
+  "name": "Teko",
+  "codeowners": ["@BickelLukas"],
+  "config_flow": true,
+  "documentation": "https://github.com/BickelLukas/teko",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/BickelLukas/teko/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.0.13"
+}

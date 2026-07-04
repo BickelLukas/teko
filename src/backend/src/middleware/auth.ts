@@ -1,7 +1,10 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { eq, and, isNull } from "drizzle-orm";
 import type { Config } from "../config.js";
-import { getOffsetMs } from "../domain/clock.js";
+import { getOffsetMs, getNow } from "../domain/clock.js";
 import { upsertHaUser } from "../ha/user-upsert.js";
+import { hashIntegrationToken } from "../domain/integrationTokens.js";
+import * as schema from "../db/schema.js";
 import "../types.js";
 
 // Only API paths require authentication. Static assets (JS/CSS/fonts) bypass
@@ -71,8 +74,37 @@ export async function registerAuth(fastify: FastifyInstance, config: Config): Pr
         return;
       }
 
-      // ── Branch 2: bearer token (Phase 11) ───────────────────────────────
-      // Placeholder — bearer pairing endpoints are added in Phase 11.
+      // ── Branch 2: bearer token (HA integration) ─────────────────────────
+      // Scoped to /api/ha/* only — the integration acts on behalf of the
+      // household, not a specific user, so these routes must not read
+      // request.user. Every other path still requires ingress or falls
+      // through to the 401 below.
+      if (request.url.startsWith("/api/ha/")) {
+        const authHeader = request.headers.authorization;
+        if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+          const rawToken = authHeader.slice("Bearer ".length);
+          const tokenHash = hashIntegrationToken(rawToken);
+          const tokenRow = fastify.db
+            .select({ id: schema.integrationTokens.id })
+            .from(schema.integrationTokens)
+            .where(
+              and(
+                eq(schema.integrationTokens.token_hash, tokenHash),
+                isNull(schema.integrationTokens.revoked_at),
+              ),
+            )
+            .get();
+
+          if (tokenRow) {
+            fastify.db
+              .update(schema.integrationTokens)
+              .set({ last_used_at: getNow() })
+              .where(eq(schema.integrationTokens.id, tokenRow.id))
+              .run();
+            return;
+          }
+        }
+      }
 
       // ── Branch 3: OAuth2 (future) ────────────────────────────────────────
 

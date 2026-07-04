@@ -114,6 +114,24 @@ export const tags = sqliteTable("tags", {
     .references(() => users.id, { onDelete: "restrict" }),
 });
 
+// Long-lived bearer tokens used by the HA integration to authenticate against
+// the add-on (Phase 11). Represents the integration acting on behalf of the
+// household, not a specific user — see ADR/ARCHITECTURE "HA Integration Surface".
+// Only the SHA-256 hash is stored; the raw token is shown once at creation time.
+export const integrationTokens = sqliteTable("integration_tokens", {
+  id: text("id").primaryKey(),
+  token_hash: text("token_hash").unique().notNull(),
+  label: text("label").notNull(),
+  created_at: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => getNow()),
+  created_by: text("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "restrict" }),
+  last_used_at: integer("last_used_at", { mode: "timestamp_ms" }),
+  revoked_at: integer("revoked_at", { mode: "timestamp_ms" }),
+});
+
 export const task_tags = sqliteTable(
   "task_tags",
   {

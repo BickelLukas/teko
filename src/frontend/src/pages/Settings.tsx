@@ -19,6 +19,7 @@ import { fetchMe, updatePreferences, fetchUsers, fetchHealth, triggerUserSync } 
 import { parseEnum } from "@/lib/utils";
 import { NotificationsSettings } from "@/components/NotificationsSettings";
 import { TagsSettings } from "@/components/TagsSettings";
+import { IntegrationSettings } from "@/components/IntegrationSettings";
 
 const FormSchema = z.object({
   display_name: z.string().optional(),
@@ -247,6 +248,21 @@ export function SettingsPage() {
         <Card>
           <CardContent className="pt-5">
             <TagsSettings />
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* ── Home Assistant integration ── */}
+      <section aria-labelledby="integration-heading">
+        <h2
+          id="integration-heading"
+          className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        >
+          {t("settings.integration_section")}
+        </h2>
+        <Card>
+          <CardContent className="pt-5">
+            <IntegrationSettings />
           </CardContent>
         </Card>
       </section>

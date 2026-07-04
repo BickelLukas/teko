@@ -12,6 +12,7 @@ import stats from "./routes/stats.js";
 import users from "./routes/users.js";
 import ha from "./routes/ha.js";
 import tags from "./routes/tags.js";
+import integrationTokens from "./routes/integrationTokens.js";
 import dev from "./routes/dev.js";
 import { eq } from "drizzle-orm";
 import { registerAuth } from "./middleware/auth.js";
@@ -98,6 +99,7 @@ export async function buildApp(
   await fastify.register(users);
   await fastify.register(tags);
   await fastify.register(ha);
+  await fastify.register(integrationTokens);
 
   if (config.devMode) {
     await fastify.register(dev);

@@ -18,3 +18,5 @@ map:
   - data:rw
 homeassistant_api: true
 hassio_api: true
+discovery:
+  - teko

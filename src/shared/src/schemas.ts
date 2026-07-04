@@ -91,6 +91,49 @@ export const TestNotificationResponseSchema = z.object({
 });
 export type TestNotificationResponse = z.infer<typeof TestNotificationResponseSchema>;
 
+// ── Integration tokens (HA integration bearer auth, Phase 11) ─────────────────
+
+export const CreateIntegrationTokenBodySchema = z.object({
+  label: z.string().min(1),
+});
+export type CreateIntegrationTokenBody = z.infer<typeof CreateIntegrationTokenBodySchema>;
+
+export const IntegrationTokenSchema = z.object({
+  id: z.string().uuid(),
+  label: z.string(),
+  created_at: z.string(),
+  last_used_at: z.string().nullable(),
+});
+export type IntegrationToken = z.infer<typeof IntegrationTokenSchema>;
+
+// Returned once, at creation time only — never again.
+export const IntegrationTokenCreatedResponseSchema = IntegrationTokenSchema.extend({
+  token: z.string(),
+});
+export type IntegrationTokenCreatedResponse = z.infer<typeof IntegrationTokenCreatedResponseSchema>;
+
+export const IntegrationTokenIdParamsSchema = z.object({
+  id: z.string().uuid("Invalid token ID"),
+});
+export type IntegrationTokenIdParams = z.infer<typeof IntegrationTokenIdParamsSchema>;
+
+// ── HA summary (consumed by the HA integration) ───────────────────────────────
+
+export const HaSummaryTaskSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  due_at: z.string().nullable(),
+  state: TaskStateSchema,
+});
+export type HaSummaryTask = z.infer<typeof HaSummaryTaskSchema>;
+
+export const HaSummaryResponseSchema = z.object({
+  open_count: z.number().int().nonnegative(),
+  overdue_count: z.number().int().nonnegative(),
+  tasks: z.array(HaSummaryTaskSchema),
+});
+export type HaSummaryResponse = z.infer<typeof HaSummaryResponseSchema>;
+
 // ── Tag ──────────────────────────────────────────────────────────────────────
 
 export const TagPaletteKeySchema = z.enum(TAG_PALETTE_KEYS);

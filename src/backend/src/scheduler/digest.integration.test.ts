@@ -30,6 +30,7 @@ function fakeClient(opts: {
     listNotifyServices: async (): Promise<NotifyService[]> => [],
     getTimeZone: async () => opts.timeZone ?? "UTC",
     getIngressPath: async () => "/hassio/ingress/teko",
+    pushDiscovery: async () => {},
     sendNotification: async (service, payload): Promise<SendNotificationResult> => {
       opts.sent.push({ service, payload });
       return opts.result ?? { ok: true };

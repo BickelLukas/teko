@@ -1,6 +1,6 @@
 {
   "name": "teko",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "private": true,
   "packageManager": "yarn@4.15.0",
   "workspaces": [

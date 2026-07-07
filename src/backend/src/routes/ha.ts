@@ -56,6 +56,7 @@ const ha: FastifyPluginAsync = async (fastify) => {
         title: schema.tasks.title,
         due_at: schema.tasks.due_at,
         state: schema.tasks.state,
+        recurrence_rule: schema.tasks.recurrence_rule,
       })
       .from(schema.tasks)
       .where(and(isNull(schema.tasks.archived_at), ne(schema.tasks.state, "done")))
@@ -63,9 +64,15 @@ const ha: FastifyPluginAsync = async (fastify) => {
 
     const overdueCount = openTasks.filter((t) => t.state === "overdue").length;
     // "Today": eligible tasks that are actionable right now — no due date, or
-    // a due date that has arrived.
+    // a due date that has arrived. Someday tasks (no recurrence, no due_at)
+    // compute to state "eligible" too but must not count here — they're a
+    // separate opt-in list, excluded the same way scope=active excludes them
+    // in /api/tasks.
     const todayCount = openTasks.filter(
-      (t) => t.state === "eligible" && (t.due_at === null || t.due_at <= today),
+      (t) =>
+        t.state === "eligible" &&
+        (t.recurrence_rule !== null || t.due_at !== null) &&
+        (t.due_at === null || t.due_at <= today),
     ).length;
     // "Eligible": eligible tasks still in an early completion window (due
     // later), not yet urgent.
@@ -77,7 +84,7 @@ const ha: FastifyPluginAsync = async (fastify) => {
       eligible_count: eligibleCount,
       today_count: todayCount,
       overdue_count: overdueCount,
-      tasks: openTasks,
+      tasks: openTasks.map(({ id, title, due_at, state }) => ({ id, title, due_at, state })),
     };
   });
 };

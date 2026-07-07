@@ -96,14 +96,35 @@ describe("GET /api/ha/summary", () => {
     expect(body.eligible_count).toBe(0);
   });
 
-  it("counts an eligible task with no due date as today", async () => {
-    insertTask(db, userId, "Someday-eligible", { due_at: null, state: "eligible" });
+  it("counts a recurring eligible task with no due date as today", async () => {
+    insertTask(db, userId, "Recurring, no due date yet", {
+      due_at: null,
+      state: "eligible",
+      recurrence_rule: "FREQ=DAILY",
+    });
 
     const res = await app.inject({ method: "GET", url: "/api/ha/summary" });
     const body = res.json<HaSummaryResponse>();
 
     expect(body.today_count).toBe(1);
     expect(body.eligible_count).toBe(0);
+  });
+
+  it("excludes Someday tasks (no recurrence, no due date) from today_count", async () => {
+    insertTask(db, userId, "Someday task", {
+      due_at: null,
+      recurrence_rule: null,
+      state: "eligible",
+    });
+
+    const res = await app.inject({ method: "GET", url: "/api/ha/summary" });
+    const body = res.json<HaSummaryResponse>();
+
+    expect(body.today_count).toBe(0);
+    expect(body.eligible_count).toBe(0);
+    expect(body.overdue_count).toBe(0);
+    // Still present in the fuller task list backing the todo entity.
+    expect(body.tasks).toHaveLength(1);
   });
 
   it("counts an eligible task due later (early completion window) as eligible", async () => {

@@ -29,7 +29,7 @@ function fakeClient(opts: {
     getInfo: async () => ({ version: "test", slug: "teko" }),
     listNotifyServices: async (): Promise<NotifyService[]> => [],
     getTimeZone: async () => opts.timeZone ?? "UTC",
-    getIngressPath: async () => "/hassio/ingress/teko",
+    getIngressPath: async () => "/44f73591_teko",
     pushDiscovery: async () => {},
     sendNotification: async (service, payload): Promise<SendNotificationResult> => {
       opts.sent.push({ service, payload });
@@ -123,7 +123,7 @@ describe("runEveningReminderTick", () => {
     expect(sent[0]!.service).toBe("mobile_app_alice");
     expect(sent[0]!.payload.title).toBe("1 thing still open");
     expect(sent[0]!.payload.message).toContain("take out trash");
-    expect(sent[0]!.payload.clickAction).toBe("/hassio/ingress/teko");
+    expect(sent[0]!.payload.clickAction).toBe("/44f73591_teko");
 
     const user = db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
     expect(user!.last_evening_reminder_sent_date).toBe(TODAY);

@@ -119,10 +119,21 @@ const me: FastifyPluginAsync = async (fastify) => {
 
     lastTestNotificationAt.set(user.id, now);
 
+    let clickAction: string | undefined;
+    try {
+      clickAction = await client.getIngressPath();
+    } catch (err) {
+      request.log.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        "me.test-notification.ingress-path-unavailable",
+      );
+    }
+
     const serviceName = bareNotifyServiceName(user.notification_service);
     const result = await client.sendNotification(serviceName, {
       title: translate(user.locale, "notifications.test.title"),
       message: translate(user.locale, "notifications.test.message"),
+      ...(clickAction !== undefined ? { clickAction } : {}),
     });
 
     if (result.ok) {

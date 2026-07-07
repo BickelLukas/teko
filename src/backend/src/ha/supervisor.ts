@@ -67,7 +67,7 @@ export type SendNotificationPayload = {
   title: string;
   message: string;
   // Relative HA path opened when the user taps the notification, e.g.
-  // "/hassio/ingress/teko". Without it the companion app just foregrounds
+  // "/44f73591_teko". Without it the companion app just foregrounds
   // itself on whatever screen it last showed.
   clickAction?: string;
 };
@@ -103,7 +103,7 @@ export type SupervisorClient = {
   // Household timezone (IANA) from HA core config. Cached for the container's
   // lifetime; restart to pick up a changed HA timezone.
   getTimeZone(): Promise<string>;
-  // Relative ingress panel path (e.g. "/hassio/ingress/teko") for deep-linking
+  // Relative ingress panel path (e.g. "/44f73591_teko") for deep-linking
   // notifications straight into the add-on. Cached for the container's lifetime.
   getIngressPath(): Promise<string>;
   // Announces this add-on to the Teko HA integration via Supervisor discovery
@@ -255,7 +255,7 @@ export function createSupervisorClient(token: string): SupervisorClient {
     async getIngressPath(): Promise<string> {
       if (ingressPathCache) return ingressPathCache;
       const info = await request(AddOnInfoResponseSchema, "/addons/self/info");
-      ingressPathCache = `/hassio/ingress/${info.data.slug}`;
+      ingressPathCache = `/${info.data.slug}`;
       return ingressPathCache;
     },
 

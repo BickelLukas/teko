@@ -165,7 +165,12 @@ describe("bearer auth on /api/ha/*", () => {
       headers: { authorization: "Bearer valid-raw-token" },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ open_count: 0, overdue_count: 0, tasks: [] });
+    expect(res.json()).toMatchObject({
+      eligible_count: 0,
+      today_count: 0,
+      overdue_count: 0,
+      tasks: [],
+    });
   });
 
   it("rejects a missing bearer token on /api/ha/summary", async () => {

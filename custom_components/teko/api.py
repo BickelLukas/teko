@@ -28,9 +28,14 @@ class TekoTask:
 
 @dataclass
 class TekoSummary:
-    """Household-wide task summary consumed by sensors and the to-do list."""
+    """Household-wide task summary consumed by sensors and the to-do list.
 
-    open_count: int
+    The three counts mirror Teko's own Today page buckets exactly: overdue,
+    today (actionable now), eligible (early completion window, due later).
+    """
+
+    eligible_count: int
+    today_count: int
     overdue_count: int
     tasks: list[TekoTask]
 
@@ -44,7 +49,7 @@ class TekoApiClient:
         self._token = token
 
     async def async_get_summary(self) -> TekoSummary:
-        """Fetch the current open/overdue task summary."""
+        """Fetch the current eligible/today/overdue task summary."""
         url = f"{self._base_url}/api/ha/summary"
         headers = {"Authorization": f"Bearer {self._token}"}
 
@@ -58,7 +63,8 @@ class TekoApiClient:
             raise TekoApiError(f"Could not reach the Teko add-on: {err}") from err
 
         return TekoSummary(
-            open_count=data["open_count"],
+            eligible_count=data["eligible_count"],
+            today_count=data["today_count"],
             overdue_count=data["overdue_count"],
             tasks=[
                 TekoTask(id=t["id"], title=t["title"], due_at=t["due_at"], state=t["state"])

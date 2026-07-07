@@ -38,9 +38,12 @@ Teko is single-instance — one household, one config entry.
 
 ## Entities
 
-- **`sensor.teko_open_tasks`** — household-wide count of open (not yet done) tasks
-- **`sensor.teko_overdue_tasks`** — household-wide count of overdue tasks
-- **`todo.teko_tasks`** — open tasks as a read-only HA to-do list (Assist voice compatible)
+The three sensors mirror Teko's own **Today** page buckets exactly:
+
+- **`sensor.teko_overdue_tasks`** — overdue tasks
+- **`sensor.teko_today_tasks`** — actionable right now: no due date, or the due date has arrived
+- **`sensor.teko_eligible_tasks`** — eligible but due later (early completion window)
+- **`todo.teko_tasks`** — all open tasks as a read-only HA to-do list (Assist voice compatible)
 
 All editing (creating, completing, assigning) happens in Teko itself — the to-do list is a glance/voice surface, not a second place to manage tasks.
 

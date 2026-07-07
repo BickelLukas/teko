@@ -128,7 +128,8 @@ export const HaSummaryTaskSchema = z.object({
 export type HaSummaryTask = z.infer<typeof HaSummaryTaskSchema>;
 
 export const HaSummaryResponseSchema = z.object({
-  open_count: z.number().int().nonnegative(),
+  eligible_count: z.number().int().nonnegative(),
+  today_count: z.number().int().nonnegative(),
   overdue_count: z.number().int().nonnegative(),
   tasks: z.array(HaSummaryTaskSchema),
 });

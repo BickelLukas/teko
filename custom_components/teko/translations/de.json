@@ -27,7 +27,8 @@
   },
   "entity": {
     "sensor": {
-      "open_tasks": { "name": "Offene Aufgaben" },
+      "eligible_tasks": { "name": "Erledigbare Aufgaben" },
+      "today_tasks": { "name": "Heutige Aufgaben" },
       "overdue_tasks": { "name": "Überfällige Aufgaben" }
     },
     "todo": {

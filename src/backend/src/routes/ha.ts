@@ -3,6 +3,7 @@ import { z } from "zod";
 import { and, isNull, ne } from "drizzle-orm";
 import type { NotifyServicesResponse, HaSummaryResponse } from "@teko/shared";
 import * as schema from "../db/schema.js";
+import { getNow } from "../domain/clock.js";
 import "../types.js";
 
 const NotifyServicesQuerySchema = z.object({
@@ -39,11 +40,15 @@ const ha: FastifyPluginAsync = async (fastify) => {
   );
 
   // ── GET /api/ha/summary ────────────────────────────────────────────────────
-  // Household-wide aggregate consumed by the HA integration (open/overdue
-  // counts + the open-task list backing the `todo` entity). Not user-scoped —
-  // reachable via ingress (dev/UI) or the integration's bearer token.
+  // Household-wide aggregate consumed by the HA integration. The three counts
+  // mirror the frontend's Today page buckets exactly (see Today.tsx
+  // bucketTasks): overdue, today (actionable now), eligible (early
+  // completion-window, due later). `tasks` is the fuller open-task list
+  // backing the `todo` entity. Not user-scoped — reachable via ingress
+  // (dev/UI) or the integration's bearer token.
   fastify.get("/api/ha/summary", async (): Promise<HaSummaryResponse> => {
     const db = fastify.db;
+    const today = getNow().toISOString().slice(0, 10);
 
     const openTasks = db
       .select({
@@ -57,9 +62,20 @@ const ha: FastifyPluginAsync = async (fastify) => {
       .all();
 
     const overdueCount = openTasks.filter((t) => t.state === "overdue").length;
+    // "Today": eligible tasks that are actionable right now — no due date, or
+    // a due date that has arrived.
+    const todayCount = openTasks.filter(
+      (t) => t.state === "eligible" && (t.due_at === null || t.due_at <= today),
+    ).length;
+    // "Eligible": eligible tasks still in an early completion window (due
+    // later), not yet urgent.
+    const eligibleCount = openTasks.filter(
+      (t) => t.state === "eligible" && t.due_at !== null && t.due_at > today,
+    ).length;
 
     return {
-      open_count: openTasks.length,
+      eligible_count: eligibleCount,
+      today_count: todayCount,
       overdue_count: overdueCount,
       tasks: openTasks,
     };

@@ -1,4 +1,8 @@
-"""Sensor platform for the Teko integration."""
+"""Sensor platform for the Teko integration.
+
+The three sensors mirror Teko's own Today page buckets exactly: overdue,
+today (actionable now), eligible (early completion window, due later).
+"""
 
 from __future__ import annotations
 
@@ -22,7 +26,8 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     async_add_entities(
         [
-            TekoOpenTasksSensor(coordinator, entry.entry_id),
+            TekoEligibleTasksSensor(coordinator, entry.entry_id),
+            TekoTodayTasksSensor(coordinator, entry.entry_id),
             TekoOverdueTasksSensor(coordinator, entry.entry_id),
         ]
     )
@@ -43,19 +48,34 @@ class TekoSensorBase(CoordinatorEntity[TekoDataUpdateCoordinator], SensorEntity)
         )
 
 
-class TekoOpenTasksSensor(TekoSensorBase):
-    """Household-wide count of open (not yet done) tasks."""
+class TekoEligibleTasksSensor(TekoSensorBase):
+    """Eligible tasks still in an early completion window (due later)."""
 
-    _attr_translation_key = "open_tasks"
+    _attr_translation_key = "eligible_tasks"
+    _attr_icon = "mdi:calendar-check-outline"
+
+    def __init__(self, coordinator: TekoDataUpdateCoordinator, entry_id: str) -> None:
+        super().__init__(coordinator, entry_id)
+        self._attr_unique_id = f"{entry_id}_eligible_tasks"
+
+    @property
+    def native_value(self) -> int:
+        return self.coordinator.data.eligible_count
+
+
+class TekoTodayTasksSensor(TekoSensorBase):
+    """Tasks actionable right now: no due date, or due date has arrived."""
+
+    _attr_translation_key = "today_tasks"
     _attr_icon = "mdi:checkbox-marked-circle-outline"
 
     def __init__(self, coordinator: TekoDataUpdateCoordinator, entry_id: str) -> None:
         super().__init__(coordinator, entry_id)
-        self._attr_unique_id = f"{entry_id}_open_tasks"
+        self._attr_unique_id = f"{entry_id}_today_tasks"
 
     @property
     def native_value(self) -> int:
-        return self.coordinator.data.open_count
+        return self.coordinator.data.today_count
 
 
 class TekoOverdueTasksSensor(TekoSensorBase):
